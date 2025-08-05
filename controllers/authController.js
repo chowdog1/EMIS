@@ -1,6 +1,8 @@
 const User = require('../models/user');
 const bcrypt = require('bcrypt');
 
+
+//for logging in
 exports.login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -29,6 +31,35 @@ exports.login = async (req, res) => {
     res.json({ message: 'Login successful', role: user.role });
   } catch (error) {
     console.error('❌ Login error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+//for user register
+
+exports.register = async (req, res) => {
+  const { email, password, role } = req.body;
+
+  try {
+    const existingUser = await User.findOne({ email: new RegExp(`^${email}$`, 'i') });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Email already exists' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({
+      email,
+      password: hashedPassword,
+      role: role || 'user',
+      createdAt: new Date(),
+      isActive: true
+    });
+
+    await newUser.save();
+    res.status(201).json({ message: 'User registered successfully' });
+
+  } catch (error) {
+    console.error('❌ Registration error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };

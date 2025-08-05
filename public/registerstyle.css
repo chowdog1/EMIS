@@ -1,0 +1,259 @@
+/**
+ * CENRO San Juan City EMIS - Registration Page Styles
+ * Environmental Management Information System
+ * Registration-specific styling
+ */
+
+/* Password Strength Indicator */
+.password-strength {
+    font-size: var(--font-size-sm);
+    margin-top: var(--spacing-xs);
+    padding: var(--spacing-xs) 0;
+    transition: all var(--transition-fast);
+    font-weight: 500;
+}
+
+.password-strength.weak {
+    color: var(--danger);
+}
+
+.password-strength.medium {
+    color: var(--warning);
+}
+
+.password-strength.strong {
+    color: var(--success);
+}
+
+.password-strength:empty {
+    display: none;
+}
+
+/* Registration Form Error Messages */
+.form-error {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md);
+    background: rgba(220, 53, 69, 0.1);
+    border: 1px solid rgba(220, 53, 69, 0.3);
+    border-radius: var(--border-radius-md);
+    color: var(--danger);
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--spacing-lg);
+    animation: slideDown 0.3s ease-out;
+}
+
+.form-error i {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+/* Registration Success Message */
+.success-message {
+    text-align: center;
+    padding: var(--spacing-2xl) var(--spacing-lg);
+}
+
+.success-message h3 {
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    margin: var(--spacing-lg) 0 var(--spacing-md) 0;
+}
+
+.success-message p {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: var(--spacing-xl);
+}
+
+.success-icon {
+    margin-bottom: var(--spacing-lg);
+    display: flex;
+    justify-content: center;
+    animation: scaleIn 0.5s ease-out;
+}
+
+.success-icon i {
+    color: var(--success);
+    width: 48px;
+    height: 48px;
+}
+
+/* Registration Button Enhancements */
+.login-button[id="registerBtn"] {
+    background: linear-gradient(135deg, var(--primary-green), var(--secondary-green));
+    position: relative;
+    overflow: hidden;
+}
+
+.login-button[id="registerBtn"]:hover {
+    background: linear-gradient(135deg, var(--secondary-green), var(--primary-green));
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-xl);
+}
+
+.login-button[id="registerBtn"]:active {
+    transform: translateY(0);
+}
+
+/* Registration Form Specific Spacing */
+.login-form .form-group:last-of-type {
+    margin-bottom: var(--spacing-xl);
+}
+
+/* Enhanced Password Field Styling */
+.password-wrapper {
+    position: relative;
+}
+
+.password-wrapper + .password-strength {
+    margin-top: var(--spacing-xs);
+    padding-left: var(--spacing-sm);
+    border-left: 3px solid transparent;
+    transition: all var(--transition-fast);
+}
+
+.password-wrapper + .password-strength.weak {
+    border-left-color: var(--danger);
+    background: rgba(220, 53, 69, 0.05);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
+}
+
+.password-wrapper + .password-strength.medium {
+    border-left-color: var(--warning);
+    background: rgba(255, 193, 7, 0.05);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
+}
+
+.password-wrapper + .password-strength.strong {
+    border-left-color: var(--success);
+    background: rgba(40, 167, 69, 0.05);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
+}
+
+/* Registration Form Animations */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes pulseSuccess {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+    }
+}
+
+/* Registration Form Enhanced Focus States */
+.login-form .form-input:focus {
+    border-color: var(--primary-green);
+    box-shadow: 0 0 0 3px rgba(34, 139, 34, 0.1);
+    transform: translateY(-1px);
+}
+
+.login-form .form-group.success .form-input {
+    border-color: var(--success);
+    background: rgba(40, 167, 69, 0.02);
+}
+
+.login-form .form-group.error .form-input {
+    border-color: var(--danger);
+    background: rgba(220, 53, 69, 0.02);
+}
+
+.login-form .form-group.warning .form-input {
+    border-color: var(--warning);
+    background: rgba(255, 193, 7, 0.02);
+}
+
+/* Registration Page Header Spacing */
+.login-header {
+    margin-bottom: var(--spacing-2xl);
+}
+
+.login-header .system-title {
+    margin-bottom: var(--spacing-xs);
+}
+
+.login-header .system-subtitle {
+    margin-bottom: var(--spacing-xs);
+}
+
+.login-header .location-subtitle {
+    margin-bottom: 0;
+}
+
+/* Registration Footer Enhancements */
+.form-footer .footer-text {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-lg);
+}
+
+.form-footer .footer-text a {
+    color: var(--primary-green);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all var(--transition-fast);
+}
+
+.form-footer .footer-text a:hover {
+    color: var(--secondary-green);
+    text-decoration: underline;
+}
+
+/* Responsive Registration Adjustments */
+@media (max-width: 480px) {
+    .success-message {
+        padding: var(--spacing-xl) var(--spacing-md);
+    }
+    
+    .success-message h3 {
+        font-size: var(--font-size-lg);
+    }
+    
+    .success-icon i {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .password-strength {
+        font-size: var(--font-size-xs);
+    }
+}
+
+@media (max-width: 360px) {
+    .form-error {
+        padding: var(--spacing-sm);
+        font-size: var(--font-size-xs);
+    }
+    
+    .password-wrapper + .password-strength {
+        padding: var(--spacing-xs);
+        font-size: var(--font-size-xs);
+    }
+}
