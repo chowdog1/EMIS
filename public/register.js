@@ -223,52 +223,44 @@ class RegistrationSystem {
     }
     
     async registerUser() {
-        console.log('registerUser called');
-        const formData = {
-            email: this.emailInput.value.trim(),
-            password: this.passwordInput.value
-        };
-        console.log('Sending registration data:', formData);
+    console.log('registerUser called');
+    const formData = {
+        email: this.emailInput.value.trim(),
+        password: this.passwordInput.value
+    };
+    console.log('Sending registration data:', formData);
+    
+    try {
+        // Always make the API call, even in development mode
+        const response = await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        console.log('Response status:', response.status);
         
-        // For development/testing purposes, simulate a successful registration
-        // This bypasses the need for a real backend API
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            console.log('Development mode: simulating successful registration');
-            // Simulate network delay
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            return { success: true, message: 'Registration successful (simulated)' };
+        // Check if response is ok before parsing JSON
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
         
-        try {
-            const response = await fetch('/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
-            });
-            console.log('Response status:', response.status);
-            
-            // Check if response is ok before parsing JSON
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-            }
-            
-            const result = await response.json();
-            console.log('Response data:', result);
-            return result;
-        } catch (error) {
-            console.error('Error in registerUser:', error);
-            
-            // If it's a network error or the API doesn't exist, show a more helpful message
-            if (error.message.includes('Failed to fetch') || 
-                error.message.includes('NetworkError') || 
-                error.message.includes('ECONNREFUSED')) {
-                throw new Error('Unable to connect to the server. Please check your internet connection and try again.');
-            }
-            
-            throw error;
+        const result = await response.json();
+        console.log('Response data:', result);
+        return result;
+    } catch (error) {
+        console.error('Error in registerUser:', error);
+        
+        // If it's a network error or the API doesn't exist, show a more helpful message
+        if (error.message.includes('Failed to fetch') || 
+            error.message.includes('NetworkError') || 
+            error.message.includes('ECONNREFUSED')) {
+            throw new Error('Unable to connect to the server. Please check your internet connection and try again.');
         }
+        
+        throw error;
     }
+}
     
     showRegistrationSuccess() {
         console.log('showRegistrationSuccess called');
