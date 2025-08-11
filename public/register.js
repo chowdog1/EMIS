@@ -12,7 +12,20 @@ class RegistrationSystem {
         this.registerBtn = document.getElementById('registerBtn');
         this.passwordToggles = document.querySelectorAll('.password-toggle');
         this.init();
+        this.emailExists = false;
+        this.emailCheckInProgress = false;
     }
+
+    debounce(func, wait)
+    {
+        let timeout;
+        return (...args) => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+
+    }
+
     init() {
         console.log('CENRO San Juan City EMIS Registration System initialized');
         
@@ -55,6 +68,11 @@ class RegistrationSystem {
             console.log('Form submit event triggered');
             this.handleSubmit(e);
         });
+        const debouncedCheckEmail = this.debounce(this.checkEmailExists.bind(this), 500);
+        this.emailInput.addEventListener('input', () => {
+            this.validateEmail();
+            debouncedCheckEmail();
+        });
         this.emailInput.addEventListener('input', () => this.validateEmail());
         this.emailInput.addEventListener('blur', () => this.validateEmail());
         this.passwordInput.addEventListener('input', () => {
@@ -96,26 +114,31 @@ class RegistrationSystem {
     }
     
     validateEmail() {
-        const email = this.emailInput.value.trim();
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const formGroup = this.emailInput.closest('.form-group');
-        const errorElement = document.getElementById('email-error');
-        this.clearValidation(formGroup);
-        if (!email) {
-            this.showError(formGroup, errorElement, 'Email address is required');
-            return false;
-        }
-        if (!emailRegex.test(email)) {
-            this.showError(formGroup, errorElement, 'Please enter a valid email address');
-            return false;
-        }
-        if (!email.includes('.gov.ph')) {
-            this.showWarning(formGroup, errorElement, 'Consider using your official government email');
-        } else {
-            this.showSuccess(formGroup);
-        }
-        return true;
+    const email = this.emailInput.value.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const formGroup = this.emailInput.closest('.form-group');
+    const errorElement = document.getElementById('email-error');
+    this.clearValidation(formGroup);
+    
+    if (!email) {
+        this.showError(formGroup, errorElement, 'Email address is required');
+        return false;
     }
+    if (!emailRegex.test(email)) {
+        this.showError(formGroup, errorElement, 'Please enter a valid email address');
+        return false;
+    }
+    if (this.emailExists) {
+        this.showError(formGroup, errorElement, 'This email is already registered');
+        return false;
+    }
+    if (!email.includes('.gov.ph')) {
+        this.showWarning(formGroup, errorElement, 'Consider using your official government email');
+    } else {
+        this.showSuccess(formGroup);
+    }
+    return true;
+}
     
     validatePassword() {
         const password = this.passwordInput.value;
@@ -190,6 +213,19 @@ class RegistrationSystem {
         e.preventDefault();
         e.stopPropagation();
         
+        if (this.emailCheckInProgress) {
+            console.log('Waiting for email check to complete');
+            
+            await new Promise(resolve => {
+                const checkInterval = setInterval(() => {
+                    if(!this.emailCheckInProgress) {
+                        clearInterval(checkInterval);
+                        resolve();
+                    }
+                }, 100)
+            })
+        }
+
         const isEmailValid = this.validateEmail();
         const isPasswordValid = this.validatePassword();
         const isConfirmPasswordValid = this.validateConfirmPassword();
@@ -261,7 +297,70 @@ class RegistrationSystem {
         throw error;
     }
 }
+    async checkEmailExists() {
+    const email = this.emailInput.value.trim();
     
+    // Don't check if email is empty or invalid
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return;
+    }
+    
+    this.emailCheckInProgress = true;
+    
+    // Find the loading spinner element
+    const parentElement = this.emailInput.parentElement;
+    let loadingElement = parentElement.querySelector('.email-check-loading');
+    
+    // If the loading element doesn't exist, create it
+    if (!loadingElement) {
+        loadingElement = document.createElement('div');
+        loadingElement.className = 'email-check-loading';
+        loadingElement.innerHTML = '<i data-feather="loader" class="spinner"></i>';
+        parentElement.appendChild(loadingElement);
+        
+        // Initialize the feather icon
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+    }
+    
+    loadingElement.style.display = 'flex';
+    
+    try {
+        const response = await fetch('/api/check-email', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email})
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.exists) {
+            this.emailExists = true;
+            const formGroup = this.emailInput.closest('.form-group');
+            const errorElement = document.getElementById('email-error');
+            this.showError(formGroup, errorElement, 'This email is already registered');
+        } else {
+            this.emailExists = false;
+            const formGroup = this.emailInput.closest('.form-group');
+            const errorElement = document.getElementById('email-error');
+            
+            // Only clear the email exists error, not other validation errors
+            if (formGroup.classList.contains('error') && 
+                errorElement.textContent === 'This email is already registered') {
+                this.clearValidation(formGroup);
+                // Re-run normal validation to show other errors if needed
+                this.validateEmail();
+            }
+        }
+    } catch (error) {
+        console.error('Error checking email existence', error);
+    } finally {
+        this.emailCheckInProgress = false;
+        loadingElement.style.display = 'none';
+    }
+}
+
     showRegistrationSuccess() {
         console.log('showRegistrationSuccess called');
         

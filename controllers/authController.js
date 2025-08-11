@@ -35,6 +35,33 @@ exports.login = async (req, res) => {
   }
 };
 
+exports.checkEmail = async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    // Validate email input
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+    
+    console.log(`🔍 Checking if email exists: ${email}`);
+    
+    // Check if email exists in database (case insensitive)
+    const user = await User.findOne({ email: new RegExp(`^${email}$`, 'i') });
+    
+    if (user) {
+      console.log(`✅ Email exists: ${email}`);
+      return res.json({ exists: true });
+    } else {
+      console.log(`❌ Email does not exist: ${email}`);
+      return res.json({ exists: false });
+    }
+  } catch (error) {
+    console.error('❌ Error checking email:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 //for user register
 
 exports.register = async (req, res) => {
