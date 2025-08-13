@@ -225,38 +225,59 @@ class LoginManager {
 
     async performLoginRequest() {
         const email = this.emailInput.value.trim();
-        const password = this.passwordInput.value;
+    const password = this.passwordInput.value;
 
-        const response = await fetch('http://127.0.0.1:3000/api/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ email, password })
-        });
+    const response = await fetch('http://127.0.0.1:3000/api/login', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+    });
 
-        const result = await response.json();
-
-        if (!response.ok) {
-            throw new Error(result.message || 'Login failed');
-        }
-
-        return result;
+    const result = await response.json();
+    
+    if (!response.ok) {
+        throw new Error(result.message || 'Login failed');
     }
 
-    handleLoginSuccess() {
-        if (this.rememberMeCheckbox.checked) this.saveCredentials();
-        else this.clearSavedCredentials();
+    this.lastLoginResult = result;
 
-        this.showSuccessMessage('Login successful! Redirecting to CENRO dashboard...');
+    return result;
+}
 
-        setTimeout(() => {
-            console.log('Redirecting to CENRO San Juan City EMIS dashboard...');
-            this.showGlobalError('Demo mode: You would now be redirected to the CENRO dashboard.');
-        }, 2000);
 
-        console.log('Login successful for user:', this.emailInput.value);
+handleLoginSuccess() {
+    if (this.rememberMeCheckbox.checked) this.saveCredentials();
+    else this.clearSavedCredentials();
+    
+    // Store the token in localStorage
+    const result = this.lastLoginResult;
+    console.log('Login result:', result);
+    
+    if (result && result.token) {
+        localStorage.setItem('auth_token', result.token);
+        localStorage.setItem('user_data', JSON.stringify(result.user));
+        console.log('Token and user data stored in localStorage');
+        
+        // Verify storage
+        console.log('Stored token:', localStorage.getItem('auth_token'));
+        console.log('Stored user data:', localStorage.getItem('user_data'));
+    } else {
+        console.error('No token in login result');
     }
+    
+    this.showSuccessMessage('Login successful! Redirecting to CENRO dashboard...');
+    
+    setTimeout(() => {
+        console.log('Redirecting to dashboard...');
+        // Change this to redirect to /dashboard instead of /dashboard.html
+        window.location.href = '/dashboard';
+    }, 1500);
+    
+    console.log('Login successful for user:', this.emailInput.value);
+}
+
 
     handleLoginError(error) {
         console.error('Login error:', error.message);
