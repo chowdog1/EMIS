@@ -103,11 +103,35 @@ const register = async (req, res) => {
   }
 };
 
+//for verifying user
+const verifyToken = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ message: 'No token provided' });
+    }
+    
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findById(decoded.userId);
+    
+    if (!user || !user.isActive) {
+      return res.status(401).json({ message: 'Invalid token' });
+    }
+    
+    res.json({ valid: true, user: { id: user._id, email: user.email, role: user.role } });
+  } catch (error) {
+    console.error('Token verification error:', error);
+    res.status(401).json({ message: 'Invalid token' });
+  }
+};
+
 // Debug: Log before exporting
-console.log('Exporting methods:', { login, register, checkEmail });
+console.log('Exporting methods:', { login, register, checkEmail, verifyToken });
 
 module.exports = {
   login,
   register,
-  checkEmail
+  checkEmail,
+  verifyToken
 };

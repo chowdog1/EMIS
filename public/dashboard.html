@@ -29,6 +29,12 @@
                 </li>
                 <li>
                     <a href="#">
+                        <i class="fas fa-building"></i>
+                        <span>Businesses</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#">
                         <i class="fas fa-file-alt"></i>
                         <span>Reports</span>
                     </a>
@@ -37,12 +43,6 @@
                     <a href="#">
                         <i class="fas fa-users"></i>
                         <span>Users</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#">
-                        <i class="fas fa-map-marked-alt"></i>
-                        <span>Locations</span>
                     </a>
                 </li>
                 <li>
@@ -58,7 +58,7 @@
         <main class="main-content">
             <!-- Header -->
             <header class="header">
-                <h1 class="header-title">Environmental Management Dashboard</h1>
+                <h1 class="header-title">Business Establishment Dashboard</h1>
                 <div class="user-info">
                     <div class="user-avatar" id="userAvatar">U</div>
                     <div class="user-dropdown">
@@ -80,77 +80,113 @@
             <div class="dashboard-cards">
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">Total Reports</h3>
+                        <h3 class="card-title">Total Businesses</h3>
                         <div class="card-icon" style="background-color: var(--primary-green);">
-                            <i class="fas fa-file-alt"></i>
+                            <i class="fas fa-building"></i>
                         </div>
                     </div>
-                    <div class="card-value">142</div>
-                    <div class="card-description">+12% from last month</div>
+                    <div class="card-value" id="totalBusinesses">0</div>
+                    <div class="card-description">Registered establishments</div>
                 </div>
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">Active Users</h3>
-                        <div class="card-icon" style="background-color: var(--sky-blue);">
-                            <i class="fas fa-users"></i>
+                        <h3 class="card-title">High Risk</h3>
+                        <div class="card-icon" style="background-color: var(--danger);">
+                            <i class="fas fa-exclamation-triangle"></i>
                         </div>
                     </div>
-                    <div class="card-value">28</div>
-                    <div class="card-description">+3 new this week</div>
+                    <div class="card-value" id="highRiskCount">0</div>
+                    <div class="card-description">Require immediate attention</div>
                 </div>
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">Compliance Rate</h3>
-                        <div class="card-icon" style="background-color: var(--accent-green);">
-                            <i class="fas fa-chart-line"></i>
+                        <h3 class="card-title">Low Risk</h3>
+                        <div class="card-icon" style="background-color: var(--success);">
+                            <i class="fas fa-check-circle"></i>
                         </div>
                     </div>
-                    <div class="card-value">87%</div>
-                    <div class="card-description">+5% from last quarter</div>
+                    <div class="card-value" id="lowRiskCount">0</div>
+                    <div class="card-description">Compliant establishments</div>
                 </div>
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">Pending Actions</h3>
-                        <div class="card-icon" style="background-color: var(--earth-brown);">
-                            <i class="fas fa-tasks"></i>
+                        <h3 class="card-title">Renewal Pending</h3>
+                        <div class="card-icon" style="background-color: var(--warning);">
+                            <i class="fas fa-clock"></i>
                         </div>
                     </div>
-                    <div class="card-value">7</div>
-                    <div class="card-description">Requires attention</div>
+                    <div class="card-value" id="renewalCount">0</div>
+                    <div class="card-description">Require renewal soon</div>
                 </div>
             </div>
 
-            <!-- Data Table -->
-            <div class="data-table-container">
+            <!-- Charts Section -->
+            <div class="charts-section">
+                <div class="chart-container">
+                    <h2 class="chart-title">Businesses by Barangay</h2>
+                    <div class="chart-wrapper">
+                        <canvas id="barangayChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search and Table Section -->
+            <div class="table-section">
                 <div class="table-header">
-                    <h2 class="table-title">Recent Environmental Reports</h2>
+                    <h2 class="table-title">Business Directory</h2>
                     <div class="table-actions">
-                        <button class="btn btn-secondary">
-                            <i class="fas fa-filter"></i>
-                            Filter
-                        </button>
+                        <div class="search-container">
+                            <input type="text" id="searchInput" class="search-input" placeholder="Search businesses...">
+                            <button id="searchBtn" class="search-button">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
                         <button class="btn btn-primary">
                             <i class="fas fa-plus"></i>
-                            New Report
+                            Add Business
                         </button>
                     </div>
                 </div>
-                <div id="data-table-root"></div>
+                <div class="table-container">
+                    <div id="businessTable">
+                    <!-- Loading message -->
+                    <div style="padding: 20px; text-align: center; color: #6c757d;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 10px;"></i>
+                    <p>Loading business data...</p>
+                </div>
+            </div>
+            </div>
             </div>
         </main>
     </div>
 
     <!-- React and ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    <!-- React DataTable Component -->
-    <script src="https://unpkg.com/react-data-table-component@7.5.3/dist/index.umd.js"></script>
-    
-    <!-- Babel for JSX transformation -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- Dashboard JavaScript -->
-    <script src="dashboard.js" type="text/babel"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+<!-- React DataTable Component -->
+<script src="https://cdn.jsdelivr.net/npm/react-data-table-component@7.5.3/dist/index.umd.js"></script>
+<script>
+    // Make sure the component is properly exposed
+    window.addEventListener('load', function() {
+        // Try to find the component in the window object
+        if (window.ReactDataTable) {
+            console.log('ReactDataTable found as window.ReactDataTable');
+        } else if (window['react-data-table-component']) {
+            console.log('ReactDataTable found as window["react-data-table-component"]');
+            window.ReactDataTable = window['react-data-table-component'];
+        } else {
+            console.error('ReactDataTable not found in window object');
+            // Log available React-related variables
+            console.log('Available React variables:', Object.keys(window).filter(key => key.toLowerCase().includes('react')));
+        }
+    });
+</script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Dashboard JavaScript -->
+<script src="dashboard.js"></script>
 </body>
 </html>

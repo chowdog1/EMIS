@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 const authRoutes = require('./routes/authRoutes');
+const businessRoutes = require('./routes/businessRoutes');
 
 const app = express();
 const PORT = 3000;
@@ -15,13 +16,17 @@ app.use(express.json());
 // Serve static files from /public
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Connect to MongoDB
+// Connect to MongoDB for auth
 mongoose.connect('mongodb://localhost:27017/logindb')
-  .then(() => console.log('✅ MongoDB connected'))
-  .catch((err) => console.error('❌ MongoDB connection error:', err));
+  .then(() => console.log('✅ Auth MongoDB connected'))
+  .catch((err) => {
+    console.error('❌ Auth MongoDB connection error:', err);
+    process.exit(1); // Exit if auth DB fails
+  });
 
 // API Routes
-app.use('/api', authRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/business', businessRoutes);
 
 // Dashboard route
 app.get('/dashboard', (req, res) => {
@@ -46,4 +51,13 @@ app.use((req, res) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
+});
+
+// Error handling for the establishments database connection
+const establishmentsDB = mongoose.createConnection('mongodb://localhost:27017/establishments');
+establishmentsDB.on('error', (err) => {
+  console.error('❌ Establishments DB connection error:', err);
+});
+establishmentsDB.once('open', () => {
+  console.log('✅ Establishments MongoDB connected');
 });

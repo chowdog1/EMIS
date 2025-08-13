@@ -224,25 +224,30 @@ class LoginManager {
     }
 
     async performLoginRequest() {
-        const email = this.emailInput.value.trim();
+    const email = this.emailInput.value.trim();
     const password = this.passwordInput.value;
-
-    const response = await fetch('http://127.0.0.1:3000/api/login', {
+    
+    console.log('Sending login request to /api/auth/login');
+    
+    const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({ email, password })
     });
-
+    
+    console.log('Response status:', response.status);
+    console.log('Response content-type:', response.headers.get('content-type'));
+    
     const result = await response.json();
     
     if (!response.ok) {
         throw new Error(result.message || 'Login failed');
     }
-
+    
     this.lastLoginResult = result;
-
+ 
     return result;
 }
 

@@ -267,8 +267,8 @@ class RegistrationSystem {
     console.log('Sending registration data:', formData);
     
     try {
-        // Always make the API call, even in development mode
-        const response = await fetch('/api/register', {
+        // Make sure to use /api/auth/register
+        const response = await fetch('/api/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData)
