@@ -374,9 +374,9 @@ function showTableError(message) {
             </button>
         </div>
     `;
-}
+}   
 
-// Function to update business table
+// Function to update business table using React
 function updateBusinessTable(businesses) {
     const tableRoot = document.getElementById('businessTable');
     
@@ -389,21 +389,30 @@ function updateBusinessTable(businesses) {
     if (businesses.length > 0) {
         console.log('Sample business data structure:', businesses[0]);
         console.log('Keys in business object:', Object.keys(businesses[0]));
+        
+        // Test accessing each property with normalized names
+        console.log('accountNo:', businesses[0]['accountNo']);
+        console.log('businessName:', businesses[0]['businessName']);
+        console.log('ownerName:', businesses[0]['ownerName']);
+        console.log('barangay:', businesses[0]['barangay']);
+        console.log('natureOfBusiness:', businesses[0]['natureOfBusiness']);
+        console.log('status:', businesses[0]['status']);
+        console.log('applicationStatus:', businesses[0]['applicationStatus']);
+        
+        // Test accessing each property with original MongoDB names
+        console.log('ACCOUNT NO:', businesses[0]['ACCOUNT NO']);
+        console.log('Name of Business:', businesses[0]['Name of Business']);
+        console.log('Name of owner:', businesses[0]['Name of owner']);
+        console.log('Barangay:', businesses[0]['Barangay']);
+        console.log('Nature of Business:', businesses[0]['Nature of Business']);
+        console.log('STATUS:', businesses[0]['STATUS']);
+        console.log('APPLICATION STATUS:', businesses[0]['APPLICATION STATUS']);
     }
     
     // Check if React and ReactDOM are loaded
     if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
         console.error('React or ReactDOM not loaded');
-        renderSimpleTable(businesses); // Fallback to simple table
-        return;
-    }
-    
-    // Check if ReactDataTable is loaded - try multiple possible global variable names
-    let DataTableComponent = window.ReactDataTable || window['react-data-table-component'];
-    
-    if (typeof DataTableComponent === 'undefined') {
-        console.error('ReactDataTable not loaded, using fallback table');
-        renderSimpleTable(businesses); // Fallback to simple table
+        renderSimpleTable(businesses);
         return;
     }
     
@@ -439,99 +448,72 @@ function updateBusinessTable(businesses) {
             }, text);
         };
         
-        // Table columns
-        const columns = [
-            {
-                name: 'Account No',
-                selector: row => row['ACCOUNT NO'],
-                sortable: true,
-                width: '120px'
-            },
-            {
-                name: 'Business Name',
-                selector: row => row['Name of Business'],
-                sortable: true,
-                grow: 2
-            },
-            {
-                name: 'Owner',
-                selector: row => row['Name of owner'],
-                sortable: true,
-                grow: 1
-            },
-            {
-                name: 'Barangay',
-                selector: row => row['Barangay'],
-                sortable: true,
-                width: '150px'
-            },
-            {
-                name: 'Nature of Business',
-                selector: row => row['Nature of Business'],
-                sortable: true,
-                grow: 1
-            },
-            {
-                name: 'Status',
-                selector: row => row['STATUS'],
-                sortable: true,
-                cell: row => React.createElement(StatusBadge, { status: row['STATUS'] }),
-                width: '120px'
-            },
-            {
-                name: 'Application Status',
-                selector: row => row['APPLICATION STATUS'],
-                sortable: true,
-                width: '130px'
-            }
-        ];
-        
-        // Custom styles for the table
-        const customStyles = {
-            headCells: {
-                style: {
-                    backgroundColor: '#f8f9fa',
-                    fontWeight: '600',
-                    fontSize: '0.875rem'
-                },
-            },
-            rows: {
-                style: {
-                    '&:not(:last-of-type)': {
-                        borderBottom: '1px solid #e9ecef',
-                    },
-                },
-            },
-        };
-        
-        // Table component
+        // Table component with flexible data access
         const App = () => {
-            return React.createElement(DataTableComponent, {
-                title: '',
-                columns: columns,
-                data: businesses,
-                customStyles: customStyles,
-                pagination: true,
-                paginationPerPage: 10,
-                paginationRowsPerPageOptions: [5, 10, 15, 20, 25],
-                paginationComponentOptions: {
-                    rowsPerPageText: 'Rows per page:',
-                    rangeSeparatorText: 'of',
-                    noRowsPerPage: false,
-                    selectAllRowsItem: false,
-                    selectAllRowsItemText: 'All'
-                },
-                persistTableHead: true,
-                highlightOnHover: true,
-                pointerOnHover: true,
-                noDataComponent: React.createElement('div', {
-                    style: {
-                        padding: '20px',
-                        textAlign: 'center',
-                        color: '#6c757d'
-                    }
-                }, 'No businesses found')
-            });
+            return React.createElement(
+                'div',
+                { style: { overflowX: 'auto' } },
+                React.createElement(
+                    'table',
+                    { 
+                        style: { 
+                            width: '100%', 
+                            borderCollapse: 'collapse',
+                            border: '1px solid #e9ecef'
+                        } 
+                    },
+                    React.createElement(
+                        'thead',
+                        null,
+                        React.createElement(
+                            'tr',
+                            { style: { backgroundColor: '#f8f9fa' } },
+                            React.createElement('th', { style: { padding: '12px 15px', textAlign: 'left', fontWeight: '600', borderBottom: '1px solid #e9ecef' } }, 'Account No'),
+                            React.createElement('th', { style: { padding: '12px 15px', textAlign: 'left', fontWeight: '600', borderBottom: '1px solid #e9ecef' } }, 'Business Name'),
+                            React.createElement('th', { style: { padding: '12px 15px', textAlign: 'left', fontWeight: '600', borderBottom: '1px solid #e9ecef' } }, 'Owner'),
+                            React.createElement('th', { style: { padding: '12px 15px', textAlign: 'left', fontWeight: '600', borderBottom: '1px solid #e9ecef' } }, 'Barangay'),
+                            React.createElement('th', { style: { padding: '12px 15px', textAlign: 'left', fontWeight: '600', borderBottom: '1px solid #e9ecef' } }, 'Nature of Business'),
+                            React.createElement('th', { style: { padding: '12px 15px', textAlign: 'left', fontWeight: '600', borderBottom: '1px solid #e9ecef' } }, 'Status'),
+                            React.createElement('th', { style: { padding: '12px 15px', textAlign: 'left', fontWeight: '600', borderBottom: '1px solid #e9ecef' } }, 'Application Status')
+                        )
+                    ),
+                    React.createElement(
+                        'tbody',
+                        null,
+                        businesses.slice(0, 100).map((business, index) => {
+                            // Try both normalized and original field names
+                            const accountNo = business['accountNo'] || business['ACCOUNT NO'] || 'N/A';
+                            const businessName = business['businessName'] || business['Name of Business'] || 'N/A';
+                            const ownerName = business['ownerName'] || business['Name of owner'] || 'N/A';
+                            const barangay = business['barangay'] || business['Barangay'] || 'N/A';
+                            const natureOfBusiness = business['natureOfBusiness'] || business['Nature of Business'] || 'N/A';
+                            const status = business['status'] || business['STATUS'] || '';
+                            const applicationStatus = business['applicationStatus'] || business['APPLICATION STATUS'] || 'N/A';
+                            
+                            // DEBUG: Log each business object
+                            if (index < 3) { // Only log first 3 to avoid console spam
+                                console.log(`Business ${index}:`, business);
+                                console.log(`Account No ${index}:`, accountNo);
+                            }
+                            
+                            return React.createElement(
+                                'tr',
+                                { 
+                                    key: index,
+                                    style: { borderBottom: '1px solid #e9ecef' }
+                                },
+                                React.createElement('td', { style: { padding: '12px 15px' } }, accountNo),
+                                React.createElement('td', { style: { padding: '12px 15px' } }, businessName),
+                                React.createElement('td', { style: { padding: '12px 15px' } }, ownerName),
+                                React.createElement('td', { style: { padding: '12px 15px' } }, barangay),
+                                React.createElement('td', { style: { padding: '12px 15px' } }, natureOfBusiness),
+                                React.createElement('td', { style: { padding: '12px 15px' } }, React.createElement(StatusBadge, { status: status })),
+                                React.createElement('td', { style: { padding: '12px 15px' } }, applicationStatus)
+                            );
+                        })
+                    )
+                )
+            );
         };
         
         // Clear the existing content
@@ -543,137 +525,22 @@ function updateBusinessTable(businesses) {
         // Render the component
         root.render(React.createElement(App));
         
-        console.log('Business table rendered successfully with React 18');
-    } catch (error) {
-        console.error('Error rendering React table:', error);
-        renderSimpleTable(businesses); // Fallback to simple table
-    }
-}
-
-// Fallback function to render a simple HTML table
-function renderSimpleTable(businesses) {
-    const tableRoot = document.getElementById('businessTable');
-    
-    if (!tableRoot) {
-        console.error('Business table root element not found');
-        return;
-    }
-    
-    // Create table element
-    const table = document.createElement('table');
-    table.className = 'business-table';
-    table.style.width = '100%';
-    table.style.borderCollapse = 'collapse';
-    
-    // Create table header
-    const thead = document.createElement('thead');
-    const headerRow = document.createElement('tr');
-    
-    const headers = ['Account No', 'Business Name', 'Owner', 'Barangay', 'Nature of Business', 'Status', 'Application Status'];
-    headers.forEach(headerText => {
-        const th = document.createElement('th');
-        th.textContent = headerText;
-        th.style.padding = '12px 15px';
-        th.style.textAlign = 'left';
-        th.style.backgroundColor = '#f8f9fa';
-        th.style.fontWeight = '600';
-        th.style.borderBottom = '1px solid #e9ecef';
-        headerRow.appendChild(th);
-    });
-    
-    thead.appendChild(headerRow);
-    table.appendChild(thead);
-    
-    // Create table body
-    const tbody = document.createElement('tbody');
-    
-    // Limit to first 100 records for performance
-    const displayBusinesses = businesses.slice(0, 100);
-    
-    displayBusinesses.forEach(business => {
-        const row = document.createElement('tr');
-        row.style.borderBottom = '1px solid #e9ecef';
-        
-        // Account No
-        const accountCell = document.createElement('td');
-        accountCell.textContent = business['ACCOUNT NO'] || '';
-        accountCell.style.padding = '12px 15px';
-        row.appendChild(accountCell);
-        
-        // Business Name
-        const nameCell = document.createElement('td');
-        nameCell.textContent = business['Name of Business'] || '';
-        nameCell.style.padding = '12px 15px';
-        row.appendChild(nameCell);
-        
-        // Owner
-        const ownerCell = document.createElement('td');
-        ownerCell.textContent = business['Name of owner'] || '';
-        ownerCell.style.padding = '12px 15px';
-        row.appendChild(ownerCell);
-        
-        // Barangay
-        const barangayCell = document.createElement('td');
-        barangayCell.textContent = business['Barangay'] || '';
-        barangayCell.style.padding = '12px 15px';
-        row.appendChild(barangayCell);
-        
-        // Nature of Business
-        const natureCell = document.createElement('td');
-        natureCell.textContent = business['Nature of Business'] || '';
-        natureCell.style.padding = '12px 15px';
-        row.appendChild(natureCell);
-        
-        // Status
-        const statusCell = document.createElement('td');
-        statusCell.style.padding = '12px 15px';
-        const status = business['STATUS'] || '';
-        let statusBadge = document.createElement('span');
-        statusBadge.textContent = status === 'HIGHRISK' ? 'High Risk' : status === 'LOWRISK' ? 'Low Risk' : status;
-        statusBadge.style.display = 'inline-block';
-        statusBadge.style.padding = '0.25rem 0.5rem';
-        statusBadge.style.borderRadius = '0.25rem';
-        statusBadge.style.color = 'white';
-        statusBadge.style.fontSize = '0.75rem';
-        statusBadge.style.fontWeight = '500';
-        
-        if (status === 'HIGHRISK') {
-            statusBadge.style.backgroundColor = '#dc3545';
-        } else if (status === 'LOWRISK') {
-            statusBadge.style.backgroundColor = '#28a745';
-        } else {
-            statusBadge.style.backgroundColor = '#6c757d';
+        // Add a message if we're showing limited records
+        if (businesses.length > 100) {
+            const message = document.createElement('div');
+            message.style.padding = '10px';
+            message.style.textAlign = 'center';
+            message.style.color = '#6c757d';
+            message.textContent = `Showing first 100 of ${businesses.length} records. Use search to find specific businesses.`;
+            tableRoot.appendChild(message);
         }
         
-        statusCell.appendChild(statusBadge);
-        row.appendChild(statusCell);
-        
-        // Application Status
-        const appStatusCell = document.createElement('td');
-        appStatusCell.textContent = business['APPLICATION STATUS'] || '';
-        appStatusCell.style.padding = '12px 15px';
-        row.appendChild(appStatusCell);
-        
-        tbody.appendChild(row);
-    });
-    
-    table.appendChild(tbody);
-    
-    // Clear the tableRoot and append the new table
-    tableRoot.innerHTML = '';
-    tableRoot.appendChild(table);
-    
-    // Add a message if we're showing limited records
-    if (businesses.length > 100) {
-        const message = document.createElement('div');
-        message.style.padding = '10px';
-        message.style.textAlign = 'center';
-        message.style.color = '#6c757d';
-        message.textContent = `Showing first 100 of ${businesses.length} records. Use search to find specific businesses.`;
-        tableRoot.appendChild(message);
+        console.log('React table rendered successfully');
+    } catch (error) {
+        console.error('Error rendering React table:', error);
+        console.error('Error details:', error.message, error.stack);
+        renderSimpleTable(businesses);
     }
-    
-    console.log('Simple table rendered successfully');
 }
 
 function debugComponentLoading() {

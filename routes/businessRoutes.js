@@ -31,9 +31,15 @@ router.get('/', async (req, res) => {
     const businesses = await Business.find({});
     console.log(`Found ${businesses.length} businesses`);
     
+    // Log the first original business
+    if (businesses.length > 0) {
+      console.log('First original business:', businesses[0]);
+      console.log('Keys in first original business:', Object.keys(businesses[0]));
+    }
+    
     // Normalize the property names
     const normalizedBusinesses = businesses.map(business => {
-      return {
+      const normalized = {
         accountNo: business['ACCOUNT NO'],
         status: business['STATUS'],
         applicationStatus: business['APPLICATION STATUS'],
@@ -43,7 +49,18 @@ router.get('/', async (req, res) => {
         barangay: business['Barangay'],
         natureOfBusiness: business['Nature of Business']
       };
+      
+      // DEBUG: Log the first normalized business
+      if (businesses.indexOf(business) === 0) {
+        console.log('Normalized business:', normalized);
+        console.log('Keys in normalized business:', Object.keys(normalized));
+      }
+      
+      return normalized;
     });
+    
+    // Log the first few normalized businesses
+    console.log('First 3 normalized businesses:', normalizedBusinesses.slice(0, 3));
     
     res.json(normalizedBusinesses);
   } catch (error) {
@@ -113,17 +130,17 @@ router.get('/search', async (req, res) => {
     
     // Normalize the property names
     const normalizedBusinesses = businesses.map(business => {
-      return {
-        accountNo: business['ACCOUNT NO'],
-        status: business['STATUS'],
-        applicationStatus: business['APPLICATION STATUS'],
-        businessName: business['Name of Business'],
-        ownerName: business['Name of owner'],
-        address: business['Address'],
-        barangay: business['Barangay'],
-        natureOfBusiness: business['Nature of Business']
-      };
-    });
+  return {
+    accountNo: business['ACCOUNT NO'],
+    status: business['STATUS'],
+    applicationStatus: business['APPLICATION STATUS'],
+    businessName: business['Name of Business'],
+    ownerName: business['Name of owner'],
+    address: business['Address'],
+    barangay: business['Barangay'],
+    natureOfBusiness: business['Nature of Business']
+  };
+});
     
     res.json(normalizedBusinesses);
   } catch (error) {

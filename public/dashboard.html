@@ -164,21 +164,23 @@
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-<!-- React DataTable Component -->
-<script src="https://cdn.jsdelivr.net/npm/react-data-table-component@7.5.3/dist/index.umd.js"></script>
+<!-- Material-UI Table - Alternative to ReactDataTable -->
+<script src="https://unpkg.com/@mui/material@5.14.20/umd/material-ui.development.js"></script>
+<script src="https://unpkg.com/@mui/icons-material@5.14.20/umd/icons-material.development.js"></script>
+<script src="https://unpkg.com/@emotion/react@11.11.1/dist/emotion-react.umd.min.js"></script>
+<script src="https://unpkg.com/@emotion/styled@11.11.0/dist/emotion-styled.umd.min.js"></script>
+
+<!-- Expose Material-UI globally -->
 <script>
-    // Make sure the component is properly exposed
     window.addEventListener('load', function() {
-        // Try to find the component in the window object
-        if (window.ReactDataTable) {
-            console.log('ReactDataTable found as window.ReactDataTable');
-        } else if (window['react-data-table-component']) {
-            console.log('ReactDataTable found as window["react-data-table-component"]');
-            window.ReactDataTable = window['react-data-table-component'];
+        // Make Material-UI components available globally
+        if (window.MaterialUI) {
+            console.log('MaterialUI found');
         } else {
-            console.error('ReactDataTable not found in window object');
-            // Log available React-related variables
-            console.log('Available React variables:', Object.keys(window).filter(key => key.toLowerCase().includes('react')));
+            console.error('MaterialUI not found');
+            // Try to find it in other global variables
+            const materialKeys = Object.keys(window).filter(key => key.includes('mui') || key.includes('material'));
+            console.log('Potential Material-UI keys:', materialKeys);
         }
     });
 </script>
