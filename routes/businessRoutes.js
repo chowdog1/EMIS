@@ -10,16 +10,20 @@ establishmentsDB.once('open', () => {
   console.log('✅ Establishments MongoDB connected');
 });
 
-// Define Business Schema
+// Define Business Schema with updated fields
 const businessSchema = new mongoose.Schema({
   "ACCOUNT NO": String,
+  "DATE OF APPLICATION": Date,
+  "OR NO": String,
+  "AMOUNT PAID": Number,
+  "DATE OF PAYMENT": Date,
   "STATUS": String,
   "APPLICATION STATUS": String,
-  "Name of Business": String,
-  "Name of owner": String,
-  "Address": String,
-  "Barangay": String,
-  "Nature of Business": String
+  "NAME OF BUSINESS": String,
+  "NAME OF OWNER": String,
+  "ADDRESS": String,
+  "BARANGAY": String,
+  "NATURE OF BUSINESS": String
 }, { collection: 'business' });
 
 const Business = establishmentsDB.model('Business', businessSchema);
@@ -41,13 +45,17 @@ router.get('/', async (req, res) => {
     const normalizedBusinesses = businesses.map(business => {
       const normalized = {
         accountNo: business['ACCOUNT NO'],
+        dateOfApplication: business['DATE OF APPLICATION'],
+        orNo: business['OR NO'],
+        amountPaid: business['AMOUNT PAID'],
+        dateOfPayment: business['DATE OF PAYMENT'],
         status: business['STATUS'],
         applicationStatus: business['APPLICATION STATUS'],
-        businessName: business['Name of Business'],
-        ownerName: business['Name of owner'],
-        address: business['Address'],
-        barangay: business['Barangay'],
-        natureOfBusiness: business['Nature of Business']
+        businessName: business['NAME OF BUSINESS'],
+        ownerName: business['NAME OF OWNER'],
+        address: business['ADDRESS'],
+        barangay: business['BARANGAY'],
+        natureOfBusiness: business['NATURE OF BUSINESS']
       };
       
       // DEBUG: Log the first normalized business
@@ -83,20 +91,54 @@ router.get('/stats', async (req, res) => {
     const lowRiskCount = await Business.countDocuments({ "STATUS": "LOWRISK" });
     console.log(`High risk: ${highRiskCount}, Low risk: ${lowRiskCount}`);
     
+    // Count businesses with no payments (amount paid is 0, null, or field doesn't exist)
+    const renewalPendingCount = await Business.countDocuments({
+      $or: [
+        { "AMOUNT PAID": { $exists: false } }, // Field doesn't exist
+        { "AMOUNT PAID": null }, // Field exists but is null
+      ]
+    });
+    console.log(`Businesses with no payments: ${renewalPendingCount}`);
+    
+    // Count active businesses (have payment record regardless of amount)
+    const activeBusinessesCount = await Business.countDocuments({
+      "AMOUNT PAID": { $exists: true, $ne: null }
+    });
+    console.log(`Active businesses: ${activeBusinessesCount}`);
+    
+    // Count by application status
+    const renewalCount = await Business.countDocuments({ "APPLICATION STATUS": "RENEWAL" });
+    const newCount = await Business.countDocuments({ "APPLICATION STATUS": "NEW" });
+    console.log(`Application status - Renewal: ${renewalCount}, New: ${newCount}`);
+    
     // Count by barangay
     const barangayStats = await Business.aggregate([
-      { $group: { _id: "$Barangay", count: { $sum: 1 } } },
+      { $group: { _id: "$BARANGAY", count: { $sum: 1 } } },
       { $sort: { count: -1 } }
     ]);
     console.log('Barangay stats:', barangayStats);
     
+    // Calculate total amount paid
+    const totalAmountResult = await Business.aggregate([
+      { $group: { _id: null, totalAmount: { $sum: "$AMOUNT PAID" } } }
+    ]);
+    const totalAmountPaid = totalAmountResult.length > 0 ? totalAmountResult[0].totalAmount : 0;
+    console.log(`Total amount paid: ${totalAmountPaid}`);
+    
     res.json({
       totalBusinesses,
+      activeBusinessesCount,
       statusCounts: {
         HIGHRISK: highRiskCount,
         LOWRISK: lowRiskCount
       },
-      barangayStats
+      renewalPendingCount,
+      applicationStatusCounts: {
+        RENEWAL: renewalCount,
+        NEW: newCount
+      },
+      barangayStats,
+      totalAmountPaid
     });
   } catch (error) {
     console.error('Error fetching business stats:', error);
@@ -117,20 +159,32 @@ router.get('/search', async (req, res) => {
     
     let businesses;
     
-    // If field is specified as accountNo, search only in that field
-    if (field === 'accountNo') {
-      businesses = await Business.find({ "ACCOUNT NO": { $regex: query, $options: 'i' } });
-    } else {
-      // Default: search in multiple fields (original behavior)
-      businesses = await Business.find({
-        $or: [
-          { "Name of Business": { $regex: query, $options: 'i' } },
-          { "Name of owner": { $regex: query, $options: 'i' } },
-          { "Barangay": { $regex: query, $options: 'i' } },
-          { "Nature of Business": { $regex: query, $options: 'i' } },
-          { "Address": { $regex: query, $options: 'i' } }
-        ]
-      });
+    // Search based on the specified field
+    switch (field) {
+      case 'accountNo':
+        businesses = await Business.find({ "ACCOUNT NO": { $regex: query, $options: 'i' } });
+        break;
+      case 'businessName':
+        businesses = await Business.find({ "NAME OF BUSINESS": { $regex: query, $options: 'i' } });
+        break;
+      case 'ownerName':
+        businesses = await Business.find({ "NAME OF OWNER": { $regex: query, $options: 'i' } });
+        break;
+      case 'barangay':
+        businesses = await Business.find({ "BARANGAY": { $regex: query, $options: 'i' } });
+        break;
+      default:
+        // Default: search in multiple fields
+        businesses = await Business.find({
+          $or: [
+            { "ACCOUNT NO": { $regex: query, $options: 'i' } },
+            { "NAME OF BUSINESS": { $regex: query, $options: 'i' } },
+            { "NAME OF OWNER": { $regex: query, $options: 'i' } },
+            { "BARANGAY": { $regex: query, $options: 'i' } },
+            { "NATURE OF BUSINESS": { $regex: query, $options: 'i' } },
+            { "APPLICATION STATUS": { $regex: query, $options: 'i' } }
+          ]
+        });
     }
     
     console.log(`Found ${businesses.length} businesses`);
@@ -139,13 +193,17 @@ router.get('/search', async (req, res) => {
     const normalizedBusinesses = businesses.map(business => {
       return {
         accountNo: business['ACCOUNT NO'],
+        dateOfApplication: business['DATE OF APPLICATION'],
+        orNo: business['OR NO'],
+        amountPaid: business['AMOUNT PAID'],
+        dateOfPayment: business['DATE OF PAYMENT'],
         status: business['STATUS'],
         applicationStatus: business['APPLICATION STATUS'],
-        businessName: business['Name of Business'],
-        ownerName: business['Name of owner'],
-        address: business['Address'],
-        barangay: business['Barangay'],
-        natureOfBusiness: business['Nature of Business']
+        businessName: business['NAME OF BUSINESS'],
+        ownerName: business['NAME OF OWNER'],
+        address: business['ADDRESS'],
+        barangay: business['BARANGAY'],
+        natureOfBusiness: business['NATURE OF BUSINESS']
       };
     });
     
@@ -155,6 +213,5 @@ router.get('/search', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
-
 
 module.exports = router;

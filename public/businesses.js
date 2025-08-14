@@ -243,7 +243,7 @@ function updateBusinessTable(businesses) {
             }, text);
         };
         
-        // Table component with flexible data access
+        // Table component with updated columns (removed OR No and Amount Paid)
         const App = () => {
             return React.createElement(
                 'div',
@@ -278,10 +278,10 @@ function updateBusinessTable(businesses) {
                         businesses.map((business, index) => {
                             // Try both normalized and original field names
                             const accountNo = business['accountNo'] || business['ACCOUNT NO'] || 'N/A';
-                            const businessName = business['businessName'] || business['Name of Business'] || 'N/A';
-                            const ownerName = business['ownerName'] || business['Name of owner'] || 'N/A';
-                            const barangay = business['barangay'] || business['Barangay'] || 'N/A';
-                            const natureOfBusiness = business['natureOfBusiness'] || business['Nature of Business'] || 'N/A';
+                            const businessName = business['businessName'] || business['NAME OF BUSINESS'] || 'N/A';
+                            const ownerName = business['ownerName'] || business['NAME OF OWNER'] || 'N/A';
+                            const barangay = business['barangay'] || business['BARANGAY'] || 'N/A';
+                            const natureOfBusiness = business['natureOfBusiness'] || business['NATURE OF BUSINESS'] || 'N/A';
                             const status = business['status'] || business['STATUS'] || '';
                             const applicationStatus = business['applicationStatus'] || business['APPLICATION STATUS'] || 'N/A';
                             
@@ -322,7 +322,7 @@ function updateBusinessTable(businesses) {
     }
 }
 
-// Fallback function to render a simple HTML table
+// Also update the renderSimpleTable function to include the new columns
 function renderSimpleTable(businesses) {
     const tableRoot = document.getElementById('businessTable');
     
@@ -341,6 +341,7 @@ function renderSimpleTable(businesses) {
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
     
+    // Updated headers without OR No and Amount Paid
     const headers = ['Account No', 'Business Name', 'Owner', 'Barangay', 'Nature of Business', 'Status', 'Application Status'];
     headers.forEach(headerText => {
         const th = document.createElement('th');
@@ -372,25 +373,25 @@ function renderSimpleTable(businesses) {
         
         // Business Name
         const nameCell = document.createElement('td');
-        nameCell.textContent = business['businessName'] || business['Name of Business'] || 'N/A';
+        nameCell.textContent = business['businessName'] || business['NAME OF BUSINESS'] || 'N/A';
         nameCell.style.padding = '12px 15px';
         row.appendChild(nameCell);
         
         // Owner
         const ownerCell = document.createElement('td');
-        ownerCell.textContent = business['ownerName'] || business['Name of owner'] || 'N/A';
+        ownerCell.textContent = business['ownerName'] || business['NAME OF OWNER'] || 'N/A';
         ownerCell.style.padding = '12px 15px';
         row.appendChild(ownerCell);
         
         // Barangay
         const barangayCell = document.createElement('td');
-        barangayCell.textContent = business['barangay'] || business['Barangay'] || 'N/A';
+        barangayCell.textContent = business['barangay'] || business['BARANGAY'] || 'N/A';
         barangayCell.style.padding = '12px 15px';
         row.appendChild(barangayCell);
         
         // Nature of Business
         const natureCell = document.createElement('td');
-        natureCell.textContent = business['natureOfBusiness'] || business['Nature of Business'] || 'N/A';
+        natureCell.textContent = business['natureOfBusiness'] || business['NATURE OF BUSINESS'] || 'N/A';
         natureCell.style.padding = '12px 15px';
         row.appendChild(natureCell);
         

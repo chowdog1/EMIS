@@ -148,6 +148,15 @@ function updateDashboardCards(data) {
     } else {
         console.error('Total businesses element not found');
     }
+
+    // Update active businesses
+    const activeBusinessesElement = document.getElementById('activeBusinessesCount');
+    if (activeBusinessesElement) {
+        activeBusinessesElement.textContent = data.activeBusinessesCount || 0;
+        console.log('Set active businesses to:', data.activeBusinessesCount || 0);
+    } else {
+        console.error('Active businesses element not found');
+    }
     
     // Update high risk count
     const highRiskElement = document.getElementById('highRiskCount');
@@ -167,13 +176,11 @@ function updateDashboardCards(data) {
         console.error('Low risk element not found');
     }
     
-    // Update renewal count
+    // Update renewal pending count
     const renewalElement = document.getElementById('renewalCount');
     if (renewalElement) {
-        // Calculate renewal count based on APPLICATION STATUS
-        const renewalCount = data.totalBusinesses - (data.statusCounts.HIGHRISK || 0) - (data.statusCounts.LOWRISK || 0);
-        renewalElement.textContent = renewalCount;
-        console.log('Set renewal count to:', renewalCount);
+        renewalElement.textContent = data.renewalPendingCount || 0;
+        console.log('Set renewal pending count to:', data.renewalPendingCount || 0);
     } else {
         console.error('Renewal element not found');
     }
