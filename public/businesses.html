@@ -149,6 +149,156 @@
                 </div>
             </div>
 
+            <!-- Business Add Modal -->
+            <div id="businessAddModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="modal-title">Add New Business</h2>
+                        <span class="modal-close">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <form id="businessAddForm" class="form-grid">
+                            <div class="form-group">
+                                <label for="addAccountNo">Account No:</label>
+                                <input type="text" id="addAccountNo" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="addBusinessName">Business Name:</label>
+                                <input type="text" id="addBusinessName" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="addOwnerName">Owner Name:</label>
+                                <input type="text" id="addOwnerName" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="addAddress">Address:</label>
+                                <input type="text" id="addAddress" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="addBarangay">Barangay:</label>
+                                <input type="text" id="addBarangay" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="addNatureOfBusiness">Nature of Business:</label>
+                                <input type="text" id="addNatureOfBusiness" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="addStatus">Status:</label>
+                                <select id="addStatus" class="form-control" required>
+                                    <option value="LOWRISK">Low Risk</option>
+                                    <option value="HIGHRISK">High Risk</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="addApplicationStatus">Application Status:</label>
+                                <select id="addApplicationStatus" class="form-control" required>
+                                    <option value="NEW">New</option>
+                                    <option value="RENEWAL">Renewal</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="addDateOfApplication">Date of Application:</label>
+                                <input type="date" id="addDateOfApplication" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="addOrNo">OR No:</label>
+                                <input type="text" id="addOrNo" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="addAmountPaid">Amount Paid:</label>
+                                <input type="number" id="addAmountPaid" class="form-control" min="0" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label for="addDateOfPayment">Date of Payment:</label>
+                                <input type="date" id="addDateOfPayment" class="form-control">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" id="addBusinessBtn">
+                            <i class="fas fa-plus"></i>
+                            Add Business
+                        </button>
+                        <button type="button" class="btn btn-secondary modal-close-btn">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Business Edit Modal -->
+            <div id="businessEditModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="modal-title">Edit Business Details</h2>
+                        <span class="modal-close">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <form id="businessEditForm">
+                            <div class="form-group">
+                                <label for="editAccountNo">Account No:</label>
+                                <input type="text" id="editAccountNo" class="form-control" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="editBusinessName">Business Name:</label>
+                                <input type="text" id="editBusinessName" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editOwnerName">Owner Name:</label>
+                                <input type="text" id="editOwnerName" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editAddress">Address:</label>
+                                <input type="text" id="editAddress" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editBarangay">Barangay:</label>
+                                <input type="text" id="editBarangay" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editNatureOfBusiness">Nature of Business:</label>
+                                <input type="text" id="editNatureOfBusiness" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editStatus">Status:</label>
+                                <select id="editStatus" class="form-control" required>
+                                    <option value="LOWRISK">Low Risk</option>
+                                    <option value="HIGHRISK">High Risk</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="editApplicationStatus">Application Status:</label>
+                                <select id="editApplicationStatus" class="form-control" required>
+                                    <option value="NEW">New</option>
+                                    <option value="RENEWAL">Renewal</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="editDateOfApplication">Date of Application:</label>
+                                <input type="date" id="editDateOfApplication" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editOrNo">OR No:</label>
+                                <input type="text" id="editOrNo" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="editAmountPaid">Amount Paid:</label>
+                                <input type="number" id="editAmountPaid" class="form-control" min="0" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label for="editDateOfPayment">Date of Payment:</label>
+                                <input type="date" id="editDateOfPayment" class="form-control">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" id="saveBusinessBtn">
+                            <i class="fas fa-save"></i>
+                            Save Changes
+                        </button>
+                        <button type="button" class="btn btn-secondary modal-close-btn">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Search and Table Section -->
             <div class="table-section">
                 <div class="table-header">
@@ -164,7 +314,7 @@
                             <i class="fas fa-sync-alt"></i>
                             Refresh
                         </button>
-                        <button class="btn btn-primary">
+                        <button class="btn btn-primary" id="headerAddBusinessBtn">
                             <i class="fas fa-plus"></i>
                             Add Business
                         </button>

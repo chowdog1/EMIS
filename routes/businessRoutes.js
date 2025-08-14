@@ -307,4 +307,140 @@ router.get('/account/:accountNo', async (req, res) => {
   }
 });
 
+// Update business by account number
+router.put('/account/:accountNo', async (req, res) => {
+  try {
+    if (!Business) {
+      return res.status(500).json({ message: 'Database connection not available' });
+    }
+    
+    const { accountNo } = req.params;
+    console.log(`Updating business with account number: "${accountNo}"`);
+    
+    // Check if database connection is ready
+    if (establishmentsDB.readyState !== 1) {
+      console.error('Database connection not ready. State:', establishmentsDB.readyState);
+      return res.status(500).json({ message: 'Database connection not ready' });
+    }
+    
+    // Find the business
+    let business = await Business.findOne({ "ACCOUNT NO": accountNo });
+    
+    if (!business) {
+      console.log(`No business found with account number: "${accountNo}"`);
+      return res.status(404).json({ message: 'Business not found' });
+    }
+    
+    // Update business with new data
+    const updateData = {
+      "NAME OF BUSINESS": req.body.businessName,
+      "NAME OF OWNER": req.body.ownerName,
+      "ADDRESS": req.body.address,
+      "BARANGAY": req.body.barangay,
+      "NATURE OF BUSINESS": req.body.natureOfBusiness,
+      "STATUS": req.body.status,
+      "APPLICATION STATUS": req.body.applicationStatus,
+      "DATE OF APPLICATION": req.body.dateOfApplication ? new Date(req.body.dateOfApplication) : null,
+      "OR NO": req.body.orNo,
+      "AMOUNT PAID": req.body.amountPaid,
+      "DATE OF PAYMENT": req.body.dateOfPayment ? new Date(req.body.dateOfPayment) : null
+    };
+    
+    // Save the updated business
+    business = await Business.findOneAndUpdate(
+      { "ACCOUNT NO": accountNo },
+      { $set: updateData },
+      { new: true }
+    );
+    
+    console.log('Business updated:', business);
+    
+    // Normalize the property names for response
+    const normalizedBusiness = {
+        accountNo: business['ACCOUNT NO'],
+        dateOfApplication: business['DATE OF APPLICATION'],
+        orNo: business['OR NO'],
+        amountPaid: business['AMOUNT PAID'],
+        dateOfPayment: business['DATE OF PAYMENT'],
+        status: business['STATUS'],
+        applicationStatus: business['APPLICATION STATUS'],
+        businessName: business['NAME OF BUSINESS'],
+        ownerName: business['NAME OF OWNER'],
+        address: business['ADDRESS'],
+        barangay: business['BARANGAY'],
+        natureOfBusiness: business['NATURE OF BUSINESS']
+    };
+    
+    res.json(normalizedBusiness);
+  } catch (error) {
+    console.error('Error updating business by account number:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Add a new business
+router.post('/', async (req, res) => {
+  try {
+    if (!Business) {
+      return res.status(500).json({ message: 'Database connection not available' });
+    }
+    
+    console.log('Adding new business');
+    
+    // Check if database connection is ready
+    if (establishmentsDB.readyState !== 1) {
+      console.error('Database connection not ready. State:', establishmentsDB.readyState);
+      return res.status(500).json({ message: 'Database connection not ready' });
+    }
+    
+    // Check if account number already exists
+    const existingBusiness = await Business.findOne({ "ACCOUNT NO": req.body.accountNo });
+    if (existingBusiness) {
+      return res.status(400).json({ message: 'Account number already exists' });
+    }
+    
+    // Create new business
+    const newBusiness = new Business({
+      "ACCOUNT NO": req.body.accountNo,
+      "NAME OF BUSINESS": req.body.businessName,
+      "NAME OF OWNER": req.body.ownerName,
+      "ADDRESS": req.body.address,
+      "BARANGAY": req.body.barangay,
+      "NATURE OF BUSINESS": req.body.natureOfBusiness,
+      "STATUS": req.body.status,
+      "APPLICATION STATUS": req.body.applicationStatus,
+      "DATE OF APPLICATION": req.body.dateOfApplication ? new Date(req.body.dateOfApplication) : null,
+      "OR NO": req.body.orNo,
+      "AMOUNT PAID": req.body.amountPaid,
+      "DATE OF PAYMENT": req.body.dateOfPayment ? new Date(req.body.dateOfPayment) : null
+    });
+    
+    // Save the new business
+    const savedBusiness = await newBusiness.save();
+    
+    console.log('Business added:', savedBusiness);
+    
+    // Normalize the property names for response
+    const normalizedBusiness = {
+        accountNo: savedBusiness['ACCOUNT NO'],
+        dateOfApplication: savedBusiness['DATE OF APPLICATION'],
+        orNo: savedBusiness['OR NO'],
+        amountPaid: savedBusiness['AMOUNT PAID'],
+        dateOfPayment: savedBusiness['DATE OF PAYMENT'],
+        status: savedBusiness['STATUS'],
+        applicationStatus: savedBusiness['APPLICATION STATUS'],
+        businessName: savedBusiness['NAME OF BUSINESS'],
+        ownerName: savedBusiness['NAME OF OWNER'],
+        address: savedBusiness['ADDRESS'],
+        barangay: savedBusiness['BARANGAY'],
+        natureOfBusiness: savedBusiness['NATURE OF BUSINESS']
+    };
+    
+    res.status(201).json(normalizedBusiness);
+  } catch (error) {
+    console.error('Error adding business:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

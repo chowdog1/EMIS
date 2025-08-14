@@ -1,5 +1,11 @@
 // businesses.js
 
+const logoUrls = [
+    '/bagongpilipinas.png',
+    '/makabagong%20san%20juan%20Logo.png',
+    '/cenro%20logo.png'
+];
+
 // Pagination variables - Global scope
 let currentPage = 1;
 let pageSize = 10;
@@ -9,6 +15,9 @@ let allBusinesses = []; // Store all businesses for client-side pagination
 // Wait for DOM to be fully loaded
 window.addEventListener('load', function() {
     console.log('Businesses page loaded, initializing');
+
+    //Preload logos
+    preloadLogos();
     
     // Check if user is logged in
     checkAuthentication();
@@ -133,6 +142,9 @@ function initializeBusinessTable() {
     
     // Load initial data
     loadBusinessData();
+
+    // Setup add business button
+    setupAddBusinessButton();
 }
 
 // Function to load business data
@@ -521,21 +533,49 @@ async function showBusinessDetails(accountNo) {
 
 // Function to setup modal event listeners
 function setupModalEventListeners() {
-    // Get modal elements
-    const modal = document.getElementById('businessDetailsModal');
-    const closeBtns = document.querySelectorAll('.modal-close, .modal-close-btn');
+    // Get business details modal elements
+    const detailsModal = document.getElementById('businessDetailsModal');
+    const detailsCloseBtns = detailsModal.querySelectorAll('.modal-close, .modal-close-btn');
     
-    // Add click event to close buttons
-    closeBtns.forEach(btn => {
+    // Add click event to close buttons for details modal
+    detailsCloseBtns.forEach(btn => {
         btn.addEventListener('click', function() {
-            modal.style.display = 'none';
+            detailsModal.style.display = 'none';
         });
     });
     
-    // Close modal when clicking outside of it
+    // Get business edit modal elements
+    const editModal = document.getElementById('businessEditModal');
+    const editCloseBtns = editModal.querySelectorAll('.modal-close, .modal-close-btn');
+    
+    // Add click event to close buttons for edit modal
+    editCloseBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            editModal.style.display = 'none';
+        });
+    });
+    
+    // Get business add modal elements
+    const addModal = document.getElementById('businessAddModal');
+    const addCloseBtns = addModal.querySelectorAll('.modal-close, .modal-close-btn');
+    
+    // Add click event to close buttons for add modal
+    addCloseBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            addModal.style.display = 'none';
+        });
+    });
+    
+    // Close modals when clicking outside of them
     window.addEventListener('click', function(event) {
-        if (event.target === modal) {
-            modal.style.display = 'none';
+        if (event.target === detailsModal) {
+            detailsModal.style.display = 'none';
+        }
+        if (event.target === editModal) {
+            editModal.style.display = 'none';
+        }
+        if (event.target === addModal) {
+            addModal.style.display = 'none';
         }
     });
     
@@ -550,6 +590,28 @@ function setupModalEventListeners() {
     if (modifyBtn) {
         modifyBtn.addEventListener('click', handleModify);
     }
+    
+    // Add click event to Save Changes button
+    const saveBusinessBtn = document.getElementById('saveBusinessBtn');
+    if (saveBusinessBtn) {
+        saveBusinessBtn.addEventListener('click', saveBusinessChanges);
+    }
+    
+    // Add click event to Add Business button in the modal
+    const modalAddBusinessBtn = document.querySelector('#businessAddModal #addBusinessBtn');
+    if (modalAddBusinessBtn) {
+        modalAddBusinessBtn.addEventListener('click', addNewBusiness);
+    }
+    
+    console.log('Modal event listeners setup complete');
+}
+
+// Preload logos when the page loads
+function preloadLogos() {
+    logoUrls.forEach(url => {
+        const img = new Image();
+        img.src = url;
+    });
 }
 
 // Function to print AEC
@@ -557,55 +619,216 @@ function printAEC() {
     // Get the business details from the modal
     const accountNo = document.getElementById('modalAccountNo').textContent;
     const businessName = document.getElementById('modalBusinessName').textContent;
-    const ownerName = document.getElementById('modalOwnerName').textContent;
     const address = document.getElementById('modalAddress').textContent;
-    const barangay = document.getElementById('modalBarangay').textContent;
-    const natureOfBusiness = document.getElementById('modalNatureOfBusiness').textContent;
     const status = document.getElementById('modalStatus').textContent;
-    const applicationStatus = document.getElementById('modalApplicationStatus').textContent;
-    const dateOfApplication = document.getElementById('modalDateOfApplication').textContent;
     const orNo = document.getElementById('modalOrNo').textContent;
     const amountPaid = document.getElementById('modalAmountPaid').textContent;
     const dateOfPayment = document.getElementById('modalDateOfPayment').textContent;
+    
+    // Get current year and date
+    const currentYear = new Date().getFullYear();
+    const currentDate = new Date().toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    });
+    
+    // Get generated date and time
+    const generatedDateTime = new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString();
     
     // Create a hidden div for printing
     const printContent = document.createElement('div');
     printContent.className = 'print-area';
     
-    // Create the print content
+    // Create the print content positioned at top-left corner
     printContent.innerHTML = `
-        <div style="padding: 20px; font-family: Arial, sans-serif;">
-            <div style="text-align: center; margin-bottom: 30px;">
-                <h1 style="margin-bottom: 5px;">Application for Environmental Compliance (AEC)</h1>
-                <p style="color: #666;">City Environmental and Natural Resources Office</p>
-                <p style="color: #666;">San Juan City</p>
+        <style>
+            @media print {
+                body {
+                    margin: 0;
+                    padding: 0;
+                    font-family: Verdana, sans-serif;
+                }
+                .print-container {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 10cm;
+                    height: 12cm;
+                    padding: 0.4cm;
+                    box-sizing: border-box;
+                    font-family: Verdana, sans-serif;
+                    page-break-after: always;
+                    border: 1px solid green;
+                    display: flex;
+                    flex-direction: column;
+                }
+                .logos {
+                    display: flex;
+                    justify-content: center;
+                    gap: 0.3cm;
+                    margin-bottom: 0.3cm;
+                }
+                .logos img {
+                    height: 1.2cm;
+                    width: 1.2cm;
+                    object-fit: contain;
+                }
+                .header-text {
+                    text-align: center;
+                    font-size: 6pt;
+                    margin-bottom: 0.1cm;
+                    line-height: 1.1;
+                    font-family: Verdana, sans-serif;
+                }
+                .certificate-title {
+                    background-color: black;
+                    color: white;
+                    text-align: center;
+                    font-weight: bold;
+                    padding: 0.15cm;
+                    margin-bottom: 0.3cm;
+                    font-size: 10pt;
+                    font-family: Verdana, sans-serif;
+                }
+                .details-row {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 0.3cm;
+                }
+                .details-column {
+                    width: 48%;
+                }
+                .detail-label {
+                    font-size: 6pt;
+                    margin-bottom: 0.1cm;
+                    font-family: Verdana, sans-serif;
+                }
+                .certify-text {
+                    text-align: center;
+                    font-size: 6pt;
+                    margin-bottom: 0.1cm;
+                    font-family: Verdana, sans-serif;
+                }
+                .business-name {
+                    text-align: center;
+                    font-weight: bold;
+                    font-size: 10pt;
+                    margin-bottom: 0.1cm;
+                    font-family: Verdana, sans-serif;
+                }
+                .business-info {
+                    text-align: left;
+                    font-size: 6pt;
+                    margin-bottom: 0.3cm;
+                    font-family: Verdana, sans-serif;
+                }
+                .info-box {
+                    border: 1px solid #000;
+                    padding: 0.2cm;
+                    margin-bottom: 0.8cm;
+                    font-size: 6pt;
+                    font-family: Verdana, sans-serif;
+                    line-height: 1.3;
+                }
+                .signature-section {
+                    margin-bottom: 0.5cm;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    margin-top: 0.5cm;
+                }
+                .signature-line {
+                    width: 5cm;
+                    border-bottom: 1px solid #000;
+                    margin-bottom: 0.2cm;
+                    font-family: Verdana, sans-serif;
+                }
+                .secretariat-text {
+                    text-align: center;
+                    font-size: 6pt;
+                    margin-top: 0.1cm;
+                    font-family: Verdana, sans-serif;
+                }
+                .footer {
+                    margin-top: auto;
+                    padding-top: 0.3cm;
+                }
+                .footer-row {
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 6pt;
+                    font-family: Verdana, sans-serif;
+                }
+                .footer-item {
+                    width: 30%;
+                }
+                .generated-datetime {
+                    font-size: 4pt;
+                    font-family: Verdana, sans-serif;
+                    margin-top: 0.1cm;
+                }
+            }
+        </style>
+        
+        <div class="print-container">
+            <!-- Logos -->
+            <div class="logos">
+                <img src="${logoUrls[0]}" alt="Bagong Pilipinas">
+                <img src="${logoUrls[1]}" alt="San Juan Logo">
+                <img src="${logoUrls[2]}" alt="CENRO Logo">
             </div>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
-                <div>
-                    <h3 style="margin-bottom: 10px; color: var(--primary-green);">Business Information</h3>
-                    <p><strong>Account No:</strong> ${accountNo}</p>
-                    <p><strong>Business Name:</strong> ${businessName}</p>
-                    <p><strong>Owner Name:</strong> ${ownerName}</p>
-                    <p><strong>Address:</strong> ${address}</p>
-                    <p><strong>Barangay:</strong> ${barangay}</p>
-                    <p><strong>Nature of Business:</strong> ${natureOfBusiness}</p>
+            <!-- Header Text -->
+            <div class="header-text">CITY GOVERNMENT OF SAN JUAN</div>
+            <div class="header-text">CITY ENVIRONMENT AND NATURAL RESOURCES OFFICE</div>
+            
+            <!-- Certificate Title -->
+            <div class="certificate-title">ASSESSMENT CERTIFICATE</div>
+            
+            <!-- Details Row -->
+            <div class="details-row">
+                <div class="details-column">
+                    <div class="detail-label">Account No.: ${accountNo}</div>
+                    <div class="detail-label">Status: 
+                        <span style="color: ${status === 'HIGHRISK' ? 'red' : 'green'}; font-weight: bold;">
+                            ${status === 'HIGHRISK' ? 'HIGH RISK' : 'LOW RISK'}
+                        </span>
+                    </div>
                 </div>
-                
-                <div>
-                    <h3 style="margin-bottom: 10px; color: var(--primary-green);">Application Details</h3>
-                    <p><strong>Status:</strong> ${status}</p>
-                    <p><strong>Application Status:</strong> ${applicationStatus}</p>
-                    <p><strong>Date of Application:</strong> ${dateOfApplication}</p>
-                    <p><strong>OR No:</strong> ${orNo}</p>
-                    <p><strong>Amount Paid:</strong> ${amountPaid}</p>
-                    <p><strong>Date of Payment:</strong> ${dateOfPayment}</p>
+                <div class="details-column" style="text-align: right;">
+                    <div class="detail-label">Date of Application: ${currentDate}</div>
                 </div>
             </div>
             
-            <div style="border-top: 1px solid #ddd; padding-top: 20px; text-align: center; font-size: 12px; color: #666;">
-                <p>This document serves as proof of assessment.</p>
-                <p>Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+            <!-- Certification Text -->
+            <div class="certify-text">This is to certify that</div>
+            <div class="business-name">${businessName}</div>
+            <div class="business-info">located at ${address}, has paid environmental protection and preservation fee of ${currentYear}</div>
+            
+            <!-- Info Box -->
+            <div class="info-box">
+                Valid for 1 year<br>
+                Subject for inspection in ${currentYear}<br>
+                Subject to annual renewal and payment of environmental compliance fee
+            </div>
+            
+            <!-- Signature Section -->
+            <div class="signature-section">
+                <div class="signature-line"></div>
+                <div class="secretariat-text">Secretariat</div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="footer">
+                <div class="footer-row">
+                    <div class="footer-item">
+                        OR No.: ${orNo}
+                        <div class="generated-datetime">Generated: ${generatedDateTime}</div>
+                    </div>
+                    <div class="footer-item" style="text-align: center;">Amount Paid: ${amountPaid}</div>
+                    <div class="footer-item" style="text-align: right;">Date: ${dateOfPayment}</div>
+                </div>
             </div>
         </div>
     `;
@@ -613,11 +836,292 @@ function printAEC() {
     // Add to body
     document.body.appendChild(printContent);
     
-    // Print
-    window.print();
+    // Wait for images to load before printing
+    const images = printContent.querySelectorAll('img');
+    let loadedImages = 0;
     
-    // Remove the print content
-    document.body.removeChild(printContent);
+    const onImageLoad = () => {
+        loadedImages++;
+        if (loadedImages === images.length) {
+            // All images loaded, now print
+            window.print();
+            // Remove the print content after printing
+            setTimeout(() => {
+                document.body.removeChild(printContent);
+            }, 100);
+        }
+    };
+    
+    // If images are already cached, they might not trigger load event
+    const checkIfLoaded = () => {
+        let allLoaded = true;
+        images.forEach(img => {
+            if (!img.complete) {
+                allLoaded = false;
+            }
+        });
+        
+        if (allLoaded) {
+            onImageLoad();
+        }
+    };
+    
+    // Add load event listeners to images
+    images.forEach(img => {
+        if (img.complete) {
+            onImageLoad();
+        } else {
+            img.addEventListener('load', onImageLoad);
+            img.addEventListener('error', onImageLoad); // Continue even if an image fails to load
+        }
+    });
+    
+    // Check if images are already loaded (cached)
+    checkIfLoaded();
+}
+
+// Function to setup add business button
+function setupAddBusinessButton() {
+    const addBusinessBtn = document.getElementById('headerAddBusinessBtn');
+    if (addBusinessBtn) {
+        addBusinessBtn.addEventListener('click', handleAddBusiness);
+        console.log('Add Business button setup complete');
+    } else {
+        console.error('Add Business button not found');
+    }
+}
+
+// Function to handle add business button click
+function handleAddBusiness() {
+    console.log('Add Business button clicked');
+    
+    // Clear the form
+    document.getElementById('businessAddForm').reset();
+    
+    // Set today's date as default for date of application
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('addDateOfApplication').value = today;
+    
+    // Show the add modal
+    document.getElementById('businessAddModal').style.display = 'block';
+}
+
+// Function to add a new business (with browser warning popup)
+async function addNewBusiness() {
+    try {
+        // Get form data
+        const businessData = {
+            accountNo: document.getElementById('addAccountNo').value.trim(),
+            businessName: document.getElementById('addBusinessName').value.trim(),
+            ownerName: document.getElementById('addOwnerName').value.trim(),
+            address: document.getElementById('addAddress').value.trim(),
+            barangay: document.getElementById('addBarangay').value.trim(),
+            natureOfBusiness: document.getElementById('addNatureOfBusiness').value.trim(),
+            status: document.getElementById('addStatus').value,
+            applicationStatus: document.getElementById('addApplicationStatus').value,
+            dateOfApplication: document.getElementById('addDateOfApplication').value,
+            orNo: document.getElementById('addOrNo').value.trim() || null,
+            amountPaid: parseFloat(document.getElementById('addAmountPaid').value) || 0,
+            dateOfPayment: document.getElementById('addDateOfPayment').value || null
+        };
+
+        // Validate required fields
+        const requiredFields = [
+            { id: 'addAccountNo', name: 'Account No' },
+            { id: 'addBusinessName', name: 'Business Name' },
+            { id: 'addOwnerName', name: 'Owner Name' },
+            { id: 'addAddress', name: 'Address' },
+            { id: 'addBarangay', name: 'Barangay' },
+            { id: 'addNatureOfBusiness', name: 'Nature of Business' },
+            { id: 'addStatus', name: 'Status' },
+            { id: 'addApplicationStatus', name: 'Application Status' },
+            { id: 'addDateOfApplication', name: 'Date of Application' }
+        ];
+
+        // Check if all required fields are filled
+        for (const field of requiredFields) {
+            const element = document.getElementById(field.id);
+            const value = element.value.trim();
+            
+            if (!value) {
+                element.classList.add('is-invalid');
+                
+                // Add error message if it doesn't exist
+                let errorElement = element.nextElementSibling;
+                if (!errorElement || !errorElement.classList.contains('invalid-feedback')) {
+                    errorElement = document.createElement('div');
+                    errorElement.className = 'invalid-feedback';
+                    errorElement.textContent = `${field.name} is required`;
+                    element.parentNode.insertBefore(errorElement, element.nextSibling);
+                }
+                
+                // Focus on the first invalid field
+                element.focus();
+                return;
+            } else {
+                element.classList.remove('is-invalid');
+                // Remove error message if it exists
+                const errorElement = element.nextElementSibling;
+                if (errorElement && errorElement.classList.contains('invalid-feedback')) {
+                    errorElement.remove();
+                }
+            }
+        }
+
+        // Validate amount paid is a positive number if provided
+        const amountPaid = document.getElementById('addAmountPaid').value;
+        if (amountPaid && (isNaN(amountPaid) || parseFloat(amountPaid) < 0)) {
+            const amountField = document.getElementById('addAmountPaid');
+            amountField.classList.add('is-invalid');
+            
+            let errorElement = amountField.nextElementSibling;
+            if (!errorElement || !errorElement.classList.contains('invalid-feedback')) {
+                errorElement = document.createElement('div');
+                errorElement.className = 'invalid-feedback';
+                errorElement.textContent = 'Amount Paid must be a positive number';
+                amountField.parentNode.insertBefore(errorElement, amountField.nextSibling);
+            }
+            
+            amountField.focus();
+            return;
+        }
+
+        // Check if account number already exists
+        console.log('Checking if account number already exists:', businessData.accountNo);
+        const accountCheckResponse = await fetch(`/api/business/account/${encodeURIComponent(businessData.accountNo)}`);
+        if (accountCheckResponse.ok) {
+            // Account number already exists
+            const accountField = document.getElementById('addAccountNo');
+            accountField.classList.add('is-invalid');
+            
+            let errorElement = accountField.nextElementSibling;
+            if (!errorElement || !errorElement.classList.contains('invalid-feedback')) {
+                errorElement = document.createElement('div');
+                errorElement.className = 'invalid-feedback';
+                errorElement.textContent = 'Account number already exists';
+                accountField.parentNode.insertBefore(errorElement, accountField.nextSibling);
+            }
+            
+            accountField.focus();
+            return;
+        }
+
+        // Show browser warning popup
+        const isConfirmed = window.confirm("Are you sure the data that are filled is correct?");
+        
+        // If user clicked Cancel, return without adding
+        if (!isConfirmed) {
+            return;
+        }
+
+        // Show loading state
+        const addBtn = document.getElementById('addBusinessBtn');
+        const originalText = addBtn.innerHTML;
+        addBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+        addBtn.disabled = true;
+
+        // Send create request to server
+        console.log('Sending request to server...');
+        const response = await fetch('/api/business', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(businessData)
+        });
+
+        // Restore button state
+        addBtn.innerHTML = originalText;
+        addBtn.disabled = false;
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to add business');
+        }
+
+        // Close the add modal
+        document.getElementById('businessAddModal').style.display = 'none';
+
+        // Show success message
+        showSuccessMessage('Business added successfully!');
+
+        // Refresh the business table
+        loadBusinessData();
+
+    } catch (error) {
+        console.error('Error adding business:', error);
+        showErrorMessage(`Failed to add business: ${error.message}`);
+    }
+}
+
+// Function to show success message
+function showSuccessMessage(message) {
+    // Create success alert element
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-success';
+    alertDiv.style.position = 'fixed';
+    alertDiv.style.top = '20px';
+    alertDiv.style.right = '20px';
+    alertDiv.style.padding = '15px 20px';
+    alertDiv.style.backgroundColor = 'var(--success)';
+    alertDiv.style.color = 'white';
+    alertDiv.style.borderRadius = 'var(--border-radius-md)';
+    alertDiv.style.boxShadow = 'var(--shadow-lg)';
+    alertDiv.style.zIndex = '10001';
+    alertDiv.style.display = 'flex';
+    alertDiv.style.alignItems = 'center';
+    alertDiv.style.gap = '10px';
+    alertDiv.innerHTML = `
+        <i class="fas fa-check-circle"></i>
+        <span>${message}</span>
+    `;
+    
+    // Add to body
+    document.body.appendChild(alertDiv);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        alertDiv.style.opacity = '0';
+        alertDiv.style.transition = 'opacity 0.5s';
+        setTimeout(() => {
+            document.body.removeChild(alertDiv);
+        }, 500);
+    }, 3000);
+}
+
+// Function to show error message
+function showErrorMessage(message) {
+    // Create error alert element
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-danger';
+    alertDiv.style.position = 'fixed';
+    alertDiv.style.top = '20px';
+    alertDiv.style.right = '20px';
+    alertDiv.style.padding = '15px 20px';
+    alertDiv.style.backgroundColor = 'var(--danger)';
+    alertDiv.style.color = 'white';
+    alertDiv.style.borderRadius = 'var(--border-radius-md)';
+    alertDiv.style.boxShadow = 'var(--shadow-lg)';
+    alertDiv.style.zIndex = '10001';
+    alertDiv.style.display = 'flex';
+    alertDiv.style.alignItems = 'center';
+    alertDiv.style.gap = '10px';
+    alertDiv.innerHTML = `
+        <i class="fas fa-exclamation-circle"></i>
+        <span>${message}</span>
+    `;
+    
+    // Add to body
+    document.body.appendChild(alertDiv);
+    
+    // Remove after 5 seconds
+    setTimeout(() => {
+        alertDiv.style.opacity = '0';
+        alertDiv.style.transition = 'opacity 0.5s';
+        setTimeout(() => {
+            document.body.removeChild(alertDiv);
+        }, 500);
+    }, 5000);
 }
 
 // Function to handle modify button click
@@ -636,26 +1140,81 @@ function handleModify() {
     const amountPaid = document.getElementById('modalAmountPaid').textContent;
     const dateOfPayment = document.getElementById('modalDateOfPayment').textContent;
     
-    // Create a confirmation message
-    const confirmMessage = `Are you sure you want to modify the details for:\n\n` +
-        `Account No: ${accountNo}\n` +
-        `Business Name: ${businessName}\n\n` +
-        `This will open a form to edit the business details.`;
+    // Close the details modal
+    document.getElementById('businessDetailsModal').style.display = 'none';
     
-    // Show confirmation dialog
-    if (confirm(confirmMessage)) {
-        // Close the modal
-        document.getElementById('businessDetailsModal').style.display = 'none';
+    // Populate the edit form with current data
+    document.getElementById('editAccountNo').value = accountNo;
+    document.getElementById('editBusinessName').value = businessName;
+    document.getElementById('editOwnerName').value = ownerName;
+    document.getElementById('editAddress').value = address;
+    document.getElementById('editBarangay').value = barangay;
+    document.getElementById('editNatureOfBusiness').value = natureOfBusiness;
+    document.getElementById('editStatus').value = status;
+    document.getElementById('editApplicationStatus').value = applicationStatus;
+    
+    // Format dates for input fields
+    if (dateOfApplication && dateOfApplication !== 'N/A') {
+        const appDate = new Date(dateOfApplication);
+        document.getElementById('editDateOfApplication').value = appDate.toISOString().split('T')[0];
+    }
+    
+    document.getElementById('editOrNo').value = orNo;
+    document.getElementById('editAmountPaid').value = amountPaid;
+    
+    if (dateOfPayment && dateOfPayment !== 'N/A') {
+        const payDate = new Date(dateOfPayment);
+        document.getElementById('editDateOfPayment').value = payDate.toISOString().split('T')[0];
+    }
+    
+    // Show the edit modal
+    document.getElementById('businessEditModal').style.display = 'block';
+}
+
+// Function to save business changes
+async function saveBusinessChanges() {
+    try {
+        // Get form data
+        const accountNo = document.getElementById('editAccountNo').value;
+        const businessData = {
+            businessName: document.getElementById('editBusinessName').value,
+            ownerName: document.getElementById('editOwnerName').value,
+            address: document.getElementById('editAddress').value,
+            barangay: document.getElementById('editBarangay').value,
+            natureOfBusiness: document.getElementById('editNatureOfBusiness').value,
+            status: document.getElementById('editStatus').value,
+            applicationStatus: document.getElementById('editApplicationStatus').value,
+            dateOfApplication: document.getElementById('editDateOfApplication').value,
+            orNo: document.getElementById('editOrNo').value,
+            amountPaid: parseFloat(document.getElementById('editAmountPaid').value) || 0,
+            dateOfPayment: document.getElementById('editDateOfPayment').value
+        };
         
-        // Show a message that the modify feature is under development
-        alert('Modify feature is under development. This will open a form to edit business details in a future update.');
+        // Send update request to server
+        const response = await fetch(`/api/business/account/${encodeURIComponent(accountNo)}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(businessData)
+        });
         
-        // TODO: Implement actual modify functionality
-        // This would typically involve:
-        // 1. Creating an edit form
-        // 2. Pre-populating it with current data
-        // 3. Sending updated data to the backend
-        // 4. Refreshing the table
+        if (!response.ok) {
+            throw new Error('Failed to update business details');
+        }
+        
+        // Close the edit modal
+        document.getElementById('businessEditModal').style.display = 'none';
+        
+        // Show success message
+        alert('Business details updated successfully!');
+        
+        // Refresh the business table
+        loadBusinessData();
+        
+    } catch (error) {
+        console.error('Error saving business changes:', error);
+        alert('Failed to save business changes. Please try again.');
     }
 }
 
@@ -799,6 +1358,12 @@ function setupRefreshButton() {
             const icon = refreshBtn.querySelector('i');
             if (icon) {
                 icon.classList.add('refreshing');
+            }
+            
+            // Clear the search input field
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.value = '';
             }
             
             // Reload the data
