@@ -2,13 +2,12 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
+const { establishmentsDB } = require('../server');
 
-// Connect to the establishments database
-const establishmentsDB = mongoose.createConnection('mongodb://localhost:27017/establishments');
-establishmentsDB.on('error', console.error.bind(console, 'Establishments DB connection error:'));
-establishmentsDB.once('open', () => {
-  console.log('✅ Establishments MongoDB connected');
-});
+// Check if establishmentsDB is available
+if (!establishmentsDB) {
+  console.error('❌ Establishments DB connection not available');
+}
 
 // Define Business Schema with updated fields
 const businessSchema = new mongoose.Schema({
@@ -26,11 +25,21 @@ const businessSchema = new mongoose.Schema({
   "NATURE OF BUSINESS": String
 }, { collection: 'business' });
 
-const Business = establishmentsDB.model('Business', businessSchema);
+// Create the Business model only if the connection is available
+let Business;
+if (establishmentsDB) {
+  Business = establishmentsDB.model('Business', businessSchema);
+} else {
+  console.error('❌ Cannot create Business model - database connection not available');
+}
 
 // Get all businesses
 router.get('/', async (req, res) => {
   try {
+    if (!Business) {
+      return res.status(500).json({ message: 'Database connection not available' });
+    }
+    
     console.log('Fetching all businesses...');
     const businesses = await Business.find({});
     console.log(`Found ${businesses.length} businesses`);
@@ -80,6 +89,10 @@ router.get('/', async (req, res) => {
 // Get dashboard statistics
 router.get('/stats', async (req, res) => {
   try {
+    if (!Business) {
+      return res.status(500).json({ message: 'Database connection not available' });
+    }
+    
     console.log('Fetching business stats...');
     
     // Total businesses count
@@ -149,6 +162,10 @@ router.get('/stats', async (req, res) => {
 // Search businesses
 router.get('/search', async (req, res) => {
   try {
+    if (!Business) {
+      return res.status(500).json({ message: 'Database connection not available' });
+    }
+    
     const { query, field } = req.query;
     
     if (!query) {
@@ -210,6 +227,82 @@ router.get('/search', async (req, res) => {
     res.json(normalizedBusinesses);
   } catch (error) {
     console.error('Error searching businesses:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get business by account number
+router.get('/account/:accountNo', async (req, res) => {
+  try {
+    if (!Business) {
+      return res.status(500).json({ message: 'Database connection not available' });
+    }
+    
+    const { accountNo } = req.params;
+    console.log(`Fetching business with account number: "${accountNo}"`);
+    
+    // Check if database connection is ready
+    if (establishmentsDB.readyState !== 1) {
+      console.error('Database connection not ready. State:', establishmentsDB.readyState);
+      return res.status(500).json({ message: 'Database connection not ready' });
+    }
+    
+    // Try multiple query approaches to find the business
+    let business;
+    
+    // First try: exact match
+    business = await Business.findOne({ "ACCOUNT NO": accountNo });
+    
+    // If not found, try case-insensitive match
+    if (!business) {
+      console.log(`Exact match not found, trying case-insensitive search for "${accountNo}"`);
+      business = await Business.findOne({ 
+        "ACCOUNT NO": { $regex: new RegExp(`^${accountNo}$`, 'i') } 
+      });
+    }
+    
+    // If still not found, try partial match (in case of formatting differences)
+    if (!business) {
+      console.log(`Case-insensitive match not found, trying partial match for "${accountNo}"`);
+      business = await Business.findOne({ 
+        "ACCOUNT NO": { $regex: accountNo, $options: 'i' } 
+      });
+    }
+    
+    if (!business) {
+      console.log(`No business found with account number: "${accountNo}"`);
+      
+      // List some account numbers for debugging
+      const sampleBusinesses = await Business.find({}).limit(5);
+      console.log('Sample account numbers in database:');
+      sampleBusinesses.forEach((b, i) => {
+        console.log(`${i+1}: "${b['ACCOUNT NO']}"`);
+      });
+      
+      return res.status(404).json({ message: 'Business not found' });
+    }
+    
+    console.log('Business found:', business);
+    
+    // Normalize the property names
+    const normalizedBusiness = {
+        accountNo: business['ACCOUNT NO'],
+        dateOfApplication: business['DATE OF APPLICATION'],
+        orNo: business['OR NO'],
+        amountPaid: business['AMOUNT PAID'],
+        dateOfPayment: business['DATE OF PAYMENT'],
+        status: business['STATUS'],
+        applicationStatus: business['APPLICATION STATUS'],
+        businessName: business['NAME OF BUSINESS'],
+        ownerName: business['NAME OF OWNER'],
+        address: business['ADDRESS'],
+        barangay: business['BARANGAY'],
+        natureOfBusiness: business['NATURE OF BUSINESS']
+    };
+    
+    res.json(normalizedBusiness);
+  } catch (error) {
+    console.error('Error fetching business by account number:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

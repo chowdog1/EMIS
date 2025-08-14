@@ -4,8 +4,6 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 const authRoutes = require('./routes/authRoutes');
-const businessRoutes = require('./routes/businessRoutes');
-
 const app = express();
 const PORT = 3000;
 
@@ -23,6 +21,21 @@ mongoose.connect('mongodb://localhost:27017/logindb')
     console.error('❌ Auth MongoDB connection error:', err);
     process.exit(1); // Exit if auth DB fails
   });
+
+// Create establishmentsDB connection BEFORE requiring businessRoutes
+const establishmentsDB = mongoose.createConnection('mongodb://localhost:27017/establishments');
+establishmentsDB.on('error', (err) => {
+  console.error('❌ Establishments DB connection error:', err);
+});
+establishmentsDB.once('open', () => {
+  console.log('✅ Establishments MongoDB connected');
+});
+
+// Export establishmentsDB so it can be imported by other modules
+module.exports = { establishmentsDB };
+
+// Now require businessRoutes AFTER establishing the connection
+const businessRoutes = require('./routes/businessRoutes');
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -56,13 +69,4 @@ app.use((req, res) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
-});
-
-// Error handling for the establishments database connection
-const establishmentsDB = mongoose.createConnection('mongodb://localhost:27017/establishments');
-establishmentsDB.on('error', (err) => {
-  console.error('❌ Establishments DB connection error:', err);
-});
-establishmentsDB.once('open', () => {
-  console.log('✅ Establishments MongoDB connected');
 });

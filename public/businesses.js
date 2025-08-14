@@ -24,6 +24,9 @@ window.addEventListener('load', function() {
     
     // Setup search functionality
     setupSearch();
+
+    // Setup modal event listeners
+    setupModalEventListeners();
 });
 
 // Function to check authentication
@@ -243,7 +246,25 @@ function updateBusinessTable(businesses) {
             }, text);
         };
         
-        // Table component with updated columns (removed OR No and Amount Paid)
+        // Clickable Account Number component
+        const ClickableAccountNo = ({ accountNo, onClick }) => {
+            return React.createElement('a', {
+                href: '#',
+                style: {
+                    color: 'var(--primary-green)',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    transition: 'color 0.2s'
+                },
+                onClick: (e) => {
+                    e.preventDefault();
+                    onClick(accountNo);
+                }
+            }, accountNo);
+        };
+        
+        // Table component with clickable account numbers
         const App = () => {
             return React.createElement(
                 'div',
@@ -291,7 +312,12 @@ function updateBusinessTable(businesses) {
                                     key: index,
                                     style: { borderBottom: '1px solid #e9ecef' }
                                 },
-                                React.createElement('td', { style: { padding: '12px 15px' } }, accountNo),
+                                React.createElement('td', { style: { padding: '12px 15px' } }, 
+                                    React.createElement(ClickableAccountNo, {
+                                        accountNo: accountNo,
+                                        onClick: showBusinessDetails
+                                    })
+                                ),
                                 React.createElement('td', { style: { padding: '12px 15px' } }, businessName),
                                 React.createElement('td', { style: { padding: '12px 15px' } }, ownerName),
                                 React.createElement('td', { style: { padding: '12px 15px' } }, barangay),
@@ -365,10 +391,19 @@ function renderSimpleTable(businesses) {
         const row = document.createElement('tr');
         row.style.borderBottom = '1px solid #e9ecef';
         
-        // Account No
+        // Account No (clickable)
         const accountCell = document.createElement('td');
-        accountCell.textContent = business['accountNo'] || business['ACCOUNT NO'] || 'N/A';
         accountCell.style.padding = '12px 15px';
+        const accountNo = business['accountNo'] || business['ACCOUNT NO'] || 'N/A';
+        const accountLink = document.createElement('a');
+        accountLink.href = '#';
+        accountLink.textContent = accountNo;
+        accountLink.className = 'clickable-account';
+        accountLink.onclick = (e) => {
+            e.preventDefault();
+            showBusinessDetails(accountNo);
+        };
+        accountCell.appendChild(accountLink);
         row.appendChild(accountCell);
         
         // Business Name
@@ -435,6 +470,193 @@ function renderSimpleTable(businesses) {
     tableRoot.appendChild(table);
     
     console.log('Simple table rendered successfully');
+}
+
+// Function to show business details modal
+async function showBusinessDetails(accountNo) {
+    try {
+        console.log(`Fetching details for account number: ${accountNo}`);
+        
+        const response = await fetch(`/api/business/account/${encodeURIComponent(accountNo)}`);
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch business details');
+        }
+        
+        const business = await response.json();
+        console.log('Business details:', business);
+        
+        // Populate modal with business details
+        document.getElementById('modalAccountNo').textContent = business.accountNo || 'N/A';
+        document.getElementById('modalBusinessName').textContent = business.businessName || 'N/A';
+        document.getElementById('modalOwnerName').textContent = business.ownerName || 'N/A';
+        document.getElementById('modalAddress').textContent = business.address || 'N/A';
+        document.getElementById('modalBarangay').textContent = business.barangay || 'N/A';
+        document.getElementById('modalNatureOfBusiness').textContent = business.natureOfBusiness || 'N/A';
+        document.getElementById('modalStatus').textContent = business.status || 'N/A';
+        document.getElementById('modalApplicationStatus').textContent = business.applicationStatus || 'N/A';
+        
+        // Format dates if they exist
+        const dateOfApplication = business.dateOfApplication;
+        document.getElementById('modalDateOfApplication').textContent = dateOfApplication 
+            ? new Date(dateOfApplication).toLocaleDateString() 
+            : 'N/A';
+            
+        document.getElementById('modalOrNo').textContent = business.orNo || 'N/A';
+        document.getElementById('modalAmountPaid').textContent = business.amountPaid || 'N/A';
+        
+        const dateOfPayment = business.dateOfPayment;
+        document.getElementById('modalDateOfPayment').textContent = dateOfPayment 
+            ? new Date(dateOfPayment).toLocaleDateString() 
+            : 'N/A';
+        
+        // Show the modal
+        document.getElementById('businessDetailsModal').style.display = 'block';
+        
+    } catch (error) {
+        console.error('Error fetching business details:', error);
+        alert('Failed to fetch business details. Please try again.');
+    }
+}
+
+// Function to setup modal event listeners
+function setupModalEventListeners() {
+    // Get modal elements
+    const modal = document.getElementById('businessDetailsModal');
+    const closeBtns = document.querySelectorAll('.modal-close, .modal-close-btn');
+    
+    // Add click event to close buttons
+    closeBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+    });
+    
+    // Close modal when clicking outside of it
+    window.addEventListener('click', function(event) {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+    
+    // Add click event to Print AEC button
+    const printAecBtn = document.getElementById('printAecBtn');
+    if (printAecBtn) {
+        printAecBtn.addEventListener('click', printAEC);
+    }
+    
+    // Add click event to Modify button
+    const modifyBtn = document.getElementById('modifyBtn');
+    if (modifyBtn) {
+        modifyBtn.addEventListener('click', handleModify);
+    }
+}
+
+// Function to print AEC
+function printAEC() {
+    // Get the business details from the modal
+    const accountNo = document.getElementById('modalAccountNo').textContent;
+    const businessName = document.getElementById('modalBusinessName').textContent;
+    const ownerName = document.getElementById('modalOwnerName').textContent;
+    const address = document.getElementById('modalAddress').textContent;
+    const barangay = document.getElementById('modalBarangay').textContent;
+    const natureOfBusiness = document.getElementById('modalNatureOfBusiness').textContent;
+    const status = document.getElementById('modalStatus').textContent;
+    const applicationStatus = document.getElementById('modalApplicationStatus').textContent;
+    const dateOfApplication = document.getElementById('modalDateOfApplication').textContent;
+    const orNo = document.getElementById('modalOrNo').textContent;
+    const amountPaid = document.getElementById('modalAmountPaid').textContent;
+    const dateOfPayment = document.getElementById('modalDateOfPayment').textContent;
+    
+    // Create a hidden div for printing
+    const printContent = document.createElement('div');
+    printContent.className = 'print-area';
+    
+    // Create the print content
+    printContent.innerHTML = `
+        <div style="padding: 20px; font-family: Arial, sans-serif;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="margin-bottom: 5px;">Application for Environmental Compliance (AEC)</h1>
+                <p style="color: #666;">City Environmental and Natural Resources Office</p>
+                <p style="color: #666;">San Juan City</p>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+                <div>
+                    <h3 style="margin-bottom: 10px; color: var(--primary-green);">Business Information</h3>
+                    <p><strong>Account No:</strong> ${accountNo}</p>
+                    <p><strong>Business Name:</strong> ${businessName}</p>
+                    <p><strong>Owner Name:</strong> ${ownerName}</p>
+                    <p><strong>Address:</strong> ${address}</p>
+                    <p><strong>Barangay:</strong> ${barangay}</p>
+                    <p><strong>Nature of Business:</strong> ${natureOfBusiness}</p>
+                </div>
+                
+                <div>
+                    <h3 style="margin-bottom: 10px; color: var(--primary-green);">Application Details</h3>
+                    <p><strong>Status:</strong> ${status}</p>
+                    <p><strong>Application Status:</strong> ${applicationStatus}</p>
+                    <p><strong>Date of Application:</strong> ${dateOfApplication}</p>
+                    <p><strong>OR No:</strong> ${orNo}</p>
+                    <p><strong>Amount Paid:</strong> ${amountPaid}</p>
+                    <p><strong>Date of Payment:</strong> ${dateOfPayment}</p>
+                </div>
+            </div>
+            
+            <div style="border-top: 1px solid #ddd; padding-top: 20px; text-align: center; font-size: 12px; color: #666;">
+                <p>This document serves as proof of assessment.</p>
+                <p>Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+            </div>
+        </div>
+    `;
+    
+    // Add to body
+    document.body.appendChild(printContent);
+    
+    // Print
+    window.print();
+    
+    // Remove the print content
+    document.body.removeChild(printContent);
+}
+
+// Function to handle modify button click
+function handleModify() {
+    // Get the business details from the modal
+    const accountNo = document.getElementById('modalAccountNo').textContent;
+    const businessName = document.getElementById('modalBusinessName').textContent;
+    const ownerName = document.getElementById('modalOwnerName').textContent;
+    const address = document.getElementById('modalAddress').textContent;
+    const barangay = document.getElementById('modalBarangay').textContent;
+    const natureOfBusiness = document.getElementById('modalNatureOfBusiness').textContent;
+    const status = document.getElementById('modalStatus').textContent;
+    const applicationStatus = document.getElementById('modalApplicationStatus').textContent;
+    const dateOfApplication = document.getElementById('modalDateOfApplication').textContent;
+    const orNo = document.getElementById('modalOrNo').textContent;
+    const amountPaid = document.getElementById('modalAmountPaid').textContent;
+    const dateOfPayment = document.getElementById('modalDateOfPayment').textContent;
+    
+    // Create a confirmation message
+    const confirmMessage = `Are you sure you want to modify the details for:\n\n` +
+        `Account No: ${accountNo}\n` +
+        `Business Name: ${businessName}\n\n` +
+        `This will open a form to edit the business details.`;
+    
+    // Show confirmation dialog
+    if (confirm(confirmMessage)) {
+        // Close the modal
+        document.getElementById('businessDetailsModal').style.display = 'none';
+        
+        // Show a message that the modify feature is under development
+        alert('Modify feature is under development. This will open a form to edit business details in a future update.');
+        
+        // TODO: Implement actual modify functionality
+        // This would typically involve:
+        // 1. Creating an edit form
+        // 2. Pre-populating it with current data
+        // 3. Sending updated data to the backend
+        // 4. Refreshing the table
+    }
 }
 
 // Function to show error in table
