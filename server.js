@@ -38,6 +38,11 @@ app.get('/dashboard.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
+// Businesses route
+app.get('/businesses', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'businesses.html'));
+});
+
 // Root route - serves login page
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

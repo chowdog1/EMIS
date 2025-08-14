@@ -107,40 +107,47 @@ router.get('/stats', async (req, res) => {
 // Search businesses
 router.get('/search', async (req, res) => {
   try {
-    const { query } = req.query;
+    const { query, field } = req.query;
     
     if (!query) {
       return res.status(400).json({ message: 'Search query is required' });
     }
     
-    console.log(`Searching for: ${query}`);
+    console.log(`Searching for: ${query} in field: ${field || 'all fields'}`);
     
-    // Search in multiple fields
-    const businesses = await Business.find({
-      $or: [
-        { "Name of Business": { $regex: query, $options: 'i' } },
-        { "Name of owner": { $regex: query, $options: 'i' } },
-        { "Barangay": { $regex: query, $options: 'i' } },
-        { "Nature of Business": { $regex: query, $options: 'i' } },
-        { "Address": { $regex: query, $options: 'i' } }
-      ]
-    });
+    let businesses;
+    
+    // If field is specified as accountNo, search only in that field
+    if (field === 'accountNo') {
+      businesses = await Business.find({ "ACCOUNT NO": { $regex: query, $options: 'i' } });
+    } else {
+      // Default: search in multiple fields (original behavior)
+      businesses = await Business.find({
+        $or: [
+          { "Name of Business": { $regex: query, $options: 'i' } },
+          { "Name of owner": { $regex: query, $options: 'i' } },
+          { "Barangay": { $regex: query, $options: 'i' } },
+          { "Nature of Business": { $regex: query, $options: 'i' } },
+          { "Address": { $regex: query, $options: 'i' } }
+        ]
+      });
+    }
     
     console.log(`Found ${businesses.length} businesses`);
     
     // Normalize the property names
     const normalizedBusinesses = businesses.map(business => {
-  return {
-    accountNo: business['ACCOUNT NO'],
-    status: business['STATUS'],
-    applicationStatus: business['APPLICATION STATUS'],
-    businessName: business['Name of Business'],
-    ownerName: business['Name of owner'],
-    address: business['Address'],
-    barangay: business['Barangay'],
-    natureOfBusiness: business['Nature of Business']
-  };
-});
+      return {
+        accountNo: business['ACCOUNT NO'],
+        status: business['STATUS'],
+        applicationStatus: business['APPLICATION STATUS'],
+        businessName: business['Name of Business'],
+        ownerName: business['Name of owner'],
+        address: business['Address'],
+        barangay: business['Barangay'],
+        natureOfBusiness: business['Nature of Business']
+      };
+    });
     
     res.json(normalizedBusinesses);
   } catch (error) {
