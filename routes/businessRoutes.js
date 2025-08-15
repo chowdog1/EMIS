@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-const { establishmentsDB } = require('../server');
+const { establishmentsDB } = require('../db'); // Import from db.js
 
 // Check if establishmentsDB is available
 if (!establishmentsDB) {
@@ -441,6 +441,39 @@ router.post('/', async (req, res) => {
     console.error('Error adding business:', error);
     res.status(500).json({ message: 'Server error' });
   }
+});
+
+// Delete business by account number
+router.delete('/account/:accountNo', async (req, res) => {
+    try {
+        if (!Business) {
+            return res.status(500).json({ message: 'Database connection not available' });
+        }
+        
+        const { accountNo } = req.params;
+        console.log(`Deleting business with account number: "${accountNo}"`);
+        
+        // Check if database connection is ready
+        if (establishmentsDB.readyState !== 1) {
+            console.error('Database connection not ready. State:', establishmentsDB.readyState);
+            return res.status(500).json({ message: 'Database connection not ready' });
+        }
+        
+        // Find and delete the business
+        const business = await Business.findOneAndDelete({ "ACCOUNT NO": accountNo });
+        
+        if (!business) {
+            console.log(`No business found with account number: "${accountNo}"`);
+            return res.status(404).json({ message: 'Business not found' });
+        }
+        
+        console.log('Business deleted:', business);
+        
+        res.status(200).json({ message: 'Business deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting business by account number:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
 });
 
 module.exports = router;

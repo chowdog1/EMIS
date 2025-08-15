@@ -4,11 +4,29 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 const authRoutes = require('./routes/authRoutes');
+const { establishmentsDB } = require('./db'); // Import from db.js
 const app = express();
 const PORT = 3000;
 
-// Middleware
-app.use(cors());
+// Enhanced CORS configuration for the same subnet
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow localhost for development
+    if (!origin || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+      return callback(null, true);
+    }
+    
+    // Allow any IP in the 192.168.55.x subnet (both CENRO and CGSJ_OSS)
+    if (origin && origin.match(/^http:\/\/192\.168\.55\.\d{1,3}:3000$/)) {
+      return callback(null, true);
+    }
+    
+    callback(new Error('Not allowed by CORS'));
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+}));
+
 app.use(express.json());
 
 // Serve static files from /public
@@ -21,18 +39,6 @@ mongoose.connect('mongodb://localhost:27017/logindb')
     console.error('❌ Auth MongoDB connection error:', err);
     process.exit(1); // Exit if auth DB fails
   });
-
-// Create establishmentsDB connection BEFORE requiring businessRoutes
-const establishmentsDB = mongoose.createConnection('mongodb://localhost:27017/establishments');
-establishmentsDB.on('error', (err) => {
-  console.error('❌ Establishments DB connection error:', err);
-});
-establishmentsDB.once('open', () => {
-  console.log('✅ Establishments MongoDB connected');
-});
-
-// Export establishmentsDB so it can be imported by other modules
-module.exports = { establishmentsDB };
 
 // Now require businessRoutes AFTER establishing the connection
 const businessRoutes = require('./routes/businessRoutes');
@@ -66,7 +72,10 @@ app.use((req, res) => {
   res.status(404).sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Start server
-app.listen(PORT, () => {
+// Start server - listen on all interfaces (0.0.0.0) to allow network access
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
+  console.log(`🌐 CENRO Network: http://192.168.55.38:${PORT}`);
+  console.log(`🏢 CGSJ_OSS Network: http://192.168.55.229:${PORT}`);
+  console.log(`📡 Any device on 192.168.55.x subnet can access the server`);
 });

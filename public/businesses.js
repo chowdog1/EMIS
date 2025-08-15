@@ -558,6 +558,12 @@ function setupModalEventListeners() {
     // Get business add modal elements
     const addModal = document.getElementById('businessAddModal');
     const addCloseBtns = addModal.querySelectorAll('.modal-close, .modal-close-btn');
+
+    // Add click event to Delete button
+    const deleteBtn = document.getElementById('deleteBtn');
+    if (deleteBtn) {
+    deleteBtn.addEventListener('click', handleDelete);
+    }    
     
     // Add click event to close buttons for add modal
     addCloseBtns.forEach(btn => {
@@ -635,6 +641,9 @@ function printAEC() {
     
     // Get generated date and time
     const generatedDateTime = new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString();
+
+    // Show instruction alert before printing
+    alert('Please select "Page 1" only in the the avoid printing a blank second page.');
     
     // Create a hidden div for printing
     const printContent = document.createElement('div');
@@ -658,7 +667,6 @@ function printAEC() {
                     padding: 0.4cm;
                     box-sizing: border-box;
                     font-family: Verdana, sans-serif;
-                    page-break-after: always;
                     border: 1px solid green;
                     display: flex;
                     flex-direction: column;
@@ -704,55 +712,63 @@ function printAEC() {
                     margin-bottom: 0.1cm;
                     font-family: Verdana, sans-serif;
                 }
+                .certify-section {
+                    margin-bottom: 0.2cm;
+                }
                 .certify-text {
                     text-align: center;
                     font-size: 6pt;
-                    margin-bottom: 0.1cm;
+                    margin-bottom: 0.05cm;
                     font-family: Verdana, sans-serif;
                 }
                 .business-name {
                     text-align: center;
                     font-weight: bold;
-                    font-size: 10pt;
-                    margin-bottom: 0.1cm;
+                    font-size: 9pt;
+                    margin-bottom: 0.05cm;
                     font-family: Verdana, sans-serif;
+                    line-height: 1.1;
+                    max-height: 1.2cm; /* Limit height to prevent excessive space usage */
+                    overflow: hidden;
                 }
                 .business-info {
                     text-align: left;
                     font-size: 6pt;
-                    margin-bottom: 0.3cm;
+                    margin-top: 0.5cm;
+                    margin-bottom: 0.2cm;
                     font-family: Verdana, sans-serif;
+                    line-height: 1.2;
                 }
                 .info-box {
                     border: 1px solid #000;
-                    padding: 0.2cm;
-                    margin-bottom: 0.8cm;
+                    padding: 0.15cm;
+                    margin-bottom: 0.4cm; /* Reduced margin */
                     font-size: 6pt;
                     font-family: Verdana, sans-serif;
-                    line-height: 1.3;
+                    line-height: 1.2;
                 }
                 .signature-section {
-                    margin-bottom: 0.5cm;
+                    margin-bottom: 0.3cm; /* Reduced margin */
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    margin-top: 0.5cm;
+                    margin-top: 1.2cm; /* Reduced margin */
                 }
                 .signature-line {
                     width: 5cm;
                     border-bottom: 1px solid #000;
-                    margin-bottom: 0.2cm;
+                    margin-bottom: 0.1cm; /* Reduced margin */
                     font-family: Verdana, sans-serif;
                 }
                 .secretariat-text {
                     text-align: center;
                     font-size: 6pt;
-                    margin-top: 0.1cm;
+                    margin-top: 0.05cm; /* Reduced margin */
                     font-family: Verdana, sans-serif;
                 }
                 .footer {
                     margin-top: auto;
-                    padding-top: 0.3cm;
+                    padding-top: 0.2cm; /* Reduced padding */
                 }
                 .footer-row {
                     display: flex;
@@ -766,7 +782,7 @@ function printAEC() {
                 .generated-datetime {
                     font-size: 4pt;
                     font-family: Verdana, sans-serif;
-                    margin-top: 0.1cm;
+                    margin-top: 0.05cm; /* Reduced margin */
                 }
             }
         </style>
@@ -801,10 +817,12 @@ function printAEC() {
                 </div>
             </div>
             
-            <!-- Certification Text -->
-            <div class="certify-text">This is to certify that</div>
-            <div class="business-name">${businessName}</div>
-            <div class="business-info">located at ${address}, has paid environmental protection and preservation fee of ${currentYear}</div>
+            <!-- Certification Section - Grouped together -->
+            <div class="certify-section">
+                <div class="certify-text">This is to certify that</div>
+                <div class="business-name">${businessName}</div>
+                <div class="business-info">located at ${address}, has paid environmental protection and preservation fee of ${currentYear}</div>
+            </div>
             
             <!-- Info Box -->
             <div class="info-box">
@@ -888,6 +906,54 @@ function setupAddBusinessButton() {
         console.log('Add Business button setup complete');
     } else {
         console.error('Add Business button not found');
+    }
+}
+
+// Function to handle delete button click
+async function handleDelete() {
+    // Get the account number from the modal
+    const accountNo = document.getElementById('modalAccountNo').textContent;
+    
+    // Show browser warning popup
+    const isConfirmed = window.confirm("Are you sure you want to delete this data? This cannot be undone. Proceed with caution.");
+    
+    // If user clicked Cancel, return without deleting
+    if (!isConfirmed) {
+        return;
+    }
+    
+    try {
+        // Show loading state
+        const deleteBtn = document.getElementById('deleteBtn');
+        const originalText = deleteBtn.innerHTML;
+        deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+        deleteBtn.disabled = true;
+        
+        // Send delete request to server
+        const response = await fetch(`/api/business/account/${encodeURIComponent(accountNo)}`, {
+            method: 'DELETE'
+        });
+        
+        // Restore button state
+        deleteBtn.innerHTML = originalText;
+        deleteBtn.disabled = false;
+        
+        if (!response.ok) {
+            throw new Error('Failed to delete business');
+        }
+        
+        // Close the modal
+        document.getElementById('businessDetailsModal').style.display = 'none';
+        
+        // Show success message
+        showSuccessMessage('Business deleted successfully!');
+        
+        // Refresh the business table
+        loadBusinessData();
+        
+    } catch (error) {
+        console.error('Error deleting business:', error);
+        showErrorMessage(`Failed to delete business: ${error.message}`);
     }
 }
 
@@ -1148,7 +1214,16 @@ function handleModify() {
     document.getElementById('editBusinessName').value = businessName;
     document.getElementById('editOwnerName').value = ownerName;
     document.getElementById('editAddress').value = address;
-    document.getElementById('editBarangay').value = barangay;
+    
+    // Set the barangay dropdown value
+    const barangaySelect = document.getElementById('editBarangay');
+    for (let i = 0; i < barangaySelect.options.length; i++) {
+        if (barangaySelect.options[i].value === barangay) {
+            barangaySelect.selectedIndex = i;
+            break;
+        }
+    }
+    
     document.getElementById('editNatureOfBusiness').value = natureOfBusiness;
     document.getElementById('editStatus').value = status;
     document.getElementById('editApplicationStatus').value = applicationStatus;
