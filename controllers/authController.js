@@ -26,12 +26,40 @@ const login = async (req, res) => {
       console.log("❌ Account inactive");
       return res.status(403).json({ message: "Account is inactive" });
     }
+
+    // Check if user is already logged in
+    if (user.currentSessionId) {
+      const sessionAge = Date.now() - user.lastLoginAt.getTime();
+      const sessionThreshold = 30 * 60 * 1000; // 30 minutes
+
+      // If session is older than threshold, clear it and allow login
+      if (sessionAge > sessionThreshold) {
+        console.log("🔄 Clearing stale session");
+        user.currentSessionId = null;
+        user.lastLoginAt = null;
+        await user.save();
+      } else {
+        console.log("❌ User already logged in");
+        return res.status(409).json({
+          message:
+            "This account is currently being used in another session. Please try again later.",
+        });
+      }
+    }
+
     // Create JWT token
+    const sessionId = require("crypto").randomBytes(16).toString("hex");
     const token = jwt.sign(
-      { userId: user._id, email: user.email, role: user.role },
+      { userId: user._id, email: user.email, role: user.role, sessionId },
       JWT_SECRET,
       { expiresIn: "24h" }
     );
+
+    // Update user session info
+    user.currentSessionId = sessionId;
+    user.lastLoginAt = new Date();
+    await user.save();
+
     console.log("✅ Login successful");
     // Return the token and user information
     res.json({
@@ -49,6 +77,26 @@ const login = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Login error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// logout function
+const logout = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(400).json({ message: "No token provided" });
+    }
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findById(decoded.userId);
+    if (user) {
+      user.currentSessionId = null;
+      await user.save();
+    }
+    res.json({ message: "Logout successful" });
+  } catch (error) {
+    console.error("❌ Logout error:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -105,34 +153,29 @@ const register = async (req, res) => {
   }
 };
 
-//for verifying user
-const verifyToken = async (req, res) => {
+//for verifying user - renamed to avoid conflict with middleware
+const verifyTokenEndpoint = async (req, res) => {
   try {
     const token = req.headers.authorization?.split(" ")[1];
     if (!token) {
       return res.status(401).json({ message: "No token provided" });
     }
-
     // First, try to decode the token without verification to check if it's malformed
     const decoded = jwt.decode(token);
     if (!decoded) {
       return res.status(401).json({ message: "Invalid token format" });
     }
-
     // Check if the token is expired
     const now = Math.floor(Date.now() / 1000);
     if (decoded.exp && decoded.exp < now) {
       return res.status(401).json({ message: "Token expired" });
     }
-
     // If the token looks valid, verify it with the secret
     const verified = jwt.verify(token, JWT_SECRET);
     const user = await User.findById(verified.userId);
-
     if (!user || !user.isActive) {
       return res.status(401).json({ message: "Invalid token" });
     }
-
     res.json({
       valid: true,
       user: {
@@ -146,7 +189,6 @@ const verifyToken = async (req, res) => {
     });
   } catch (error) {
     console.error("Token verification error:", error);
-
     // Only return 401 if the token is actually invalid
     if (
       error.name === "JsonWebTokenError" ||
@@ -154,7 +196,6 @@ const verifyToken = async (req, res) => {
     ) {
       return res.status(401).json({ message: "Invalid token" });
     }
-
     // For other errors, return 500
     res.status(500).json({ message: "Internal server error" });
   }
@@ -277,20 +318,22 @@ console.log("Exporting methods:", {
   login,
   register,
   checkEmail,
-  verifyToken,
+  verifyTokenEndpoint,
   updateProfile,
   uploadProfilePicture,
   changePassword,
   getProfilePicture,
+  logout,
 });
 
 module.exports = {
   login,
   register,
   checkEmail,
-  verifyToken,
+  verifyToken: verifyTokenEndpoint, // Export as verifyToken for compatibility
   updateProfile,
   uploadProfilePicture,
   changePassword,
   getProfilePicture,
+  logout,
 };

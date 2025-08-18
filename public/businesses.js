@@ -4,55 +4,444 @@ const logoUrls = [
   "/makabagong%20san%20juan%20Logo.png",
   "/cenro%20logo.png",
 ];
-
 // Pagination variables - Global scope
 let currentPage = 1;
 let pageSize = 10;
 let totalRecords = 0;
 let allBusinesses = []; // Store all businesses for client-side pagination
 
+// Inactivity Manager Class
+class InactivityManager {
+  constructor() {
+    this.sessionCheckInterval = null;
+    this.inactivityTimer = null;
+    this.warningTimer = null;
+    this.inactivityTimeout = 180 * 1000; // 1 minute in milliseconds
+    this.warningTimeout = 160 * 1000; // Show warning 20 seconds before logout
+    this.init();
+  }
+
+  init() {
+    console.log("Initializing inactivity manager");
+    // Start periodic session check
+    this.startSessionCheck();
+    // Setup inactivity detection
+    this.setupInactivityDetection();
+    // Create inactivity warning popup
+    this.createInactivityWarning();
+  }
+
+  // Start periodic session check
+  startSessionCheck() {
+    // Clear any existing interval
+    if (this.sessionCheckInterval) {
+      clearInterval(this.sessionCheckInterval);
+    }
+
+    // Check every 1 minute
+    this.sessionCheckInterval = setInterval(async () => {
+      const isValid = await this.checkSessionValidity();
+      if (!isValid) {
+        console.log("Session expired or invalid");
+        this.clearSessionData();
+        window.location.href = "/";
+      }
+    }, 1 * 60 * 1000); // 1 minute
+
+    console.log("Session check started (1 minute interval)");
+  }
+
+  // Stop session check
+  stopSessionCheck() {
+    if (this.sessionCheckInterval) {
+      clearInterval(this.sessionCheckInterval);
+      this.sessionCheckInterval = null;
+      console.log("Session check stopped");
+    }
+  }
+
+  // Setup inactivity detection
+  setupInactivityDetection() {
+    console.log("Setting up inactivity detection");
+
+    // Reset inactivity timer on user activity
+    const resetInactivityTimer = () => {
+      console.log("User activity detected, resetting inactivity timer");
+      this.resetInactivityTimer();
+    };
+
+    // Add event listeners for user activity
+    const events = [
+      "mousedown",
+      "mousemove",
+      "keypress",
+      "scroll",
+      "touchstart",
+      "click",
+      "keydown",
+      "input",
+    ];
+
+    events.forEach((event) => {
+      document.addEventListener(event, resetInactivityTimer, true);
+    });
+
+    // Start the inactivity timer
+    this.resetInactivityTimer();
+
+    console.log("Inactivity detection setup complete");
+  }
+
+  // Reset inactivity timer
+  resetInactivityTimer() {
+    // Clear existing timers
+    if (this.inactivityTimer) {
+      clearTimeout(this.inactivityTimer);
+    }
+    if (this.warningTimer) {
+      clearTimeout(this.warningTimer);
+    }
+
+    // Hide warning popup if it's visible
+    this.hideInactivityWarning();
+
+    // Set warning timer (40 seconds before logout)
+    this.warningTimer = setTimeout(() => {
+      console.log("Showing inactivity warning");
+      this.showInactivityWarning();
+    }, this.warningTimeout);
+
+    // Set logout timer (60 seconds total)
+    this.inactivityTimer = setTimeout(() => {
+      console.log("User inactive for 1 minute, logging out");
+      this.logout();
+    }, this.inactivityTimeout);
+
+    console.log(
+      `Inactivity timer reset (will logout after ${
+        this.inactivityTimeout / 1000
+      } seconds of inactivity)`
+    );
+  }
+
+  // Create inactivity warning popup
+  createInactivityWarning() {
+    // Create popup container
+    const popup = document.createElement("div");
+    popup.id = "inactivityWarning";
+    popup.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      padding: 24px;
+      max-width: 400px;
+      width: 90%;
+      z-index: 10000;
+      display: none;
+      text-align: center;
+      border: 1px solid #e0e0e0;
+    `;
+
+    // Create warning icon
+    const icon = document.createElement("div");
+    icon.innerHTML = `
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ff9800" stroke-width="2">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+        <line x1="12" y1="9" x2="12" y2="13"></line>
+        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+      </svg>
+    `;
+    icon.style.marginBottom = "16px";
+
+    // Create warning message
+    const message = document.createElement("h3");
+    message.textContent = "Session Timeout Warning";
+    message.style.cssText = `
+      margin: 0 0 12px 0;
+      color: #333;
+      font-size: 18px;
+      font-weight: 600;
+    `;
+
+    // Create warning text
+    const text = document.createElement("p");
+    text.textContent =
+      "You have been inactive for a while. You will be automatically logged out in 20 seconds.";
+    text.style.cssText = `
+      margin: 0 0 24px 0;
+      color: #666;
+      font-size: 14px;
+      line-height: 1.5;
+    `;
+
+    // Create countdown timer
+    const countdown = document.createElement("div");
+    countdown.id = "inactivityCountdown";
+    countdown.textContent = "20";
+    countdown.style.cssText = `
+      font-size: 24px;
+      font-weight: bold;
+      color: #ff9800;
+      margin-bottom: 20px;
+    `;
+
+    // Create buttons container
+    const buttons = document.createElement("div");
+    buttons.style.cssText =
+      "display: flex; gap: 12px; justify-content: center;";
+
+    // Create stay logged in button
+    const stayButton = document.createElement("button");
+    stayButton.textContent = "Stay Logged In";
+    stayButton.style.cssText = `
+      background: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    `;
+    stayButton.addEventListener("click", () => {
+      this.resetInactivityTimer();
+    });
+    stayButton.addEventListener("mouseenter", () => {
+      stayButton.style.background = "#45a049";
+    });
+    stayButton.addEventListener("mouseleave", () => {
+      stayButton.style.background = "#4caf50";
+    });
+
+    // Create logout button
+    const logoutButton = document.createElement("button");
+    logoutButton.textContent = "Logout Now";
+    logoutButton.style.cssText = `
+      background: #f44336;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    `;
+    logoutButton.addEventListener("click", () => {
+      this.logout();
+    });
+    logoutButton.addEventListener("mouseenter", () => {
+      logoutButton.style.background = "#d32f2f";
+    });
+    logoutButton.addEventListener("mouseleave", () => {
+      logoutButton.style.background = "#f44336";
+    });
+
+    // Append elements
+    buttons.appendChild(stayButton);
+    buttons.appendChild(logoutButton);
+    popup.appendChild(icon);
+    popup.appendChild(message);
+    popup.appendChild(text);
+    popup.appendChild(countdown);
+    popup.appendChild(buttons);
+
+    // Create overlay
+    const overlay = document.createElement("div");
+    overlay.id = "inactivityOverlay";
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 9999;
+      display: none;
+    `;
+
+    // Add to document
+    document.body.appendChild(overlay);
+    document.body.appendChild(popup);
+    console.log("Inactivity warning popup created");
+  }
+
+  // Show inactivity warning popup
+  showInactivityWarning() {
+    const popup = document.getElementById("inactivityWarning");
+    const overlay = document.getElementById("inactivityOverlay");
+    const countdown = document.getElementById("inactivityCountdown");
+
+    if (popup && overlay && countdown) {
+      popup.style.display = "block";
+      overlay.style.display = "block";
+
+      // Start countdown
+      let timeLeft = 20;
+      countdown.textContent = timeLeft;
+
+      const countdownInterval = setInterval(() => {
+        timeLeft--;
+        countdown.textContent = timeLeft;
+
+        if (timeLeft <= 0) {
+          clearInterval(countdownInterval);
+        }
+      }, 1000);
+
+      // Store interval ID to clear it later
+      popup.countdownInterval = countdownInterval;
+    }
+  }
+
+  // Hide inactivity warning popup
+  hideInactivityWarning() {
+    const popup = document.getElementById("inactivityWarning");
+    const overlay = document.getElementById("inactivityOverlay");
+
+    if (popup && overlay) {
+      popup.style.display = "none";
+      overlay.style.display = "none";
+
+      // Clear countdown interval if it exists
+      if (popup.countdownInterval) {
+        clearInterval(popup.countdownInterval);
+      }
+    }
+  }
+
+  // Check session validity
+  async checkSessionValidity() {
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (!token) return false;
+
+      const response = await fetch("/api/auth/verify-token", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error("Session check error:", error);
+      // If server is unavailable, allow the session to continue
+      return true;
+    }
+  }
+
+  // Clear session data
+  clearSessionData() {
+    console.log("Clearing session data");
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user_data");
+
+    // Clear all cookies
+    document.cookie.split(";").forEach(function (c) {
+      document.cookie = c
+        .replace(/^ +/, "")
+        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+    });
+
+    // Clear sessionStorage
+    sessionStorage.clear();
+  }
+
+  // Logout function
+  async logout() {
+    try {
+      const token = localStorage.getItem("auth_token");
+
+      if (token) {
+        // Call server logout endpoint
+        const response = await fetch("/api/auth/logout", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (response.ok) {
+          console.log("Server logout successful");
+        } else {
+          console.error("Server logout failed");
+        }
+      }
+    } catch (error) {
+      console.error("Error during logout:", error);
+    } finally {
+      // Always clear local data and redirect
+      this.clearSessionData();
+      window.location.href = "/";
+    }
+  }
+}
+
 // Wait for DOM to be fully loaded
 window.addEventListener("load", function () {
   console.log("Businesses page loaded, initializing");
-
   //Preload logos
   preloadLogos();
-
   // Check if user is logged in
   checkAuthentication();
-
   // Setup dropdown functionality
   setupDropdown();
-
   // Setup logout functionality
   setupLogout();
-
   // Initialize business table
   initializeBusinessTable();
-
   // Setup search functionality
   setupSearch();
-
   // Setup modal event listeners
   setupModalEventListeners();
+  // Initialize inactivity manager
+  window.inactivityManager = new InactivityManager();
+});
+
+// Handle page visibility change
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    console.log("Page hidden - pausing session check");
+    if (window.inactivityManager) {
+      window.inactivityManager.stopSessionCheck();
+    }
+  } else {
+    console.log("Page visible - resuming session check");
+    if (window.inactivityManager) {
+      window.inactivityManager.startSessionCheck();
+      // Reset inactivity timer when page becomes visible again
+      window.inactivityManager.resetInactivityTimer();
+    }
+  }
+});
+
+// Handle beforeunload event
+window.addEventListener("beforeunload", () => {
+  // Note: This won't reliably call the server logout
+  // It's better to rely on the periodic session check
+  console.log("Page is unloading");
 });
 
 // Function to check authentication
 function checkAuthentication() {
   console.log("=== Checking Authentication ===");
-
   const token = localStorage.getItem("auth_token");
   const userData = localStorage.getItem("user_data");
-
   console.log("Token found:", !!token);
   console.log("User data found:", !!userData);
-
   if (!token || !userData) {
     console.log("No token or user data found, redirecting to login");
     window.location.href = "/";
     return;
   }
-
   try {
     // Check if token is expired locally first
     if (isTokenExpired(token)) {
@@ -62,12 +451,10 @@ function checkAuthentication() {
       window.location.href = "/";
       return;
     }
-
     const user = JSON.parse(userData);
     console.log("User data parsed successfully:", user);
     console.log("User ID:", user.id);
     console.log("User Email:", user.email);
-
     // Verify that the token user matches the stored user data
     const tokenUser = getUserFromToken(token);
     if (tokenUser && tokenUser.userId !== user.id) {
@@ -77,10 +464,8 @@ function checkAuthentication() {
       window.location.href = "/";
       return;
     }
-
     // Update user info in the UI
     updateUserInterface(user);
-
     // Verify token with server in the background
     verifyTokenWithServer(token).catch((error) => {
       console.error("Token verification failed:", error);
@@ -110,12 +495,10 @@ async function updateUserInterface(user) {
   const userEmailElement = document.getElementById("userEmail");
   const userAvatarImage = document.getElementById("userAvatarImage");
   const userAvatarFallback = document.getElementById("userAvatarFallback");
-
   // Get the greeting based on current time
   const greeting = getTimeBasedGreeting();
   // Get the user's first name if available, otherwise fall back to email
   const displayName = user.firstname || user.email;
-
   if (userEmailElement) {
     // Update with greeting and first name
     userEmailElement.textContent = `${greeting}, ${displayName}!`;
@@ -123,7 +506,6 @@ async function updateUserInterface(user) {
   } else {
     console.error("User email element not found");
   }
-
   // Update avatar using the shared utility function
   updateUserAvatar(user, userAvatarImage, userAvatarFallback);
 }
@@ -153,7 +535,6 @@ async function verifyTokenWithServer(token) {
         Authorization: `Bearer ${token}`,
       },
     });
-
     if (response.ok) {
       console.log("Token verification successful");
     } else {
@@ -165,7 +546,6 @@ async function verifyTokenWithServer(token) {
       } catch (e) {
         console.log("Could not parse error response");
       }
-
       // Only redirect if the token is actually invalid (not for network errors)
       if (response.status === 401) {
         console.log("Token is invalid, redirecting to login");
@@ -184,16 +564,12 @@ async function verifyTokenWithServer(token) {
 // Function to initialize business table
 function initializeBusinessTable() {
   console.log("Initializing business table");
-
   // Setup pagination controls first to set the initial page size
   setupPaginationControls();
-
   // Setup refresh button
   setupRefreshButton();
-
   // Load initial data
   loadBusinessData();
-
   // Setup add business button
   setupAddBusinessButton();
 }
@@ -203,7 +579,6 @@ async function loadBusinessData() {
   try {
     console.log("Loading business data...");
     console.log("Current page size:", pageSize);
-
     // Show loading state
     const tableRoot = document.getElementById("businessTable");
     if (tableRoot) {
@@ -214,12 +589,9 @@ async function loadBusinessData() {
                 </div>
             `;
     }
-
     const response = await fetch("/api/business");
-
     console.log("Response status:", response.status);
     console.log("Response ok:", response.ok);
-
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Error response:", errorText);
@@ -227,21 +599,16 @@ async function loadBusinessData() {
         `Failed to load business data: ${response.status} ${response.statusText}`
       );
     }
-
     const businesses = await response.json();
     console.log("Business data loaded:", businesses);
     console.log("Number of businesses:", businesses.length);
-
     // Store all businesses for client-side pagination
     allBusinesses = businesses;
     totalRecords = businesses.length;
-
     // Reset to first page
     currentPage = 1;
-
     // Update table with paginated data
     updateBusinessTable(getPaginatedData());
-
     // Update pagination controls
     updatePaginationControls();
   } catch (error) {
@@ -256,7 +623,6 @@ function getPaginatedData() {
   if (!allBusinesses || allBusinesses.length === 0) {
     return [];
   }
-
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   return allBusinesses.slice(startIndex, endIndex);
@@ -265,25 +631,21 @@ function getPaginatedData() {
 // Function to update business table using React
 function updateBusinessTable(businesses) {
   const tableRoot = document.getElementById("businessTable");
-
   if (!tableRoot) {
     console.error("Business table root element not found");
     return;
   }
-
   // Check if React and ReactDOM are loaded
   if (typeof React === "undefined" || typeof ReactDOM === "undefined") {
     console.error("React or ReactDOM not loaded");
     renderSimpleTable(businesses);
     return;
   }
-
   try {
     // Status badge component
     const StatusBadge = ({ status }) => {
       let color = "";
       let text = status;
-
       switch (status) {
         case "HIGHRISK":
           color = "#dc3545";
@@ -296,7 +658,6 @@ function updateBusinessTable(businesses) {
         default:
           color = "#6c757d";
       }
-
       return React.createElement(
         "span",
         {
@@ -313,7 +674,6 @@ function updateBusinessTable(businesses) {
         text
       );
     };
-
     // Clickable Account Number component
     const ClickableAccountNo = ({ accountNo, onClick }) => {
       return React.createElement(
@@ -335,7 +695,6 @@ function updateBusinessTable(businesses) {
         accountNo
       );
     };
-
     // Table component with clickable account numbers
     const App = () => {
       return React.createElement(
@@ -466,7 +825,6 @@ function updateBusinessTable(businesses) {
                 business["applicationStatus"] ||
                 business["APPLICATION STATUS"] ||
                 "N/A";
-
               return React.createElement(
                 "tr",
                 {
@@ -517,16 +875,12 @@ function updateBusinessTable(businesses) {
         )
       );
     };
-
     // Clear the existing content
     tableRoot.innerHTML = "";
-
     // Create a root for React 18
     const root = ReactDOM.createRoot(tableRoot);
-
     // Render the component
     root.render(React.createElement(App));
-
     console.log("Business table rendered successfully");
   } catch (error) {
     console.error("Error rendering business table:", error);
@@ -538,22 +892,18 @@ function updateBusinessTable(businesses) {
 // Also update the renderSimpleTable function to include the new columns
 function renderSimpleTable(businesses) {
   const tableRoot = document.getElementById("businessTable");
-
   if (!tableRoot) {
     console.error("Business table root element not found");
     return;
   }
-
   // Create table element
   const table = document.createElement("table");
   table.className = "business-table";
   table.style.width = "100%";
   table.style.borderCollapse = "collapse";
-
   // Create table header
   const thead = document.createElement("thead");
   const headerRow = document.createElement("tr");
-
   // Updated headers without OR No and Amount Paid
   const headers = [
     "Account No",
@@ -574,18 +924,14 @@ function renderSimpleTable(businesses) {
     th.style.borderBottom = "1px solid #e9ecef";
     headerRow.appendChild(th);
   });
-
   thead.appendChild(headerRow);
   table.appendChild(thead);
-
   // Create table body
   const tbody = document.createElement("tbody");
-
   // Use the businesses passed to this function (already paginated)
   businesses.forEach((business) => {
     const row = document.createElement("tr");
     row.style.borderBottom = "1px solid #e9ecef";
-
     // Account No (clickable)
     const accountCell = document.createElement("td");
     accountCell.style.padding = "12px 15px";
@@ -600,35 +946,30 @@ function renderSimpleTable(businesses) {
     };
     accountCell.appendChild(accountLink);
     row.appendChild(accountCell);
-
     // Business Name
     const nameCell = document.createElement("td");
     nameCell.textContent =
       business["businessName"] || business["NAME OF BUSINESS"] || "N/A";
     nameCell.style.padding = "12px 15px";
     row.appendChild(nameCell);
-
     // Owner
     const ownerCell = document.createElement("td");
     ownerCell.textContent =
       business["ownerName"] || business["NAME OF OWNER"] || "N/A";
     ownerCell.style.padding = "12px 15px";
     row.appendChild(ownerCell);
-
     // Barangay
     const barangayCell = document.createElement("td");
     barangayCell.textContent =
       business["barangay"] || business["BARANGAY"] || "N/A";
     barangayCell.style.padding = "12px 15px";
     row.appendChild(barangayCell);
-
     // Nature of Business
     const natureCell = document.createElement("td");
     natureCell.textContent =
       business["natureOfBusiness"] || business["NATURE OF BUSINESS"] || "N/A";
     natureCell.style.padding = "12px 15px";
     row.appendChild(natureCell);
-
     // Status
     const statusCell = document.createElement("td");
     statusCell.style.padding = "12px 15px";
@@ -646,7 +987,6 @@ function renderSimpleTable(businesses) {
     statusBadge.style.color = "white";
     statusBadge.style.fontSize = "0.75rem";
     statusBadge.style.fontWeight = "500";
-
     if (status === "HIGHRISK") {
       statusBadge.style.backgroundColor = "#dc3545";
     } else if (status === "LOWRISK") {
@@ -654,26 +994,20 @@ function renderSimpleTable(businesses) {
     } else {
       statusBadge.style.backgroundColor = "#6c757d";
     }
-
     statusCell.appendChild(statusBadge);
     row.appendChild(statusCell);
-
     // Application Status
     const appStatusCell = document.createElement("td");
     appStatusCell.textContent =
       business["applicationStatus"] || business["APPLICATION STATUS"] || "N/A";
     appStatusCell.style.padding = "12px 15px";
     row.appendChild(appStatusCell);
-
     tbody.appendChild(row);
   });
-
   table.appendChild(tbody);
-
   // Clear the tableRoot and append the new table
   tableRoot.innerHTML = "";
   tableRoot.appendChild(table);
-
   console.log("Simple table rendered successfully");
 }
 
@@ -681,18 +1015,14 @@ function renderSimpleTable(businesses) {
 async function showBusinessDetails(accountNo) {
   try {
     console.log(`Fetching details for account number: ${accountNo}`);
-
     const response = await fetch(
       `/api/business/account/${encodeURIComponent(accountNo)}`
     );
-
     if (!response.ok) {
       throw new Error("Failed to fetch business details");
     }
-
     const business = await response.json();
     console.log("Business details:", business);
-
     // Populate modal with business details
     document.getElementById("modalAccountNo").textContent =
       business.accountNo || "N/A";
@@ -710,23 +1040,19 @@ async function showBusinessDetails(accountNo) {
       business.status || "N/A";
     document.getElementById("modalApplicationStatus").textContent =
       business.applicationStatus || "N/A";
-
     // Format dates if they exist
     const dateOfApplication = business.dateOfApplication;
     document.getElementById("modalDateOfApplication").textContent =
       dateOfApplication
         ? new Date(dateOfApplication).toLocaleDateString()
         : "N/A";
-
     document.getElementById("modalOrNo").textContent = business.orNo || "N/A";
     document.getElementById("modalAmountPaid").textContent =
       business.amountPaid || "N/A";
-
     const dateOfPayment = business.dateOfPayment;
     document.getElementById("modalDateOfPayment").textContent = dateOfPayment
       ? new Date(dateOfPayment).toLocaleDateString()
       : "N/A";
-
     // Show the modal
     document.getElementById("businessDetailsModal").style.display = "block";
   } catch (error) {
@@ -742,46 +1068,39 @@ function setupModalEventListeners() {
   const detailsCloseBtns = detailsModal.querySelectorAll(
     ".modal-close, .modal-close-btn"
   );
-
   // Add click event to close buttons for details modal
   detailsCloseBtns.forEach((btn) => {
     btn.addEventListener("click", function () {
       detailsModal.style.display = "none";
     });
   });
-
   // Get business edit modal elements
   const editModal = document.getElementById("businessEditModal");
   const editCloseBtns = editModal.querySelectorAll(
     ".modal-close, .modal-close-btn"
   );
-
   // Add click event to close buttons for edit modal
   editCloseBtns.forEach((btn) => {
     btn.addEventListener("click", function () {
       editModal.style.display = "none";
     });
   });
-
   // Get business add modal elements
   const addModal = document.getElementById("businessAddModal");
   const addCloseBtns = addModal.querySelectorAll(
     ".modal-close, .modal-close-btn"
   );
-
   // Add click event to Delete button
   const deleteBtn = document.getElementById("deleteBtn");
   if (deleteBtn) {
     deleteBtn.addEventListener("click", handleDelete);
   }
-
   // Add click event to close buttons for add modal
   addCloseBtns.forEach((btn) => {
     btn.addEventListener("click", function () {
       addModal.style.display = "none";
     });
   });
-
   // Close modals when clicking outside of them
   window.addEventListener("click", function (event) {
     if (event.target === detailsModal) {
@@ -794,25 +1113,21 @@ function setupModalEventListeners() {
       addModal.style.display = "none";
     }
   });
-
   // Add click event to Print AEC button
   const printAecBtn = document.getElementById("printAecBtn");
   if (printAecBtn) {
     printAecBtn.addEventListener("click", printAEC);
   }
-
   // Add click event to Modify button
   const modifyBtn = document.getElementById("modifyBtn");
   if (modifyBtn) {
     modifyBtn.addEventListener("click", handleModify);
   }
-
   // Add click event to Save Changes button
   const saveBusinessBtn = document.getElementById("saveBusinessBtn");
   if (saveBusinessBtn) {
     saveBusinessBtn.addEventListener("click", saveBusinessChanges);
   }
-
   // Add click event to Add Business button in the modal
   const modalAddBusinessBtn = document.querySelector(
     "#businessAddModal #addBusinessBtn"
@@ -820,7 +1135,6 @@ function setupModalEventListeners() {
   if (modalAddBusinessBtn) {
     modalAddBusinessBtn.addEventListener("click", addNewBusiness);
   }
-
   console.log("Modal event listeners setup complete");
 }
 
@@ -843,7 +1157,6 @@ function printAEC() {
   const amountPaid = document.getElementById("modalAmountPaid").textContent;
   const dateOfPayment =
     document.getElementById("modalDateOfPayment").textContent;
-
   // Get current year and date
   const currentYear = new Date().getFullYear();
   const currentDate = new Date().toLocaleDateString("en-US", {
@@ -851,20 +1164,16 @@ function printAEC() {
     month: "long",
     day: "numeric",
   });
-
   // Get generated date and time
   const generatedDateTime =
     new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString();
-
   // Show instruction alert before printing
   alert(
     'Please select "Page 1" only in the the avoid printing a blank second page.'
   );
-
   // Create a hidden div for printing
   const printContent = document.createElement("div");
   printContent.className = "print-area";
-
   // Create the print content positioned at top-left corner
   printContent.innerHTML = `
         <style>
@@ -1068,14 +1377,11 @@ function printAEC() {
             </div>
         </div>
     `;
-
   // Add to body
   document.body.appendChild(printContent);
-
   // Wait for images to load before printing
   const images = printContent.querySelectorAll("img");
   let loadedImages = 0;
-
   const onImageLoad = () => {
     loadedImages++;
     if (loadedImages === images.length) {
@@ -1087,7 +1393,6 @@ function printAEC() {
       }, 100);
     }
   };
-
   // If images are already cached, they might not trigger load event
   const checkIfLoaded = () => {
     let allLoaded = true;
@@ -1096,12 +1401,10 @@ function printAEC() {
         allLoaded = false;
       }
     });
-
     if (allLoaded) {
       onImageLoad();
     }
   };
-
   // Add load event listeners to images
   images.forEach((img) => {
     if (img.complete) {
@@ -1111,7 +1414,6 @@ function printAEC() {
       img.addEventListener("error", onImageLoad); // Continue even if an image fails to load
     }
   });
-
   // Check if images are already loaded (cached)
   checkIfLoaded();
 }
@@ -1131,24 +1433,20 @@ function setupAddBusinessButton() {
 async function handleDelete() {
   // Get the account number from the modal
   const accountNo = document.getElementById("modalAccountNo").textContent;
-
   // Show browser warning popup
   const isConfirmed = window.confirm(
     "Are you sure you want to delete this data? This cannot be undone. Proceed with caution."
   );
-
   // If user clicked Cancel, return without deleting
   if (!isConfirmed) {
     return;
   }
-
   try {
     // Show loading state
     const deleteBtn = document.getElementById("deleteBtn");
     const originalText = deleteBtn.innerHTML;
     deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
     deleteBtn.disabled = true;
-
     // Send delete request to server
     const response = await fetch(
       `/api/business/account/${encodeURIComponent(accountNo)}`,
@@ -1156,21 +1454,16 @@ async function handleDelete() {
         method: "DELETE",
       }
     );
-
     // Restore button state
     deleteBtn.innerHTML = originalText;
     deleteBtn.disabled = false;
-
     if (!response.ok) {
       throw new Error("Failed to delete business");
     }
-
     // Close the modal
     document.getElementById("businessDetailsModal").style.display = "none";
-
     // Show success message
     showSuccessMessage("Business deleted successfully!");
-
     // Refresh the business table
     loadBusinessData();
   } catch (error) {
@@ -1182,14 +1475,11 @@ async function handleDelete() {
 // Function to handle add business button click
 function handleAddBusiness() {
   console.log("Add Business button clicked");
-
   // Clear the form
   document.getElementById("businessAddForm").reset();
-
   // Set today's date as default for date of application
   const today = new Date().toISOString().split("T")[0];
   document.getElementById("addDateOfApplication").value = today;
-
   // Show the add modal
   document.getElementById("businessAddModal").style.display = "block";
 }
@@ -1215,7 +1505,6 @@ async function addNewBusiness() {
         parseFloat(document.getElementById("addAmountPaid").value) || 0,
       dateOfPayment: document.getElementById("addDateOfPayment").value || null,
     };
-
     // Validate required fields
     const requiredFields = [
       { id: "addAccountNo", name: "Account No" },
@@ -1228,15 +1517,12 @@ async function addNewBusiness() {
       { id: "addApplicationStatus", name: "Application Status" },
       { id: "addDateOfApplication", name: "Date of Application" },
     ];
-
     // Check if all required fields are filled
     for (const field of requiredFields) {
       const element = document.getElementById(field.id);
       const value = element.value.trim();
-
       if (!value) {
         element.classList.add("is-invalid");
-
         // Add error message if it doesn't exist
         let errorElement = element.nextElementSibling;
         if (
@@ -1248,7 +1534,6 @@ async function addNewBusiness() {
           errorElement.textContent = `${field.name} is required`;
           element.parentNode.insertBefore(errorElement, element.nextSibling);
         }
-
         // Focus on the first invalid field
         element.focus();
         return;
@@ -1264,13 +1549,11 @@ async function addNewBusiness() {
         }
       }
     }
-
     // Validate amount paid is a positive number if provided
     const amountPaid = document.getElementById("addAmountPaid").value;
     if (amountPaid && (isNaN(amountPaid) || parseFloat(amountPaid) < 0)) {
       const amountField = document.getElementById("addAmountPaid");
       amountField.classList.add("is-invalid");
-
       let errorElement = amountField.nextElementSibling;
       if (
         !errorElement ||
@@ -1284,11 +1567,9 @@ async function addNewBusiness() {
           amountField.nextSibling
         );
       }
-
       amountField.focus();
       return;
     }
-
     // Check if account number already exists
     console.log(
       "Checking if account number already exists:",
@@ -1301,7 +1582,6 @@ async function addNewBusiness() {
       // Account number already exists
       const accountField = document.getElementById("addAccountNo");
       accountField.classList.add("is-invalid");
-
       let errorElement = accountField.nextElementSibling;
       if (
         !errorElement ||
@@ -1315,27 +1595,22 @@ async function addNewBusiness() {
           accountField.nextSibling
         );
       }
-
       accountField.focus();
       return;
     }
-
     // Show browser warning popup
     const isConfirmed = window.confirm(
       "Are you sure the data that are filled is correct?"
     );
-
     // If user clicked Cancel, return without adding
     if (!isConfirmed) {
       return;
     }
-
     // Show loading state
     const addBtn = document.getElementById("addBusinessBtn");
     const originalText = addBtn.innerHTML;
     addBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
     addBtn.disabled = true;
-
     // Send create request to server
     console.log("Sending request to server...");
     const response = await fetch("/api/business", {
@@ -1345,22 +1620,17 @@ async function addNewBusiness() {
       },
       body: JSON.stringify(businessData),
     });
-
     // Restore button state
     addBtn.innerHTML = originalText;
     addBtn.disabled = false;
-
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || "Failed to add business");
     }
-
     // Close the add modal
     document.getElementById("businessAddModal").style.display = "none";
-
     // Show success message
     showSuccessMessage("Business added successfully!");
-
     // Refresh the business table
     loadBusinessData();
   } catch (error) {
@@ -1390,10 +1660,8 @@ function showSuccessMessage(message) {
         <i class="fas fa-check-circle"></i>
         <span>${message}</span>
     `;
-
   // Add to body
   document.body.appendChild(alertDiv);
-
   // Remove after 3 seconds
   setTimeout(() => {
     alertDiv.style.opacity = "0";
@@ -1425,10 +1693,8 @@ function showErrorMessage(message) {
         <i class="fas fa-exclamation-circle"></i>
         <span>${message}</span>
     `;
-
   // Add to body
   document.body.appendChild(alertDiv);
-
   // Remove after 5 seconds
   setTimeout(() => {
     alertDiv.style.opacity = "0";
@@ -1461,16 +1727,13 @@ function handleModify() {
   const amountPaid = document.getElementById("modalAmountPaid").textContent;
   const dateOfPayment =
     document.getElementById("modalDateOfPayment").textContent;
-
   // Close the details modal
   document.getElementById("businessDetailsModal").style.display = "none";
-
   // Populate the edit form with current data
   document.getElementById("editAccountNo").value = accountNo;
   document.getElementById("editBusinessName").value = businessName;
   document.getElementById("editOwnerName").value = ownerName;
   document.getElementById("editAddress").value = address;
-
   // Set the barangay dropdown value
   const barangaySelect = document.getElementById("editBarangay");
   for (let i = 0; i < barangaySelect.options.length; i++) {
@@ -1479,11 +1742,9 @@ function handleModify() {
       break;
     }
   }
-
   document.getElementById("editNatureOfBusiness").value = natureOfBusiness;
   document.getElementById("editStatus").value = status;
   document.getElementById("editApplicationStatus").value = applicationStatus;
-
   // Format dates for input fields
   if (dateOfApplication && dateOfApplication !== "N/A") {
     const appDate = new Date(dateOfApplication);
@@ -1491,17 +1752,14 @@ function handleModify() {
       .toISOString()
       .split("T")[0];
   }
-
   document.getElementById("editOrNo").value = orNo;
   document.getElementById("editAmountPaid").value = amountPaid;
-
   if (dateOfPayment && dateOfPayment !== "N/A") {
     const payDate = new Date(dateOfPayment);
     document.getElementById("editDateOfPayment").value = payDate
       .toISOString()
       .split("T")[0];
   }
-
   // Show the edit modal
   document.getElementById("businessEditModal").style.display = "block";
 }
@@ -1525,7 +1783,6 @@ async function saveBusinessChanges() {
         parseFloat(document.getElementById("editAmountPaid").value) || 0,
       dateOfPayment: document.getElementById("editDateOfPayment").value,
     };
-
     // Send update request to server
     const response = await fetch(
       `/api/business/account/${encodeURIComponent(accountNo)}`,
@@ -1537,17 +1794,13 @@ async function saveBusinessChanges() {
         body: JSON.stringify(businessData),
       }
     );
-
     if (!response.ok) {
       throw new Error("Failed to update business details");
     }
-
     // Close the edit modal
     document.getElementById("businessEditModal").style.display = "none";
-
     // Show success message
     alert("Business details updated successfully!");
-
     // Refresh the business table
     loadBusinessData();
   } catch (error) {
@@ -1559,12 +1812,10 @@ async function saveBusinessChanges() {
 // Function to show error in table
 function showTableError(message) {
   const tableRoot = document.getElementById("businessTable");
-
   if (!tableRoot) {
     console.error("Business table root element not found");
     return;
   }
-
   tableRoot.innerHTML = `
         <div style="padding: 20px; text-align: center; color: #dc3545;">
             <i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-bottom: 10px;"></i>
@@ -1584,7 +1835,6 @@ function updatePaginationControls() {
     if (paginationInfo) {
       paginationInfo.textContent = "Showing 0 of 0 records";
     }
-
     // Disable all pagination buttons
     const buttons = [
       "firstPageBtn",
@@ -1596,12 +1846,9 @@ function updatePaginationControls() {
       const btn = document.getElementById(id);
       if (btn) btn.disabled = true;
     });
-
     return;
   }
-
   const totalPages = Math.ceil(totalRecords / pageSize);
-
   // Update pagination info
   const paginationInfo = document.getElementById("paginationInfo");
   if (paginationInfo) {
@@ -1609,13 +1856,11 @@ function updatePaginationControls() {
     const endRecord = Math.min(currentPage * pageSize, totalRecords);
     paginationInfo.textContent = `Showing ${startRecord}-${endRecord} of ${totalRecords} records`;
   }
-
   // Update button states
   const firstPageBtn = document.getElementById("firstPageBtn");
   const prevPageBtn = document.getElementById("prevPageBtn");
   const nextPageBtn = document.getElementById("nextPageBtn");
   const lastPageBtn = document.getElementById("lastPageBtn");
-
   if (firstPageBtn) firstPageBtn.disabled = currentPage === 1;
   if (prevPageBtn) prevPageBtn.disabled = currentPage === 1;
   if (nextPageBtn)
@@ -1632,7 +1877,6 @@ function setupPaginationControls() {
     pageSize = parseInt(pageSizeSelect.value);
     console.log("Initial page size set to:", pageSize);
   }
-
   // First page button
   const firstPageBtn = document.getElementById("firstPageBtn");
   if (firstPageBtn) {
@@ -1644,7 +1888,6 @@ function setupPaginationControls() {
       }
     });
   }
-
   // Previous page button
   const prevPageBtn = document.getElementById("prevPageBtn");
   if (prevPageBtn) {
@@ -1656,7 +1899,6 @@ function setupPaginationControls() {
       }
     });
   }
-
   // Next page button
   const nextPageBtn = document.getElementById("nextPageBtn");
   if (nextPageBtn) {
@@ -1669,7 +1911,6 @@ function setupPaginationControls() {
       }
     });
   }
-
   // Last page button
   const lastPageBtn = document.getElementById("lastPageBtn");
   if (lastPageBtn) {
@@ -1682,7 +1923,6 @@ function setupPaginationControls() {
       }
     });
   }
-
   // Page size selector
   if (pageSizeSelect) {
     pageSizeSelect.addEventListener("change", function () {
@@ -1704,13 +1944,11 @@ function setupRefreshButton() {
       if (icon) {
         icon.classList.add("refreshing");
       }
-
       // Clear the search input field
       const searchInput = document.getElementById("searchInput");
       if (searchInput) {
         searchInput.value = "";
       }
-
       // Reload the data
       loadBusinessData().finally(() => {
         // Remove spinning animation
@@ -1726,15 +1964,12 @@ function setupRefreshButton() {
 function setupSearch() {
   const searchInput = document.getElementById("searchInput");
   const searchBtn = document.getElementById("searchBtn");
-
   if (!searchInput || !searchBtn) {
     console.error("Search elements not found");
     return;
   }
-
   // Search on button click
   searchBtn.addEventListener("click", performSearch);
-
   // Search on Enter key press
   searchInput.addEventListener("keypress", function (e) {
     if (e.key === "Enter") {
@@ -1747,35 +1982,27 @@ function setupSearch() {
 async function performSearch() {
   const searchInput = document.getElementById("searchInput");
   const query = searchInput.value.trim();
-
   if (!query) {
     // If query is empty, load all businesses
     loadBusinessData();
     return;
   }
-
   try {
     console.log("Searching for account number:", query);
-
     const response = await fetch(
       `/api/business/search?query=${encodeURIComponent(query)}&field=accountNo`
     );
-
     if (!response.ok) {
       throw new Error("Search failed");
     }
-
     const businesses = await response.json();
     console.log("Search results:", businesses);
-
     // Store search results for pagination
     allBusinesses = businesses;
     totalRecords = businesses.length;
     currentPage = 1; // Reset to first page
-
     // Update table with paginated data
     updateBusinessTable(getPaginatedData());
-
     // Update pagination controls
     updatePaginationControls();
   } catch (error) {
@@ -1786,28 +2013,22 @@ async function performSearch() {
 // Function to setup dropdown functionality
 function setupDropdown() {
   console.log("Setting up dropdown functionality");
-
   const userDropdown = document.getElementById("userDropdown");
   const userDropdownMenu = document.getElementById("userDropdownMenu");
-
   if (!userDropdown || !userDropdownMenu) {
     console.error("Dropdown elements not found");
     return;
   }
-
   // Remove any existing event listeners
   const newUserDropdown = userDropdown.cloneNode(true);
   userDropdown.parentNode.replaceChild(newUserDropdown, userDropdown);
-
   // Add click event listener
   newUserDropdown.addEventListener("click", function (e) {
     e.preventDefault();
     e.stopPropagation();
     console.log("Dropdown clicked");
-
     // Toggle dropdown menu
     userDropdownMenu.classList.toggle("show");
-
     // Close dropdown when clicking outside
     document.addEventListener("click", function closeDropdown(e) {
       if (!e.target.closest(".user-dropdown")) {
@@ -1816,37 +2037,138 @@ function setupDropdown() {
       }
     });
   });
-
   console.log("Dropdown functionality setup complete");
 }
 
 // Function to setup logout functionality
 function setupLogout() {
   console.log("Setting up logout functionality");
-
   const logoutBtn = document.getElementById("logoutBtn");
-
   if (!logoutBtn) {
     console.error("Logout button not found");
     return;
   }
-
   // Remove any existing event listeners
   const newLogoutBtn = logoutBtn.cloneNode(true);
   logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
-
   // Add click event listener
   newLogoutBtn.addEventListener("click", function (e) {
     e.preventDefault();
     console.log("Logout button clicked");
-
-    // Clear authentication data
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("user_data");
-
-    // Redirect to login page
-    window.location.href = "/";
+    // Use the inactivity manager's logout method if available
+    if (window.inactivityManager) {
+      window.inactivityManager.logout();
+    } else {
+      // Fallback logout
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("user_data");
+      window.location.href = "/";
+    }
   });
-
   console.log("Logout functionality setup complete");
+}
+
+// Helper functions for token handling
+function isTokenExpired(token) {
+  try {
+    // Split the token and get the payload
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      return true; // Invalid token format
+    }
+    // Decode the payload
+    const payload = JSON.parse(atob(parts[1]));
+    // Check if it has an expiration time
+    if (!payload.exp) {
+      return true; // No expiration time
+    }
+    // Check if it's expired
+    const now = Math.floor(Date.now() / 1000);
+    return payload.exp < now;
+  } catch (e) {
+    console.error("Error checking token expiration:", e);
+    return true; // Assume expired if there's an error
+  }
+}
+
+function getUserFromToken(token) {
+  try {
+    // Split the token and get the payload
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      return null; // Invalid token format
+    }
+    // Decode the payload
+    return JSON.parse(atob(parts[1]));
+  } catch (e) {
+    console.error("Error decoding token:", e);
+    return null;
+  }
+}
+
+// Helper function to update user avatar
+async function updateUserAvatar(user, imageElement, fallbackElement) {
+  if (!imageElement || !fallbackElement) {
+    console.error("Avatar elements not found");
+    return;
+  }
+
+  // Check if user has a profile picture
+  if (user.hasProfilePicture) {
+    try {
+      // Get the token for authorization
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        console.error("No auth token found");
+        this.showFallbackAvatar(user, fallbackElement);
+        return;
+      }
+
+      // Fetch the profile picture
+      const response = await fetch(`/api/auth/profile-picture/${user.id}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        // Convert the response to a blob URL
+        const blob = await response.blob();
+        const imageUrl = URL.createObjectURL(blob);
+
+        // Set the image source and show it
+        imageElement.src = imageUrl;
+        imageElement.style.display = "block";
+        fallbackElement.style.display = "none";
+
+        console.log("Profile picture loaded successfully");
+      } else {
+        console.error("Failed to load profile picture:", response.status);
+        this.showFallbackAvatar(user, fallbackElement);
+      }
+    } catch (error) {
+      console.error("Error loading profile picture:", error);
+      this.showFallbackAvatar(user, fallbackElement);
+    }
+  } else {
+    // User doesn't have a profile picture, show fallback
+    console.log("User has no profile picture, showing fallback");
+    this.showFallbackAvatar(user, fallbackElement);
+  }
+}
+
+// Show fallback avatar with initials
+function showFallbackAvatar(user, fallbackElement) {
+  const initials = getUserInitials(user);
+  fallbackElement.textContent = initials;
+  fallbackElement.style.display = "flex";
+  fallbackElement.style.alignItems = "center";
+  fallbackElement.style.justifyContent = "center";
+
+  // Hide the image element
+  const imageElement = document.getElementById("userAvatarImage");
+  if (imageElement) {
+    imageElement.style.display = "none";
+  }
 }

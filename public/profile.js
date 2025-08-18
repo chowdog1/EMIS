@@ -13,24 +13,315 @@ window.addEventListener("load", function () {
   setupProfilePictureUpload();
   // Setup change password modal
   setupChangePasswordModal();
+  // Setup inactivity detection
+  setupInactivityDetection();
+  // Create inactivity warning popup
+  createInactivityWarning();
 });
+
+// Global variables for inactivity tracking
+let inactivityTimer = null;
+let warningTimer = null;
+const inactivityTimeout = 180 * 1000; // 1 minute in milliseconds
+const warningTimeout = 160 * 1000; // Show warning 20 seconds before logout
+
+// Function to setup inactivity detection
+function setupInactivityDetection() {
+  console.log("Setting up inactivity detection");
+
+  // Reset inactivity timer on user activity
+  const resetInactivityTimer = () => {
+    console.log("User activity detected, resetting inactivity timer");
+    resetInactivityTimer();
+  };
+
+  // Add event listeners for user activity
+  const events = [
+    "mousedown",
+    "mousemove",
+    "keypress",
+    "scroll",
+    "touchstart",
+    "click",
+    "keydown",
+    "input",
+  ];
+
+  events.forEach((event) => {
+    document.addEventListener(event, resetInactivityTimer, true);
+  });
+
+  // Start the inactivity timer
+  resetInactivityTimer();
+  console.log("Inactivity detection setup complete");
+}
+
+// Function to reset inactivity timer
+function resetInactivityTimer() {
+  // Clear existing timers
+  if (inactivityTimer) {
+    clearTimeout(inactivityTimer);
+  }
+  if (warningTimer) {
+    clearTimeout(warningTimer);
+  }
+
+  // Hide warning popup if it's visible
+  hideInactivityWarning();
+
+  // Set warning timer (40 seconds before logout)
+  warningTimer = setTimeout(() => {
+    console.log("Showing inactivity warning");
+    showInactivityWarning();
+  }, warningTimeout);
+
+  // Set logout timer (60 seconds total)
+  inactivityTimer = setTimeout(() => {
+    console.log("User inactive for 1 minute, logging out");
+    logout();
+  }, inactivityTimeout);
+
+  console.log(
+    `Inactivity timer reset (will logout after ${
+      inactivityTimeout / 1000
+    } seconds of inactivity)`
+  );
+}
+
+// Function to create inactivity warning popup
+function createInactivityWarning() {
+  // Check if popup already exists
+  if (document.getElementById("inactivityWarning")) {
+    return;
+  }
+
+  // Create popup container
+  const popup = document.createElement("div");
+  popup.id = "inactivityWarning";
+  popup.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 24px;
+    max-width: 400px;
+    width: 90%;
+    z-index: 10000;
+    display: none;
+    text-align: center;
+    border: 1px solid #e0e0e0;
+  `;
+
+  // Create warning icon
+  const icon = document.createElement("div");
+  icon.innerHTML = `
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ff9800" stroke-width="2">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+      <line x1="12" y1="9" x2="12" y2="13"></line>
+      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+    </svg>
+  `;
+  icon.style.marginBottom = "16px";
+
+  // Create warning message
+  const message = document.createElement("h3");
+  message.textContent = "Session Timeout Warning";
+  message.style.cssText = `
+    margin: 0 0 12px 0;
+    color: #333;
+    font-size: 18px;
+    font-weight: 600;
+  `;
+
+  // Create warning text
+  const text = document.createElement("p");
+  text.textContent =
+    "You have been inactive for a while. You will be automatically logged out in 20 seconds.";
+  text.style.cssText = `
+    margin: 0 0 24px 0;
+    color: #666;
+    font-size: 14px;
+    line-height: 1.5;
+  `;
+
+  // Create countdown timer
+  const countdown = document.createElement("div");
+  countdown.id = "inactivityCountdown";
+  countdown.textContent = "20";
+  countdown.style.cssText = `
+    font-size: 24px;
+    font-weight: bold;
+    color: #ff9800;
+    margin-bottom: 20px;
+  `;
+
+  // Create buttons container
+  const buttons = document.createElement("div");
+  buttons.style.cssText = "display: flex; gap: 12px; justify-content: center;";
+
+  // Create stay logged in button
+  const stayButton = document.createElement("button");
+  stayButton.textContent = "Stay Logged In";
+  stayButton.style.cssText = `
+    background: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  `;
+  stayButton.addEventListener("click", () => {
+    resetInactivityTimer();
+  });
+  stayButton.addEventListener("mouseenter", () => {
+    stayButton.style.background = "#45a049";
+  });
+  stayButton.addEventListener("mouseleave", () => {
+    stayButton.style.background = "#4caf50";
+  });
+
+  // Create logout button
+  const logoutButton = document.createElement("button");
+  logoutButton.textContent = "Logout Now";
+  logoutButton.style.cssText = `
+    background: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  `;
+  logoutButton.addEventListener("click", () => {
+    logout();
+  });
+  logoutButton.addEventListener("mouseenter", () => {
+    logoutButton.style.background = "#d32f2f";
+  });
+  logoutButton.addEventListener("mouseleave", () => {
+    logoutButton.style.background = "#f44336";
+  });
+
+  // Append elements
+  buttons.appendChild(stayButton);
+  buttons.appendChild(logoutButton);
+  popup.appendChild(icon);
+  popup.appendChild(message);
+  popup.appendChild(text);
+  popup.appendChild(countdown);
+  popup.appendChild(buttons);
+
+  // Create overlay
+  const overlay = document.createElement("div");
+  overlay.id = "inactivityOverlay";
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    display: none;
+  `;
+
+  // Add to document
+  document.body.appendChild(overlay);
+  document.body.appendChild(popup);
+  console.log("Inactivity warning popup created");
+}
+
+// Function to show inactivity warning popup
+function showInactivityWarning() {
+  const popup = document.getElementById("inactivityWarning");
+  const overlay = document.getElementById("inactivityOverlay");
+  const countdown = document.getElementById("inactivityCountdown");
+
+  if (popup && overlay && countdown) {
+    popup.style.display = "block";
+    overlay.style.display = "block";
+
+    // Start countdown
+    let timeLeft = 20;
+    countdown.textContent = timeLeft;
+
+    const countdownInterval = setInterval(() => {
+      timeLeft--;
+      countdown.textContent = timeLeft;
+      if (timeLeft <= 0) {
+        clearInterval(countdownInterval);
+      }
+    }, 1000);
+
+    // Store interval ID to clear it later
+    popup.countdownInterval = countdownInterval;
+  }
+}
+
+// Function to hide inactivity warning popup
+function hideInactivityWarning() {
+  const popup = document.getElementById("inactivityWarning");
+  const overlay = document.getElementById("inactivityOverlay");
+
+  if (popup && overlay) {
+    popup.style.display = "none";
+    overlay.style.display = "none";
+
+    // Clear countdown interval if it exists
+    if (popup.countdownInterval) {
+      clearInterval(popup.countdownInterval);
+    }
+  }
+}
+
+// Function to handle logout
+async function logout() {
+  try {
+    const token = localStorage.getItem("auth_token");
+    if (token) {
+      // Call server logout endpoint
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (response.ok) {
+        console.log("Server logout successful");
+      } else {
+        console.error("Server logout failed");
+      }
+    }
+  } catch (error) {
+    console.error("Error during logout:", error);
+  } finally {
+    // Always clear local data and redirect
+    clearAllSessionData();
+    window.location.href = "/";
+  }
+}
 
 // Function to check authentication
 function checkAuthentication() {
   console.log("=== Checking Authentication ===");
-
   const token = localStorage.getItem("auth_token");
   const userData = localStorage.getItem("user_data");
-
   console.log("Token found:", !!token);
   console.log("User data found:", !!userData);
-
   if (!token || !userData) {
     console.log("No token or user data found, redirecting to login");
     window.location.href = "/";
     return;
   }
-
   try {
     // Check if token has valid format first
     if (!window.isValidTokenFormat(token)) {
@@ -40,7 +331,6 @@ function checkAuthentication() {
       window.location.href = "/";
       return;
     }
-
     // Check if token is expired locally first
     if (window.isTokenExpired(token)) {
       console.log("Token is expired, clearing data and redirecting");
@@ -49,12 +339,10 @@ function checkAuthentication() {
       window.location.href = "/";
       return;
     }
-
     const user = JSON.parse(userData);
     console.log("User data parsed successfully:", user);
     console.log("User ID:", user.id);
     console.log("User Email:", user.email);
-
     // Verify that the token user matches the stored user data
     const tokenUser = window.getUserFromToken(token);
     if (!tokenUser || tokenUser.userId !== user.id) {
@@ -64,13 +352,10 @@ function checkAuthentication() {
       window.location.href = "/";
       return;
     }
-
     // Update user info in the UI
     updateUserInterface(user);
-
     // Load profile data
     loadProfileData(user);
-
     // Verify token with server in the background - don't await it
     verifyTokenWithServer(token)
       .then((success) => {
@@ -110,12 +395,10 @@ async function updateUserInterface(user) {
   const userEmailElement = document.getElementById("userEmail");
   const userAvatarImage = document.getElementById("userAvatarImage");
   const userAvatarFallback = document.getElementById("userAvatarFallback");
-
   // Get the greeting based on current time
   const greeting = getTimeBasedGreeting();
   // Get the user's first name if available, otherwise fall back to email
   const displayName = user.firstname || user.email;
-
   if (userEmailElement) {
     // Update with greeting and first name
     userEmailElement.textContent = `${greeting}, ${displayName}!`;
@@ -123,7 +406,6 @@ async function updateUserInterface(user) {
   } else {
     console.error("User email element not found");
   }
-
   // Update avatar using the shared utility function
   updateUserAvatar(user, userAvatarImage, userAvatarFallback);
 }
@@ -155,7 +437,6 @@ async function loadProfileData(user) {
   if (profileEmail) {
     profileEmail.textContent = user.email;
   }
-
   // Update form fields
   const firstNameInput = document.getElementById("firstName");
   const lastNameInput = document.getElementById("lastName");
@@ -163,7 +444,6 @@ async function loadProfileData(user) {
   if (firstNameInput) firstNameInput.value = user.firstname || "";
   if (lastNameInput) lastNameInput.value = user.lastname || "";
   if (emailInput) emailInput.value = user.email || "";
-
   // Load profile picture if available
   const profilePicture = document.getElementById("profilePicture");
   if (profilePicture) {
@@ -185,24 +465,19 @@ async function loadProfileData(user) {
           );
         }
         loadingIndicator.style.display = "flex";
-
         // Fetch the profile picture with authentication
         const imageUrl = await fetchProfilePicture(user.id);
-
         // Hide loading indicator
         loadingIndicator.style.display = "none";
-
         // Set the image source to the blob URL
         profilePicture.src = imageUrl;
         profilePicture.style.display = "block";
-
         // Clean up the blob URL when the page unloads
         window.addEventListener("beforeunload", () => {
           URL.revokeObjectURL(imageUrl);
         });
       } catch (error) {
         console.error("Failed to load profile picture:", error);
-
         // Hide loading indicator
         const loadingIndicator = profilePicture.nextElementSibling;
         if (
@@ -211,7 +486,6 @@ async function loadProfileData(user) {
         ) {
           loadingIndicator.style.display = "none";
         }
-
         // Show fallback
         profilePicture.style.display = "none";
         let fallback = profilePicture.nextElementSibling;
@@ -255,43 +529,35 @@ async function loadProfileData(user) {
 // Function to setup profile form
 function setupProfileForm() {
   const profileForm = document.getElementById("profileForm");
-
   if (!profileForm) {
     console.error("Profile form not found");
     return;
   }
-
   profileForm.addEventListener("submit", async function (e) {
     e.preventDefault();
-
     const firstName = document.getElementById("firstName").value.trim();
     const lastName = document.getElementById("lastName").value.trim();
     const email = document.getElementById("email").value.trim();
-
     // Validate form
     if (!firstName || !lastName || !email) {
       showErrorMessage("Please fill in all required fields");
       return;
     }
-
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       showErrorMessage("Please enter a valid email address");
       return;
     }
-
     try {
       // Show loading state
       const saveBtn = document.getElementById("saveProfileBtn");
       const originalText = saveBtn.innerHTML;
       saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
       saveBtn.disabled = true;
-
       // Get user data from localStorage
       const userData = JSON.parse(localStorage.getItem("user_data"));
       const token = localStorage.getItem("auth_token");
-
       // Send update request
       const response = await fetch("/api/auth/update-profile", {
         method: "PUT",
@@ -305,13 +571,10 @@ function setupProfileForm() {
           email: email,
         }),
       });
-
       const result = await response.json();
-
       if (!response.ok) {
         throw new Error(result.message || "Failed to update profile");
       }
-
       // Update localStorage with new user data
       const updatedUserData = {
         ...userData,
@@ -320,11 +583,9 @@ function setupProfileForm() {
         email: email,
       };
       localStorage.setItem("user_data", JSON.stringify(updatedUserData));
-
       // Update UI
       updateUserInterface(updatedUserData);
       loadProfileData(updatedUserData);
-
       // Show success message
       showSuccessMessage("Profile updated successfully!");
     } catch (error) {
@@ -345,37 +606,30 @@ function setupProfilePictureUpload() {
     "profilePictureContainer"
   );
   const profilePictureInput = document.getElementById("profilePictureInput");
-
   if (!profilePictureContainer || !profilePictureInput) {
     console.error("Profile picture elements not found");
     return;
   }
-
   profilePictureContainer.addEventListener("click", function () {
     profilePictureInput.click();
   });
-
   profilePictureInput.addEventListener("change", async function (e) {
     const file = e.target.files[0];
     if (!file) return;
-
     // Validate file type
     if (!file.type.startsWith("image/")) {
       showErrorMessage("Please select an image file");
       return;
     }
-
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       showErrorMessage("Image size must be less than 5MB");
       return;
     }
-
     try {
       // Show loading state
       const profilePicture = document.getElementById("profilePicture");
       const originalSrc = profilePicture.src;
-
       // Instead of using a placeholder, show a loading indicator
       profilePicture.style.display = "none";
       let loadingIndicator = profilePicture.nextElementSibling;
@@ -392,14 +646,11 @@ function setupProfilePictureUpload() {
         );
       }
       loadingIndicator.style.display = "flex";
-
       // Create FormData
       const formData = new FormData();
       formData.append("profilePicture", file);
-
       // Get token
       const token = localStorage.getItem("auth_token");
-
       // Send upload request
       const response = await fetch("/api/auth/upload-profile-picture", {
         method: "POST",
@@ -408,47 +659,36 @@ function setupProfilePictureUpload() {
         },
         body: formData,
       });
-
       const result = await response.json();
-
       if (!response.ok) {
         throw new Error(result.message || "Failed to upload profile picture");
       }
-
       console.log("Profile picture upload successful");
-
       // Update user data
       const userData = JSON.parse(localStorage.getItem("user_data"));
       userData.hasProfilePicture = true;
       localStorage.setItem("user_data", JSON.stringify(userData));
-
       // Hide loading indicator
       loadingIndicator.style.display = "none";
-
       // Fetch the newly uploaded profile picture with authentication
       const imageUrl = await fetchProfilePicture(userData.id);
-
       // Update profile picture
       profilePicture.src = imageUrl;
       profilePicture.style.display = "block";
-
       // Update the avatar in the header
       const userAvatarImage = document.getElementById("userAvatarImage");
       userAvatarImage.src = imageUrl;
       userAvatarImage.style.display = "block";
       document.getElementById("userAvatarFallback").style.display = "none";
-
       // Clean up the blob URL when the page unloads
       window.addEventListener("beforeunload", () => {
         URL.revokeObjectURL(imageUrl);
       });
-
       // Show success message
       showSuccessMessage("Profile picture updated successfully!");
     } catch (error) {
       console.error("Error uploading profile picture:", error);
       showErrorMessage(error.message || "Failed to upload profile picture");
-
       // Hide loading indicator and restore original image
       const loadingIndicator = profilePicture.nextElementSibling;
       if (
@@ -467,7 +707,6 @@ function setupProfilePictureUpload() {
 function updateHeaderAvatar(profilePictureUrl) {
   const userAvatarImage = document.getElementById("userAvatarImage");
   const userAvatarFallback = document.getElementById("userAvatarFallback");
-
   if (userAvatarImage) {
     userAvatarImage.src = profilePictureUrl;
     // Hide fallback when image is set
@@ -485,28 +724,24 @@ function setupChangePasswordModal() {
     ".modal-close, .modal-close-btn"
   );
   const updatePasswordBtn = document.getElementById("updatePasswordBtn");
-
   // Open modal
   changePasswordBtn.addEventListener("click", function () {
     changePasswordModal.style.display = "block";
     document.getElementById("changePasswordForm").reset();
     document.getElementById("passwordStrength").textContent = "";
   });
-
   // Close modal
   modalCloseBtns.forEach((btn) => {
     btn.addEventListener("click", function () {
       changePasswordModal.style.display = "none";
     });
   });
-
   // Close modal when clicking outside
   window.addEventListener("click", function (e) {
     if (e.target === changePasswordModal) {
       changePasswordModal.style.display = "none";
     }
   });
-
   // Setup password toggles
   const passwordToggles = document.querySelectorAll(".password-toggle");
   passwordToggles.forEach((toggle) => {
@@ -514,7 +749,6 @@ function setupChangePasswordModal() {
       const targetId = this.getAttribute("data-target");
       const input = document.getElementById(targetId);
       const icon = this.querySelector("i");
-
       if (input.type === "password") {
         input.type = "text";
         icon.classList.remove("fa-eye");
@@ -526,43 +760,35 @@ function setupChangePasswordModal() {
       }
     });
   });
-
   // Setup password strength checker
   const newPasswordInput = document.getElementById("newPassword");
   newPasswordInput.addEventListener("input", checkPasswordStrength);
-
   // Handle password update
   updatePasswordBtn.addEventListener("click", async function () {
     const currentPassword = document.getElementById("currentPassword").value;
     const newPassword = document.getElementById("newPassword").value;
     const confirmPassword = document.getElementById("confirmPassword").value;
-
     // Validate passwords
     if (!currentPassword || !newPassword || !confirmPassword) {
       showErrorMessage("Please fill in all password fields");
       return;
     }
-
     if (newPassword.length < 6) {
       showErrorMessage("New password must be at least 6 characters long");
       return;
     }
-
     if (newPassword !== confirmPassword) {
       showErrorMessage("New passwords do not match");
       return;
     }
-
     try {
       // Show loading state
       const originalText = updatePasswordBtn.innerHTML;
       updatePasswordBtn.innerHTML =
         '<i class="fas fa-spinner fa-spin"></i> Updating...';
       updatePasswordBtn.disabled = true;
-
       // Get token
       const token = localStorage.getItem("auth_token");
-
       // Send update request
       const response = await fetch("/api/auth/change-password", {
         method: "POST",
@@ -575,16 +801,12 @@ function setupChangePasswordModal() {
           newPassword,
         }),
       });
-
       const result = await response.json();
-
       if (!response.ok) {
         throw new Error(result.message || "Failed to update password");
       }
-
       // Close modal
       changePasswordModal.style.display = "none";
-
       // Show success message
       showSuccessMessage("Password updated successfully!");
     } catch (error) {
@@ -602,33 +824,24 @@ function setupChangePasswordModal() {
 function checkPasswordStrength() {
   const password = document.getElementById("newPassword").value;
   const strengthElement = document.getElementById("passwordStrength");
-
   if (!password) {
     strengthElement.textContent = "";
     strengthElement.className = "password-strength";
     return;
   }
-
   let strength = 0;
   let feedback = [];
-
   if (password.length >= 8) strength++;
   else feedback.push("at least 8 characters");
-
   if (/[A-Z]/.test(password)) strength++;
   else feedback.push("uppercase letter");
-
   if (/[a-z]/.test(password)) strength++;
   else feedback.push("lowercase letter");
-
   if (/\d/.test(password)) strength++;
   else feedback.push("number");
-
   if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength++;
   else feedback.push("special character");
-
   strengthElement.className = "password-strength";
-
   if (strength < 2) {
     strengthElement.className += " weak";
     strengthElement.textContent = `Weak password. Consider adding: ${feedback
@@ -665,9 +878,7 @@ function showSuccessMessage(message) {
         <i class="fas fa-check-circle"></i>
         <span>${message}</span>
     `;
-
   document.body.appendChild(alertDiv);
-
   setTimeout(() => {
     alertDiv.style.opacity = "0";
     alertDiv.style.transition = "opacity 0.5s";
@@ -697,9 +908,7 @@ function showErrorMessage(message) {
         <i class="fas fa-exclamation-circle"></i>
         <span>${message}</span>
     `;
-
   document.body.appendChild(alertDiv);
-
   setTimeout(() => {
     alertDiv.style.opacity = "0";
     alertDiv.style.transition = "opacity 0.5s";
@@ -712,28 +921,22 @@ function showErrorMessage(message) {
 // Function to setup dropdown functionality
 function setupDropdown() {
   console.log("Setting up dropdown functionality");
-
   const userDropdown = document.getElementById("userDropdown");
   const userDropdownMenu = document.getElementById("userDropdownMenu");
-
   if (!userDropdown || !userDropdownMenu) {
     console.error("Dropdown elements not found");
     return;
   }
-
   // Remove any existing event listeners
   const newUserDropdown = userDropdown.cloneNode(true);
   userDropdown.parentNode.replaceChild(newUserDropdown, userDropdown);
-
   // Add click event listener
   newUserDropdown.addEventListener("click", function (e) {
     e.preventDefault();
     e.stopPropagation();
     console.log("Dropdown clicked");
-
     // Toggle dropdown menu
     userDropdownMenu.classList.toggle("show");
-
     // Close dropdown when clicking outside
     document.addEventListener("click", function closeDropdown(e) {
       if (!e.target.closest(".user-dropdown")) {
@@ -742,7 +945,6 @@ function setupDropdown() {
       }
     });
   });
-
   console.log("Dropdown functionality setup complete");
 }
 
@@ -751,7 +953,6 @@ async function verifyTokenWithServer(token) {
   try {
     console.log("=== Verifying Token with Server ===");
     console.log("Token being verified:", token.substring(0, 20) + "...");
-
     const response = await fetch("/api/auth/verify-token", {
       method: "POST",
       headers: {
@@ -759,30 +960,24 @@ async function verifyTokenWithServer(token) {
         Authorization: `Bearer ${token}`,
       },
     });
-
     console.log("Response status:", response.status);
     console.log("Response ok:", response.ok);
-
     if (response.ok) {
       console.log("Token verification successful");
       const data = await response.json();
       console.log("Response data:", data);
-
       // Update localStorage with fresh user data
       if (data.user && data.valid) {
         localStorage.setItem("user_data", JSON.stringify(data.user));
         console.log("Updated localStorage with fresh user data");
       }
-
       return true;
     } else {
       console.log("Token verification failed, status:", response.status);
-
       // Only reject if the token is actually invalid (401)
       if (response.status === 401) {
         throw new Error("Invalid token");
       }
-
       // For other errors, don't reject
       return true;
     }
@@ -796,52 +991,38 @@ async function verifyTokenWithServer(token) {
 // profile.js
 function clearAllSessionData() {
   console.log("Clearing all session data");
-
   // Clear localStorage
   localStorage.removeItem("auth_token");
   localStorage.removeItem("user_data");
   localStorage.removeItem("cenro_sanjuan_emis_login_data");
-
   // Clear all cookies
   document.cookie.split(";").forEach(function (c) {
     document.cookie = c
       .replace(/^ +/, "")
       .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
   });
-
   // Clear sessionStorage
   sessionStorage.clear();
-
   console.log("All session data cleared");
 }
 
 // Update the logout function to use this
 function setupLogout() {
   console.log("Setting up logout functionality");
-
   const logoutBtn = document.getElementById("logoutBtn");
-
   if (!logoutBtn) {
     console.error("Logout button not found");
     return;
   }
-
   // Remove any existing event listeners
   const newLogoutBtn = logoutBtn.cloneNode(true);
   logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
-
   // Add click event listener
   newLogoutBtn.addEventListener("click", function (e) {
     e.preventDefault();
     console.log("Logout button clicked");
-
-    // Clear all session data
-    clearAllSessionData();
-
-    console.log("Redirecting to login page");
-    window.location.href = "/";
+    logout();
   });
-
   console.log("Logout functionality setup complete");
 }
 
@@ -853,7 +1034,6 @@ async function refreshToken() {
       console.log("No token found to refresh");
       return false;
     }
-
     console.log("Refreshing token...");
     const response = await fetch("/api/auth/verify-token", {
       method: "POST",
@@ -862,7 +1042,6 @@ async function refreshToken() {
         Authorization: `Bearer ${token}`,
       },
     });
-
     if (response.ok) {
       const data = await response.json();
       if (data.valid && data.user) {
@@ -871,7 +1050,6 @@ async function refreshToken() {
         return true;
       }
     }
-
     console.log("Token refresh failed");
     return false;
   } catch (error) {
@@ -886,18 +1064,15 @@ async function fetchProfilePicture(userId) {
   if (!token) {
     throw new Error("No authentication token found");
   }
-
   try {
     const response = await fetch(`/api/auth/profile-picture/${userId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
-
     if (!response.ok) {
       throw new Error(`Failed to fetch profile picture: ${response.status}`);
     }
-
     const blob = await response.blob();
     return URL.createObjectURL(blob);
   } catch (error) {
@@ -905,3 +1080,30 @@ async function fetchProfilePicture(userId) {
     throw error;
   }
 }
+
+// Handle page visibility change
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    console.log("Page hidden - pausing inactivity timer");
+    if (inactivityTimer) {
+      clearTimeout(inactivityTimer);
+    }
+    if (warningTimer) {
+      clearTimeout(warningTimer);
+    }
+  } else {
+    console.log("Page visible - resuming inactivity timer");
+    resetInactivityTimer();
+  }
+});
+
+// Handle beforeunload event
+window.addEventListener("beforeunload", () => {
+  // Clear timers to prevent memory leaks
+  if (inactivityTimer) {
+    clearTimeout(inactivityTimer);
+  }
+  if (warningTimer) {
+    clearTimeout(warningTimer);
+  }
+});

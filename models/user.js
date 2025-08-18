@@ -19,6 +19,9 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  // For session tracking
+  currentSessionId: String,
+  lastLoginAt: Date,
 });
 
 module.exports = mongoose.model("User", userSchema);

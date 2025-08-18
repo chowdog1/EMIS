@@ -19,11 +19,15 @@ console.log(
   typeof authController.verifyToken
 );
 
+// Debug: Check if middleware is properly loaded
+console.log("verifyToken middleware type:", typeof verifyToken);
+
 // POST /api/auth/login
 router.post("/login", authController.login);
 router.post("/register", authController.register);
 router.post("/check-email", authController.checkEmail);
-router.post("/verify-token", authController.verifyToken); // This is the endpoint, not middleware
+router.post("/verify-token", authController.verifyToken); // This now uses the renamed method
+router.post("/logout", authController.logout); // Add logout route
 
 // Protected routes - use the middleware
 router.put("/update-profile", verifyToken, authController.updateProfile);
@@ -34,7 +38,6 @@ router.post(
   authController.uploadProfilePicture
 );
 router.post("/change-password", verifyToken, authController.changePassword);
-// Fix this line - use middleware instead of controller method
 router.get(
   "/profile-picture/:userId",
   verifyToken,
