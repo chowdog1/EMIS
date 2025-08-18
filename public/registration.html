@@ -1,146 +1,237 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Register - CENRO San Juan City EMIS</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="loginstyle.css">
-    <link rel="stylesheet" href="registerstyle.css">
-</head>
-<body>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="loginstyle.css" />
+    <link rel="stylesheet" href="registerstyle.css" />
+  </head>
+  <body>
     <!-- Background Elements -->
     <div class="background-elements">
-        <div class="leaf leaf-1" data-float="true"></div>
-        <div class="leaf leaf-2" data-float="true"></div>
-        <div class="leaf leaf-3" data-float="true"></div>
-        <div class="wave wave-1"></div>
-        <div class="wave wave-2"></div>
-        <div class="wave wave-3"></div>
+      <div class="leaf leaf-1" data-float="true"></div>
+      <div class="leaf leaf-2" data-float="true"></div>
+      <div class="leaf leaf-3" data-float="true"></div>
+      <div class="wave wave-1"></div>
+      <div class="wave wave-2"></div>
+      <div class="wave wave-3"></div>
     </div>
 
     <!-- Main Container -->
     <div class="login-container">
-        <!-- Registration Card -->
-        <div class="login-card">
-            <!-- Header Section -->
-            <div class="login-header">
-                <div class="logos-container">
-                    <div class="logo-item">
-                        <img src="bagongpilipinas.png" alt="Bagong Pilipinas Logo" class="official-logo">
-                    </div>
-                    <div class="logo-item">
-                        <img src="makabagong san juan Logo.png" alt="Makabagong San Juan Logo" class="official-logo">
-                    </div>
-                    <div class="logo-item">
-                        <img src="cenro logo.png" alt="CENRO San Juan City Logo" class="official-logo">
-                    </div>
-                </div>
-                <h1 class="system-title">CENRO San Juan City</h1>
-                <p class="system-subtitle">Environmental Management Information System</p>
-                <p class="location-subtitle">City Environment and Natural Resources Office</p>
+      <!-- Registration Card -->
+      <div class="login-card">
+        <!-- Header Section -->
+        <div class="login-header">
+          <div class="logos-container">
+            <div class="logo-item">
+              <img
+                src="bagongpilipinas.png"
+                alt="Bagong Pilipinas Logo"
+                class="official-logo"
+              />
             </div>
-
-            <!-- Registration Form -->
-            <form class="login-form" id="registrationForm" novalidate>
-                <div class="form-group">
-    <label for="email" class="form-label">
-        <i data-feather="mail" class="form-icon"></i>
-        Email Address
-    </label>
-    <div class="input-wrapper">
-        <input 
-            type="email" 
-            id="email" 
-            name="email" 
-            class="form-input"
-            placeholder="Enter your official email"
-            required
-            autocomplete="email"
-            aria-describedby="email-error"
-        >
-        <div class="email-check-loading" style="display: none;">
-            <i data-feather="loader" class="spinner"></i>
-        </div>
-    </div>
-    <div class="error-message" id="email-error" role="alert" aria-live="polite"></div>
-</div>
-
-                <div class="form-group">
-                    <label for="password" class="form-label">
-                        <i data-feather="lock" class="form-icon"></i>
-                        Password
-                    </label>
-                    <div class="password-wrapper">
-                        <input 
-                            type="password" 
-                            id="password" 
-                            name="password" 
-                            class="form-input"
-                            placeholder="Create a secure password"
-                            required
-                            autocomplete="new-password"
-                            aria-describedby="password-error password-strength"
-                        >
-                        <button type="button" class="password-toggle" aria-label="Toggle password visibility">
-                            <i data-feather="eye" class="toggle-icon"></i>
-                        </button>
-                    </div>
-                    <div class="password-strength" id="password-strength" aria-live="polite"></div>
-                    <div class="error-message" id="password-error" role="alert" aria-live="polite"></div>
-                </div>
-
-                <div class="form-group">
-                    <label for="confirmPassword" class="form-label">
-                        <i data-feather="shield" class="form-icon"></i>
-                        Confirm Password
-                    </label>
-                    <div class="password-wrapper">
-                        <input 
-                            type="password" 
-                            id="confirmPassword" 
-                            name="confirmPassword" 
-                            class="form-input"
-                            placeholder="Confirm your password"
-                            required
-                            autocomplete="new-password"
-                            aria-describedby="confirmPassword-error"
-                        >
-                        <button type="button" class="password-toggle" aria-label="Toggle confirm password visibility">
-                            <i data-feather="eye" class="toggle-icon"></i>
-                        </button>
-                    </div>
-                    <div class="error-message" id="confirmPassword-error" role="alert" aria-live="polite"></div>
-                </div>
-
-                <button type="submit" class="login-button" id="registerBtn">
-                    <i data-feather="user-plus" class="button-icon"></i>
-                    Create Account
-                    <div class="button-spinner" aria-hidden="true"></div>
-                </button>
-            </form>
-
-            <!-- Footer Links -->
-            <div class="form-footer">
-                <p class="footer-text">
-                    Already have an account? 
-                    <a href="index.html" class="footer-link">Sign In</a>
-                </p>
-                
-                <div class="footer-links">
-                    <a href="#" class="footer-link">Privacy Policy</a>
-                    <span class="separator">•</span>
-                    <a href="#" class="footer-link">Terms of Service</a>
-                    <span class="separator">•</span>
-                    <a href="#" class="footer-link">Contact Support</a>
-                </div>
+            <div class="logo-item">
+              <img
+                src="makabagong san juan Logo.png"
+                alt="Makabagong San Juan Logo"
+                class="official-logo"
+              />
             </div>
+            <div class="logo-item">
+              <img
+                src="cenro logo.png"
+                alt="CENRO San Juan City Logo"
+                class="official-logo"
+              />
+            </div>
+          </div>
+          <h1 class="system-title">CENRO San Juan City</h1>
+          <p class="system-subtitle">
+            Environmental Management Information System
+          </p>
+          <p class="location-subtitle">
+            City Environment and Natural Resources Office
+          </p>
         </div>
+
+        <!-- Registration Form -->
+        <form class="login-form" id="registrationForm" novalidate>
+          <div class="form-group">
+            <label for="firstname" class="form-label">
+              <i data-feather="user" class="form-icon"></i>
+              First Name
+            </label>
+            <input
+              type="text"
+              id="firstname"
+              name="firstname"
+              class="form-input"
+              placeholder="Enter your first name"
+              required
+              autocomplete="given-name"
+              aria-describedby="firstname-error"
+            />
+            <div
+              class="error-message"
+              id="firstname-error"
+              role="alert"
+              aria-live="polite"
+            ></div>
+          </div>
+
+          <div class="form-group">
+            <label for="lastname" class="form-label">
+              <i data-feather="user" class="form-icon"></i>
+              Last Name
+            </label>
+            <input
+              type="text"
+              id="lastname"
+              name="lastname"
+              class="form-input"
+              placeholder="Enter your last name"
+              required
+              autocomplete="family-name"
+              aria-describedby="lastname-error"
+            />
+            <div
+              class="error-message"
+              id="lastname-error"
+              role="alert"
+              aria-live="polite"
+            ></div>
+          </div>
+          <div class="form-group">
+            <label for="email" class="form-label">
+              <i data-feather="mail" class="form-icon"></i>
+              Email Address
+            </label>
+            <div class="input-wrapper">
+              <input
+                type="email"
+                id="email"
+                name="email"
+                class="form-input"
+                placeholder="Enter your official email"
+                required
+                autocomplete="email"
+                aria-describedby="email-error"
+              />
+              <div class="email-check-loading" style="display: none">
+                <i data-feather="loader" class="spinner"></i>
+              </div>
+            </div>
+            <div
+              class="error-message"
+              id="email-error"
+              role="alert"
+              aria-live="polite"
+            ></div>
+          </div>
+
+          <div class="form-group">
+            <label for="password" class="form-label">
+              <i data-feather="lock" class="form-icon"></i>
+              Password
+            </label>
+            <div class="password-wrapper">
+              <input
+                type="password"
+                id="password"
+                name="password"
+                class="form-input"
+                placeholder="Create a secure password"
+                required
+                autocomplete="new-password"
+                aria-describedby="password-error password-strength"
+              />
+              <button
+                type="button"
+                class="password-toggle"
+                aria-label="Toggle password visibility"
+              >
+                <i data-feather="eye" class="toggle-icon"></i>
+              </button>
+            </div>
+            <div
+              class="password-strength"
+              id="password-strength"
+              aria-live="polite"
+            ></div>
+            <div
+              class="error-message"
+              id="password-error"
+              role="alert"
+              aria-live="polite"
+            ></div>
+          </div>
+
+          <div class="form-group">
+            <label for="confirmPassword" class="form-label">
+              <i data-feather="shield" class="form-icon"></i>
+              Confirm Password
+            </label>
+            <div class="password-wrapper">
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                class="form-input"
+                placeholder="Confirm your password"
+                required
+                autocomplete="new-password"
+                aria-describedby="confirmPassword-error"
+              />
+              <button
+                type="button"
+                class="password-toggle"
+                aria-label="Toggle confirm password visibility"
+              >
+                <i data-feather="eye" class="toggle-icon"></i>
+              </button>
+            </div>
+            <div
+              class="error-message"
+              id="confirmPassword-error"
+              role="alert"
+              aria-live="polite"
+            ></div>
+          </div>
+
+          <button type="submit" class="login-button" id="registerBtn">
+            <i data-feather="user-plus" class="button-icon"></i>
+            Create Account
+            <div class="button-spinner" aria-hidden="true"></div>
+          </button>
+        </form>
+
+        <!-- Footer Links -->
+        <div class="form-footer">
+          <p class="footer-text">
+            Already have an account?
+            <a href="index.html" class="footer-link">Sign In</a>
+          </p>
+
+          <div class="footer-links">
+            <a href="#" class="footer-link">Privacy Policy</a>
+            <span class="separator">•</span>
+            <a href="#" class="footer-link">Terms of Service</a>
+            <span class="separator">•</span>
+            <a href="#" class="footer-link">Contact Support</a>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.29.0/feather.min.js"></script>
     <script src="register.js"></script>
-</body>
+  </body>
 </html>

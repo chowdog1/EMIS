@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Profile | CENRO San Juan City EMIS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="dashboard.css" />
+    <link rel="stylesheet" href="profile.css" />
+  </head>
+  <body>
+    <div class="dashboard-container">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-title">
+            <i class="fas fa-leaf"></i>
+            <span>CENRO EMIS</span>
+          </div>
+        </div>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="/dashboard">
+              <i class="fas fa-tachometer-alt"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="/businesses">
+              <i class="fas fa-building"></i>
+              <span>Businesses</span>
+            </a>
+          </li>
+          <li>
+            <a href="/profile" class="active">
+              <i class="fas fa-user"></i>
+              <span>Profile</span>
+            </a>
+          </li>
+          <li>
+            <a href="#">
+              <i class="fas fa-file-alt"></i>
+              <span>Reports</span>
+            </a>
+          </li>
+          <li>
+            <a href="#">
+              <i class="fas fa-users"></i>
+              <span>Users</span>
+            </a>
+          </li>
+        </ul>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Header -->
+        <header class="header">
+          <h1 class="header-title">User Profile</h1>
+          <div class="user-info">
+            <div class="user-avatar" id="userAvatar">
+              <img
+                id="userAvatarImage"
+                src="https://via.placeholder.com/40"
+                alt="User Avatar"
+              />
+              <div id="userAvatarFallback" class="avatar-fallback">U</div>
+            </div>
+            <div class="user-dropdown">
+              <button class="dropdown-toggle" id="userDropdown">
+                <span id="userEmail">Loading...</span>
+                <i class="fas fa-chevron-down"></i>
+              </button>
+              <div class="dropdown-menu" id="userDropdownMenu">
+                <a href="/profile" class="dropdown-item">Profile</a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item" id="logoutBtn">Logout</a>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Profile Content -->
+        <div class="profile-container">
+          <div class="profile-card">
+            <div class="profile-header">
+              <h2>Profile Information</h2>
+              <p>Update your account details and profile settings</p>
+            </div>
+
+            <div class="profile-content">
+              <!-- Profile Picture Section -->
+              <div class="profile-picture-section">
+                <div
+                  class="profile-picture-container"
+                  id="profilePictureContainer"
+                >
+                  <img
+                    id="profilePicture"
+                    src="https://via.placeholder.com/150"
+                    alt="Profile Picture"
+                  />
+                  <div class="profile-picture-overlay">
+                    <i class="fas fa-camera"></i>
+                    <span>Upload</span>
+                  </div>
+                  <input
+                    type="file"
+                    id="profilePictureInput"
+                    accept="image/*"
+                    style="display: none"
+                  />
+                </div>
+                <h3 id="profileName">Loading...</h3>
+                <p id="profileEmail">Loading...</p>
+              </div>
+
+              <!-- Profile Form -->
+              <div class="profile-form-section">
+                <form id="profileForm">
+                  <div class="form-group">
+                    <label for="firstName">First Name</label>
+                    <input
+                      type="text"
+                      id="firstName"
+                      name="firstName"
+                      class="form-control"
+                      required
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="lastName">Last Name</label>
+                    <input
+                      type="text"
+                      id="lastName"
+                      name="lastName"
+                      class="form-control"
+                      required
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      class="form-control"
+                      required
+                    />
+                  </div>
+
+                  <div class="form-actions">
+                    <button
+                      type="submit"
+                      class="btn btn-primary"
+                      id="saveProfileBtn"
+                    >
+                      <i class="fas fa-save"></i>
+                      Save Changes
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-secondary"
+                      id="changePasswordBtn"
+                    >
+                      <i class="fas fa-key"></i>
+                      Change Password
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">Change Password</h2>
+          <span class="modal-close">&times;</span>
+        </div>
+        <div class="modal-body">
+          <form id="changePasswordForm">
+            <div class="form-group">
+              <label for="currentPassword">Current Password</label>
+              <div class="password-input-container">
+                <input
+                  type="password"
+                  id="currentPassword"
+                  name="currentPassword"
+                  class="form-control"
+                  required
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  data-target="currentPassword"
+                >
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="newPassword">New Password</label>
+              <div class="password-input-container">
+                <input
+                  type="password"
+                  id="newPassword"
+                  name="newPassword"
+                  class="form-control"
+                  required
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  data-target="newPassword"
+                >
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
+              <div class="password-strength" id="passwordStrength"></div>
+            </div>
+
+            <div class="form-group">
+              <label for="confirmPassword">Confirm New Password</label>
+              <div class="password-input-container">
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  class="form-control"
+                  required
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  data-target="confirmPassword"
+                >
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-close-btn">
+            Cancel
+          </button>
+          <button type="button" class="btn btn-primary" id="updatePasswordBtn">
+            <i class="fas fa-save"></i>
+            Update Password
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profile JavaScript -->
+    <script src="/js/imageUtils.js"></script>
+    <script src="/js/authUtils.js"></script>
+    <script src="profile.js"></script>
+  </body>
+</html>

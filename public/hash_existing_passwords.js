@@ -1,28 +1,31 @@
 // hash_existing_passwords.js
 
-const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
+const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
 
 // MongoDB connection
-mongoose.connect('mongodb://localhost:27017/logindb', {
-  useNewUrlParser: true, // these options can be removed if using mongoose 6+
-  useUnifiedTopology: true
-}).then(() => {
-  console.log("✅ MongoDB connected");
-}).catch((err) => {
-  console.error("❌ MongoDB connection error:", err);
-});
+mongoose
+  .connect("mongodb://localhost:27017/logindb", {
+    useNewUrlParser: true, // these options can be removed if using mongoose 6+
+    useUnifiedTopology: true,
+  })
+  .then(() => {
+    console.log("✅ MongoDB connected");
+  })
+  .catch((err) => {
+    console.error("❌ MongoDB connection error:", err);
+  });
 
 // Define the schema
 const userSchema = new mongoose.Schema({
+  firstname: String,
+  lastname: String,
   email: String,
   password: String,
   role: String,
-  createdAt: Date,
-  isActive: Boolean
 });
 
-const User = mongoose.model('User', userSchema);
+const User = mongoose.model("User", userSchema);
 
 // Hash all existing passwords
 async function hashAllPasswords() {

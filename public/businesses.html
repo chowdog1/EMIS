@@ -1,419 +1,551 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Businesses | CENRO San Juan City EMIS</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="dashboard.css">
-</head>
-<body>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="dashboard.css" />
+  </head>
+  <body>
     <div class="dashboard-container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="sidebar-title">
-                    <i class="fas fa-leaf"></i>
-                    <span>CENRO EMIS</span>
-                </div>
-            </div>
-            <ul class="sidebar-menu">
-                <li>
-                    <a href="/dashboard">
-                        <i class="fas fa-tachometer-alt"></i>
-                        <span>Dashboard</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="/businesses" class="active">
-                        <i class="fas fa-building"></i>
-                        <span>Businesses</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#">
-                        <i class="fas fa-file-alt"></i>
-                        <span>Reports</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#">
-                        <i class="fas fa-users"></i>
-                        <span>Users</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#">
-                        <i class="fas fa-cog"></i>
-                        <span>Settings</span>
-                    </a>
-                </li>
-            </ul>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Header -->
-            <header class="header">
-                <h1 class="header-title">Business Directory</h1>
-                <div class="user-info">
-                    <div class="user-avatar" id="userAvatar">U</div>
-                    <div class="user-dropdown">
-                        <button class="dropdown-toggle" id="userDropdown">
-                            <span id="userEmail">Loading...</span>
-                            <i class="fas fa-chevron-down"></i>
-                        </button>
-                        <div class="dropdown-menu" id="userDropdownMenu">
-                            <a href="#" class="dropdown-item">Profile</a>
-                            <a href="#" class="dropdown-item">Settings</a>
-                            <div class="dropdown-divider"></div>
-                            <a href="#" class="dropdown-item" id="logoutBtn">Logout</a>
-                        </div>
-                    </div>
-                </div>
-            </header>
-
-            <!-- Business Details Modal -->
-            <div id="businessDetailsModal" class="modal">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h2 class="modal-title">Business Details</h2>
-                        <span class="modal-close">&times;</span>
-                    </div>
-                    <div class="modal-body">
-                        <div class="details-grid">
-                            <div class="detail-item">
-                                <div class="detail-label">Account No:</div>
-                                <div class="detail-value" id="modalAccountNo">-</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-label">Business Name:</div>
-                                <div class="detail-value" id="modalBusinessName">-</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-label">Owner Name:</div>
-                                <div class="detail-value" id="modalOwnerName">-</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-label">Address:</div>
-                                <div class="detail-value" id="modalAddress">-</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-label">Barangay:</div>
-                                <div class="detail-value" id="modalBarangay">-</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-label">Nature of Business:</div>
-                                <div class="detail-value" id="modalNatureOfBusiness">-</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-label">Status:</div>
-                                <div class="detail-value" id="modalStatus">-</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-label">Application Status:</div>
-                                <div class="detail-value" id="modalApplicationStatus">-</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-label">Date of Application:</div>
-                                <div class="detail-value" id="modalDateOfApplication">-</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-label">OR No:</div>
-                                <div class="detail-value" id="modalOrNo">-</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-label">Amount Paid:</div>
-                                <div class="detail-value" id="modalAmountPaid">-</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-label">Date of Payment:</div>
-                                <div class="detail-value" id="modalDateOfPayment">-</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-danger" id="deleteBtn">
-                            <i class="fas fa-trash"></i>
-                            Delete
-                        </button>
-                    <div class="modal-footer-right">
-                        <button class="btn btn-primary" id="printAecBtn">
-                            <i class="fas fa-print"></i>
-                            Print AEC
-                        </button>
-                        <button class="btn btn-secondary" id="modifyBtn">
-                            <i class="fas fa-edit"></i>
-                                Modify
-                        </button>
-                        <button class="btn btn-secondary modal-close-btn">Close</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Business Add Modal -->
-<div id="businessAddModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 class="modal-title">Add New Business</h2>
-            <span class="modal-close">&times;</span>
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-title">
+            <i class="fas fa-leaf"></i>
+            <span>CENRO EMIS</span>
+          </div>
         </div>
-        <div class="modal-body">
-            <form id="businessAddForm" class="form-grid">
-                <div class="form-group">
-                    <label for="addAccountNo">Account No:</label>
-                    <input type="text" id="addAccountNo" class="form-control text-uppercase" required>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="/dashboard">
+              <i class="fas fa-tachometer-alt"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="/businesses" class="active">
+              <i class="fas fa-building"></i>
+              <span>Businesses</span>
+            </a>
+          </li>
+          <li>
+            <a href="#">
+              <i class="fas fa-file-alt"></i>
+              <span>Reports</span>
+            </a>
+          </li>
+          <li>
+            <a href="#">
+              <i class="fas fa-users"></i>
+              <span>Users</span>
+            </a>
+          </li>
+          <li>
+            <a href="#">
+              <i class="fas fa-cog"></i>
+              <span>Settings</span>
+            </a>
+          </li>
+        </ul>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Header -->
+        <header class="header">
+          <h1 class="header-title">Business Directory</h1>
+          <div class="user-info">
+            <div class="user-avatar" id="userAvatar">
+              <img
+                id="userAvatarImage"
+                src="https://via.placeholder.com/40"
+                alt="User Avatar"
+              />
+              <div id="userAvatarFallback" class="avatar-fallback">U</div>
+            </div>
+            <div class="user-dropdown">
+              <button class="dropdown-toggle" id="userDropdown">
+                <span id="userEmail">Loading...</span>
+                <i class="fas fa-chevron-down"></i>
+              </button>
+              <div class="dropdown-menu" id="userDropdownMenu">
+                <a href="profile.html" class="dropdown-item">Profile</a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item" id="logoutBtn">Logout</a>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Business Details Modal -->
+        <div id="businessDetailsModal" class="modal">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title">Business Details</h2>
+              <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+              <div class="details-grid">
+                <div class="detail-item">
+                  <div class="detail-label">Account No:</div>
+                  <div class="detail-value" id="modalAccountNo">-</div>
                 </div>
-                <div class="form-group">
-                    <label for="addBusinessName">Business Name:</label>
-                    <input type="text" id="addBusinessName" class="form-control text-uppercase" required>
+                <div class="detail-item">
+                  <div class="detail-label">Business Name:</div>
+                  <div class="detail-value" id="modalBusinessName">-</div>
                 </div>
-                <div class="form-group">
-                    <label for="addOwnerName">Owner Name:</label>
-                    <input type="text" id="addOwnerName" class="form-control text-uppercase" required>
+                <div class="detail-item">
+                  <div class="detail-label">Owner Name:</div>
+                  <div class="detail-value" id="modalOwnerName">-</div>
                 </div>
-                <div class="form-group">
-                    <label for="addAddress">Address:</label>
-                    <input type="text" id="addAddress" class="form-control text-uppercase" required>
+                <div class="detail-item">
+                  <div class="detail-label">Address:</div>
+                  <div class="detail-value" id="modalAddress">-</div>
                 </div>
-                <div class="form-group">
-                    <label for="addBarangay">Barangay:</label>
-                    <select id="addBarangay" class="form-control" required>
-                        <option value="">Select Barangay</option>
-                        <option value="ADDITION HILLS">ADDITION HILLS</option>
-                        <option value="BALONG BATO">BALONG BATO</option>
-                        <option value="BATIS">BATIS</option>
-                        <option value="CORAZON DE JESUS">CORAZON DE JESUS</option>
-                        <option value="ERMITAÑO">ERMITAÑO</option>
-                        <option value="GREENHILLS">GREENHILLS</option>
-                        <option value="ISABELITA">ISABELITA</option>
-                        <option value="KABAYANAN">KABAYANAN</option>
-                        <option value="LITTLE BAGUIO">LITTLE BAGUIO</option>
-                        <option value="MAYTUNAS">MAYTUNAS</option>
-                        <option value="ONSE">ONSE</option>
-                        <option value="PASADENA">PASADENA</option>
-                        <option value="PEDRO CRUZ">PEDRO CRUZ</option>
-                        <option value="PROGRESO">PROGRESO</option>
-                        <option value="RIVERA">RIVERA</option>
-                        <option value="SALAPAN">SALAPAN</option>
-                        <option value="SAN PERFECTO">SAN PERFECTO</option>
-                        <option value="ST. JOSEPH">ST. JOSEPH</option>
-                        <option value="STA. LUCIA">STA. LUCIA</option>
-                        <option value="TIBAGAN">TIBAGAN</option>
-                        <option value="WEST CRAME">WEST CRAME</option>
-                    </select>
+                <div class="detail-item">
+                  <div class="detail-label">Barangay:</div>
+                  <div class="detail-value" id="modalBarangay">-</div>
                 </div>
-                <div class="form-group">
-                    <label for="addNatureOfBusiness">Nature of Business:</label>
-                    <input type="text" id="addNatureOfBusiness" class="form-control text-uppercase" required>
+                <div class="detail-item">
+                  <div class="detail-label">Nature of Business:</div>
+                  <div class="detail-value" id="modalNatureOfBusiness">-</div>
                 </div>
-                <div class="form-group">
-                    <label for="addStatus">Status:</label>
-                    <select id="addStatus" class="form-control" required>
-                        <option value="LOWRISK">Low Risk</option>
-                        <option value="HIGHRISK">High Risk</option>
-                    </select>
+                <div class="detail-item">
+                  <div class="detail-label">Status:</div>
+                  <div class="detail-value" id="modalStatus">-</div>
                 </div>
-                <div class="form-group">
-                    <label for="addApplicationStatus">Application Status:</label>
-                    <select id="addApplicationStatus" class="form-control" required>
-                        <option value="NEW">New</option>
-                        <option value="RENEWAL">Renewal</option>
-                    </select>
+                <div class="detail-item">
+                  <div class="detail-label">Application Status:</div>
+                  <div class="detail-value" id="modalApplicationStatus">-</div>
                 </div>
-                <div class="form-group">
-                    <label for="addDateOfApplication">Date of Application:</label>
-                    <input type="date" id="addDateOfApplication" class="form-control" required>
+                <div class="detail-item">
+                  <div class="detail-label">Date of Application:</div>
+                  <div class="detail-value" id="modalDateOfApplication">-</div>
                 </div>
-                <div class="form-group">
-                    <label for="addOrNo">OR No:</label>
-                    <input type="text" id="addOrNo" class="form-control text-uppercase">
+                <div class="detail-item">
+                  <div class="detail-label">OR No:</div>
+                  <div class="detail-value" id="modalOrNo">-</div>
                 </div>
-                <div class="form-group">
-                    <label for="addAmountPaid">Amount Paid:</label>
-                    <input type="number" id="addAmountPaid" class="form-control" min="0" step="0.01">
+                <div class="detail-item">
+                  <div class="detail-label">Amount Paid:</div>
+                  <div class="detail-value" id="modalAmountPaid">-</div>
                 </div>
-                <div class="form-group">
-                    <label for="addDateOfPayment">Date of Payment:</label>
-                    <input type="date" id="addDateOfPayment" class="form-control">
+                <div class="detail-item">
+                  <div class="detail-label">Date of Payment:</div>
+                  <div class="detail-value" id="modalDateOfPayment">-</div>
                 </div>
-            </form>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-danger" id="deleteBtn">
+                <i class="fas fa-trash"></i>
+                Delete
+              </button>
+              <div class="modal-footer-right">
+                <button class="btn btn-primary" id="printAecBtn">
+                  <i class="fas fa-print"></i>
+                  Print AEC
+                </button>
+                <button class="btn btn-secondary" id="modifyBtn">
+                  <i class="fas fa-edit"></i>
+                  Modify
+                </button>
+                <button class="btn btn-secondary modal-close-btn">Close</button>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-primary" id="addBusinessBtn">
+
+        <!-- Business Add Modal -->
+        <div id="businessAddModal" class="modal">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title">Add New Business</h2>
+              <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+              <form id="businessAddForm" class="form-grid">
+                <div class="form-group">
+                  <label for="addAccountNo">Account No:</label>
+                  <input
+                    type="text"
+                    id="addAccountNo"
+                    class="form-control text-uppercase"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="addBusinessName">Business Name:</label>
+                  <input
+                    type="text"
+                    id="addBusinessName"
+                    class="form-control text-uppercase"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="addOwnerName">Owner Name:</label>
+                  <input
+                    type="text"
+                    id="addOwnerName"
+                    class="form-control text-uppercase"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="addAddress">Address:</label>
+                  <input
+                    type="text"
+                    id="addAddress"
+                    class="form-control text-uppercase"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="addBarangay">Barangay:</label>
+                  <select id="addBarangay" class="form-control" required>
+                    <option value="">Select Barangay</option>
+                    <option value="ADDITION HILLS">ADDITION HILLS</option>
+                    <option value="BALONG BATO">BALONG BATO</option>
+                    <option value="BATIS">BATIS</option>
+                    <option value="CORAZON DE JESUS">CORAZON DE JESUS</option>
+                    <option value="ERMITAÑO">ERMITAÑO</option>
+                    <option value="GREENHILLS">GREENHILLS</option>
+                    <option value="ISABELITA">ISABELITA</option>
+                    <option value="KABAYANAN">KABAYANAN</option>
+                    <option value="LITTLE BAGUIO">LITTLE BAGUIO</option>
+                    <option value="MAYTUNAS">MAYTUNAS</option>
+                    <option value="ONSE">ONSE</option>
+                    <option value="PASADENA">PASADENA</option>
+                    <option value="PEDRO CRUZ">PEDRO CRUZ</option>
+                    <option value="PROGRESO">PROGRESO</option>
+                    <option value="RIVERA">RIVERA</option>
+                    <option value="SALAPAN">SALAPAN</option>
+                    <option value="SAN PERFECTO">SAN PERFECTO</option>
+                    <option value="ST. JOSEPH">ST. JOSEPH</option>
+                    <option value="STA. LUCIA">STA. LUCIA</option>
+                    <option value="TIBAGAN">TIBAGAN</option>
+                    <option value="WEST CRAME">WEST CRAME</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="addNatureOfBusiness">Nature of Business:</label>
+                  <input
+                    type="text"
+                    id="addNatureOfBusiness"
+                    class="form-control text-uppercase"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="addStatus">Status:</label>
+                  <select id="addStatus" class="form-control" required>
+                    <option value="LOWRISK">Low Risk</option>
+                    <option value="HIGHRISK">High Risk</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="addApplicationStatus">Application Status:</label>
+                  <select
+                    id="addApplicationStatus"
+                    class="form-control"
+                    required
+                  >
+                    <option value="NEW">New</option>
+                    <option value="RENEWAL">Renewal</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="addDateOfApplication">Date of Application:</label>
+                  <input
+                    type="date"
+                    id="addDateOfApplication"
+                    class="form-control"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="addOrNo">OR No:</label>
+                  <input
+                    type="text"
+                    id="addOrNo"
+                    class="form-control text-uppercase"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="addAmountPaid">Amount Paid:</label>
+                  <input
+                    type="number"
+                    id="addAmountPaid"
+                    class="form-control"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="addDateOfPayment">Date of Payment:</label>
+                  <input
+                    type="date"
+                    id="addDateOfPayment"
+                    class="form-control"
+                  />
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-primary" id="addBusinessBtn">
                 <i class="fas fa-plus"></i>
                 Add Business
-            </button>
-            <button type="button" class="btn btn-secondary modal-close-btn">Cancel</button>
+              </button>
+              <button type="button" class="btn btn-secondary modal-close-btn">
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
-    </div>
-</div>
 
-<!-- Business Edit Modal -->
-<div id="businessEditModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 class="modal-title">Edit Business Details</h2>
-            <span class="modal-close">&times;</span>
-        </div>
-        <div class="modal-body">
-            <form id="businessEditForm">
+        <!-- Business Edit Modal -->
+        <div id="businessEditModal" class="modal">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title">Edit Business Details</h2>
+              <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+              <form id="businessEditForm">
                 <div class="form-group">
-                    <label for="editAccountNo">Account No:</label>
-                    <input type="text" id="editAccountNo" class="form-control" readonly>
+                  <label for="editAccountNo">Account No:</label>
+                  <input
+                    type="text"
+                    id="editAccountNo"
+                    class="form-control"
+                    readonly
+                  />
                 </div>
                 <div class="form-group">
-                    <label for="editBusinessName">Business Name:</label>
-                    <input type="text" id="editBusinessName" class="form-control text-uppercase" required>
+                  <label for="editBusinessName">Business Name:</label>
+                  <input
+                    type="text"
+                    id="editBusinessName"
+                    class="form-control text-uppercase"
+                    required
+                  />
                 </div>
                 <div class="form-group">
-                    <label for="editOwnerName">Owner Name:</label>
-                    <input type="text" id="editOwnerName" class="form-control text-uppercase" required>
+                  <label for="editOwnerName">Owner Name:</label>
+                  <input
+                    type="text"
+                    id="editOwnerName"
+                    class="form-control text-uppercase"
+                    required
+                  />
                 </div>
                 <div class="form-group">
-                    <label for="editAddress">Address:</label>
-                    <input type="text" id="editAddress" class="form-control text-uppercase" required>
+                  <label for="editAddress">Address:</label>
+                  <input
+                    type="text"
+                    id="editAddress"
+                    class="form-control text-uppercase"
+                    required
+                  />
                 </div>
                 <div class="form-group">
-                    <label for="editBarangay">Barangay:</label>
-                    <select id="editBarangay" class="form-control" required>
-                        <option value="">Select Barangay</option>
-                        <option value="ADDITION HILLS">ADDITION HILLS</option>
-                        <option value="BALONG BATO">BALONG BATO</option>
-                        <option value="BATIS">BATIS</option>
-                        <option value="CORAZON DE JESUS">CORAZON DE JESUS</option>
-                        <option value="ERMITAÑO">ERMITAÑO</option>
-                        <option value="GREENHILLS">GREENHILLS</option>
-                        <option value="ISABELITA">ISABELITA</option>
-                        <option value="KABAYANAN">KABAYANAN</option>
-                        <option value="LITTLE BAGUIO">LITTLE BAGUIO</option>
-                        <option value="MAYTUNAS">MAYTUNAS</option>
-                        <option value="ONSE">ONSE</option>
-                        <option value="PASADENA">PASADENA</option>
-                        <option value="PEDRO CRUZ">PEDRO CRUZ</option>
-                        <option value="PROGRESO">PROGRESO</option>
-                        <option value="RIVERA">RIVERA</option>
-                        <option value="SALAPAN">SALAPAN</option>
-                        <option value="SAN PERFECTO">SAN PERFECTO</option>
-                        <option value="ST. JOSEPH">ST. JOSEPH</option>
-                        <option value="STA. LUCIA">STA. LUCIA</option>
-                        <option value="TIBAGAN">TIBAGAN</option>
-                        <option value="WEST CRAME">WEST CRAME</option>
-                    </select>
+                  <label for="editBarangay">Barangay:</label>
+                  <select id="editBarangay" class="form-control" required>
+                    <option value="">Select Barangay</option>
+                    <option value="ADDITION HILLS">ADDITION HILLS</option>
+                    <option value="BALONG BATO">BALONG BATO</option>
+                    <option value="BATIS">BATIS</option>
+                    <option value="CORAZON DE JESUS">CORAZON DE JESUS</option>
+                    <option value="ERMITAÑO">ERMITAÑO</option>
+                    <option value="GREENHILLS">GREENHILLS</option>
+                    <option value="ISABELITA">ISABELITA</option>
+                    <option value="KABAYANAN">KABAYANAN</option>
+                    <option value="LITTLE BAGUIO">LITTLE BAGUIO</option>
+                    <option value="MAYTUNAS">MAYTUNAS</option>
+                    <option value="ONSE">ONSE</option>
+                    <option value="PASADENA">PASADENA</option>
+                    <option value="PEDRO CRUZ">PEDRO CRUZ</option>
+                    <option value="PROGRESO">PROGRESO</option>
+                    <option value="RIVERA">RIVERA</option>
+                    <option value="SALAPAN">SALAPAN</option>
+                    <option value="SAN PERFECTO">SAN PERFECTO</option>
+                    <option value="ST. JOSEPH">ST. JOSEPH</option>
+                    <option value="STA. LUCIA">STA. LUCIA</option>
+                    <option value="TIBAGAN">TIBAGAN</option>
+                    <option value="WEST CRAME">WEST CRAME</option>
+                  </select>
                 </div>
                 <div class="form-group">
-                    <label for="editNatureOfBusiness">Nature of Business:</label>
-                    <input type="text" id="editNatureOfBusiness" class="form-control text-uppercase" required>
+                  <label for="editNatureOfBusiness">Nature of Business:</label>
+                  <input
+                    type="text"
+                    id="editNatureOfBusiness"
+                    class="form-control text-uppercase"
+                    required
+                  />
                 </div>
                 <div class="form-group">
-                    <label for="editStatus">Status:</label>
-                    <select id="editStatus" class="form-control" required>
-                        <option value="LOWRISK">Low Risk</option>
-                        <option value="HIGHRISK">High Risk</option>
-                    </select>
+                  <label for="editStatus">Status:</label>
+                  <select id="editStatus" class="form-control" required>
+                    <option value="LOWRISK">Low Risk</option>
+                    <option value="HIGHRISK">High Risk</option>
+                  </select>
                 </div>
                 <div class="form-group">
-                    <label for="editApplicationStatus">Application Status:</label>
-                    <select id="editApplicationStatus" class="form-control" required>
-                        <option value="NEW">New</option>
-                        <option value="RENEWAL">Renewal</option>
-                    </select>
+                  <label for="editApplicationStatus">Application Status:</label>
+                  <select
+                    id="editApplicationStatus"
+                    class="form-control"
+                    required
+                  >
+                    <option value="NEW">New</option>
+                    <option value="RENEWAL">Renewal</option>
+                  </select>
                 </div>
                 <div class="form-group">
-                    <label for="editDateOfApplication">Date of Application:</label>
-                    <input type="date" id="editDateOfApplication" class="form-control" required>
+                  <label for="editDateOfApplication"
+                    >Date of Application:</label
+                  >
+                  <input
+                    type="date"
+                    id="editDateOfApplication"
+                    class="form-control"
+                    required
+                  />
                 </div>
                 <div class="form-group">
-                    <label for="editOrNo">OR No:</label>
-                    <input type="text" id="editOrNo" class="form-control text-uppercase">
+                  <label for="editOrNo">OR No:</label>
+                  <input
+                    type="text"
+                    id="editOrNo"
+                    class="form-control text-uppercase"
+                  />
                 </div>
                 <div class="form-group">
-                    <label for="editAmountPaid">Amount Paid:</label>
-                    <input type="number" id="editAmountPaid" class="form-control" min="0" step="0.01">
+                  <label for="editAmountPaid">Amount Paid:</label>
+                  <input
+                    type="number"
+                    id="editAmountPaid"
+                    class="form-control"
+                    min="0"
+                    step="0.01"
+                  />
                 </div>
                 <div class="form-group">
-                    <label for="editDateOfPayment">Date of Payment:</label>
-                    <input type="date" id="editDateOfPayment" class="form-control">
+                  <label for="editDateOfPayment">Date of Payment:</label>
+                  <input
+                    type="date"
+                    id="editDateOfPayment"
+                    class="form-control"
+                  />
                 </div>
-            </form>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-primary" id="saveBusinessBtn">
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="saveBusinessBtn"
+              >
                 <i class="fas fa-save"></i>
                 Save Changes
-            </button>
-            <button type="button" class="btn btn-secondary modal-close-btn">Cancel</button>
-        </div>
-    </div>
-</div>
-
-            <!-- Search and Table Section -->
-            <div class="table-section">
-                <div class="table-header">
-                    <h2 class="table-title">Business Directory</h2>
-                    <div class="table-actions">
-                        <div class="search-container">
-                            <input type="text" id="searchInput" class="search-input" placeholder="Search by Account No...">
-                            <button id="searchBtn" class="search-button">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
-                        <button class="btn btn-primary" id="refreshBtn">
-                            <i class="fas fa-sync-alt"></i>
-                            Refresh
-                        </button>
-                        <button class="btn btn-primary" id="headerAddBusinessBtn">
-                            <i class="fas fa-plus"></i>
-                            Add Business
-                        </button>
-                    </div>
-                </div>
-                <div class="table-container">
-                    <div id="businessTable">
-                        <!-- Loading message -->
-                        <div style="padding: 20px; text-align: center; color: #6c757d;">
-                            <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 10px;"></i>
-                            <p>Loading business data...</p>
-                        </div>
-                    </div>
-                </div>
-                <!-- Pagination Controls -->
-                <div class="pagination-container">
-                    <div class="pagination-info">
-                        <span id="paginationInfo">Showing 0 of 0 records</span>
-                    </div>
-                    <div class="pagination-controls">
-                        <button id="firstPageBtn" class="pagination-btn" disabled>
-                            <i class="fas fa-angle-double-left"></i>
-                        </button>
-                        <button id="prevPageBtn" class="pagination-btn" disabled>
-                            <i class="fas fa-angle-left"></i>
-                        </button>
-                        <select id="pageSizeSelect" class="page-size-select">
-                            <option value="10">10 per page</option>
-                            <option value="25">25 per page</option>
-                            <option value="50">50 per page</option>
-                            <option value="100">100 per page</option>
-                        </select>
-                        <button id="nextPageBtn" class="pagination-btn" disabled>
-                            <i class="fas fa-angle-right"></i>
-                        </button>
-                        <button id="lastPageBtn" class="pagination-btn" disabled>
-                            <i class="fas fa-angle-double-right"></i>
-                        </button>
-                    </div>
-                </div>
+              </button>
+              <button type="button" class="btn btn-secondary modal-close-btn">
+                Cancel
+              </button>
             </div>
-        </main>
+          </div>
+        </div>
+
+        <!-- Search and Table Section -->
+        <div class="table-section">
+          <div class="table-header">
+            <h2 class="table-title">Business Directory</h2>
+            <div class="table-actions">
+              <div class="search-container">
+                <input
+                  type="text"
+                  id="searchInput"
+                  class="search-input"
+                  placeholder="Search by Account No..."
+                />
+                <button id="searchBtn" class="search-button">
+                  <i class="fas fa-search"></i>
+                </button>
+              </div>
+              <button class="btn btn-primary" id="refreshBtn">
+                <i class="fas fa-sync-alt"></i>
+                Refresh
+              </button>
+              <button class="btn btn-primary" id="headerAddBusinessBtn">
+                <i class="fas fa-plus"></i>
+                Add Business
+              </button>
+            </div>
+          </div>
+          <div class="table-container">
+            <div id="businessTable">
+              <!-- Loading message -->
+              <div style="padding: 20px; text-align: center; color: #6c757d">
+                <i
+                  class="fas fa-spinner fa-spin"
+                  style="font-size: 24px; margin-bottom: 10px"
+                ></i>
+                <p>Loading business data...</p>
+              </div>
+            </div>
+          </div>
+          <!-- Pagination Controls -->
+          <div class="pagination-container">
+            <div class="pagination-info">
+              <span id="paginationInfo">Showing 0 of 0 records</span>
+            </div>
+            <div class="pagination-controls">
+              <button id="firstPageBtn" class="pagination-btn" disabled>
+                <i class="fas fa-angle-double-left"></i>
+              </button>
+              <button id="prevPageBtn" class="pagination-btn" disabled>
+                <i class="fas fa-angle-left"></i>
+              </button>
+              <select id="pageSizeSelect" class="page-size-select">
+                <option value="10">10 per page</option>
+                <option value="25">25 per page</option>
+                <option value="50">50 per page</option>
+                <option value="100">100 per page</option>
+              </select>
+              <button id="nextPageBtn" class="pagination-btn" disabled>
+                <i class="fas fa-angle-right"></i>
+              </button>
+              <button id="lastPageBtn" class="pagination-btn" disabled>
+                <i class="fas fa-angle-double-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
 
     <!-- React and ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.production.min.js"
+    ></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
+    ></script>
 
     <!-- Material-UI Table - Alternative to ReactDataTable -->
     <script src="https://unpkg.com/@mui/material@5.14.20/umd/material-ui.development.js"></script>
@@ -422,6 +554,8 @@
     <script src="https://unpkg.com/@emotion/styled@11.11.0/dist/emotion-styled.umd.min.js"></script>
 
     <!-- Businesses JavaScript -->
+    <script src="./js/imageUtils.js"></script>
+    <script src="./js/authUtils.js"></script>
     <script src="businesses.js"></script>
-</body>
+  </body>
 </html>

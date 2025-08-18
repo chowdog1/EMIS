@@ -57,18 +57,20 @@
         <!-- Main Content -->
         <main class="main-content">
             <!-- Header -->
-            <header class="header">
+                        <header class="header">
                 <h1 class="header-title">Business Establishment Dashboard</h1>
                 <div class="user-info">
-                    <div class="user-avatar" id="userAvatar">U</div>
+                    <div class="user-avatar" id="userAvatar">
+                        <img id="userAvatarImage" src="https://via.placeholder.com/40" alt="User Avatar">
+                        <div id="userAvatarFallback" class="avatar-fallback">U</div>
+                    </div>
                     <div class="user-dropdown">
                         <button class="dropdown-toggle" id="userDropdown">
                             <span id="userEmail">Loading...</span>
                             <i class="fas fa-chevron-down"></i>
                         </button>
                         <div class="dropdown-menu" id="userDropdownMenu">
-                            <a href="#" class="dropdown-item">Profile</a>
-                            <a href="#" class="dropdown-item">Settings</a>
+                            <a href="profile.html" class="dropdown-item">Profile</a>
                             <div class="dropdown-divider"></div>
                             <a href="#" class="dropdown-item" id="logoutBtn">Logout</a>
                         </div>
@@ -147,7 +149,11 @@
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+
+
 <!-- Dashboard JavaScript -->
+<script src="./js/imageUtils.js"></script>
+<script src="./js/authUtils.js"></script>
 <script src="dashboard.js"></script>
 </body>
 </html>
