@@ -4,6 +4,9 @@ const logoUrls = [
   "/makabagong%20san%20juan%20Logo.png",
   "/cenro%20logo.png",
 ];
+
+let currentYear = "2025"; // Default to 2025
+
 // Pagination variables - Global scope
 let currentPage = 1;
 let pageSize = 10;
@@ -402,6 +405,8 @@ window.addEventListener("load", function () {
   setupSearch();
   // Setup modal event listeners
   setupModalEventListeners();
+  // Setup year selection
+  setupYearSelection();
   // Initialize inactivity manager
   window.inactivityManager = new InactivityManager();
 });
@@ -577,19 +582,22 @@ function initializeBusinessTable() {
 // Function to load business data
 async function loadBusinessData() {
   try {
-    console.log("Loading business data...");
+    console.log(`Loading business data for ${currentYear}...`);
     console.log("Current page size:", pageSize);
     // Show loading state
     const tableRoot = document.getElementById("businessTable");
     if (tableRoot) {
       tableRoot.innerHTML = `
-                <div style="padding: 20px; text-align: center; color: #6c757d;">
-                    <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 10px;"></i>
-                    <p>Loading business data...</p>
-                </div>
-            `;
+        <div style="padding: 20px; text-align: center; color: #6c757d;">
+          <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 10px;"></i>
+          <p>Loading ${currentYear} business data...</p>
+        </div>
+      `;
     }
-    const response = await fetch("/api/business");
+    // Use the appropriate API endpoint based on the current year
+    const apiUrl =
+      currentYear === "2026" ? "/api/business2026" : "/api/business2025";
+    const response = await fetch(apiUrl);
     console.log("Response status:", response.status);
     console.log("Response ok:", response.ok);
     if (!response.ok) {
@@ -600,7 +608,7 @@ async function loadBusinessData() {
       );
     }
     const businesses = await response.json();
-    console.log("Business data loaded:", businesses);
+    console.log(`Business data loaded for ${currentYear}:`, businesses);
     console.log("Number of businesses:", businesses.length);
     // Store all businesses for client-side pagination
     allBusinesses = businesses;
@@ -615,6 +623,35 @@ async function loadBusinessData() {
     console.error("Error loading business data:", error);
     // Show error message in table
     showTableError(`Failed to load business data: ${error.message}`);
+  }
+}
+
+// Function to setup year selection
+function setupYearSelection() {
+  const yearSelect = document.getElementById("yearSelect");
+  if (yearSelect) {
+    // Set the current value
+    yearSelect.value = currentYear;
+
+    // Add change event listener
+    yearSelect.addEventListener("change", function () {
+      currentYear = this.value;
+      console.log(`Year changed to ${currentYear}`);
+
+      // Show a brief loading message
+      const tableRoot = document.getElementById("businessTable");
+      if (tableRoot) {
+        tableRoot.innerHTML = `
+          <div style="padding: 20px; text-align: center; color: #6c757d;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 10px;"></i>
+            <p>Loading ${currentYear} business data...</p>
+          </div>
+        `;
+      }
+
+      // Load data for the selected year
+      loadBusinessData();
+    });
   }
 }
 
@@ -1014,45 +1051,57 @@ function renderSimpleTable(businesses) {
 // Function to show business details modal
 async function showBusinessDetails(accountNo) {
   try {
-    console.log(`Fetching details for account number: ${accountNo}`);
+    console.log(
+      `Fetching details for account number: ${accountNo} from ${currentYear}`
+    );
     const response = await fetch(
-      `/api/business/account/${encodeURIComponent(accountNo)}`
+      `/api/business${currentYear}/account/${encodeURIComponent(accountNo)}`
     );
     if (!response.ok) {
       throw new Error("Failed to fetch business details");
     }
     const business = await response.json();
     console.log("Business details:", business);
-    // Populate modal with business details
+
+    // Populate modal with business details - try both camelCase and original property names
     document.getElementById("modalAccountNo").textContent =
-      business.accountNo || "N/A";
+      business.accountNo || business["ACCOUNT NO"] || "N/A";
     document.getElementById("modalBusinessName").textContent =
-      business.businessName || "N/A";
+      business.businessName || business["NAME OF BUSINESS"] || "N/A";
     document.getElementById("modalOwnerName").textContent =
-      business.ownerName || "N/A";
+      business.ownerName || business["NAME OF OWNER"] || "N/A";
     document.getElementById("modalAddress").textContent =
-      business.address || "N/A";
+      business.address || business.ADDRESS || "N/A";
     document.getElementById("modalBarangay").textContent =
-      business.barangay || "N/A";
+      business.barangay || business.BARANGAY || "N/A";
     document.getElementById("modalNatureOfBusiness").textContent =
-      business.natureOfBusiness || "N/A";
+      business.natureOfBusiness || business["NATURE OF BUSINESS"] || "N/A";
     document.getElementById("modalStatus").textContent =
-      business.status || "N/A";
+      business.status || business.STATUS || "N/A";
     document.getElementById("modalApplicationStatus").textContent =
-      business.applicationStatus || "N/A";
+      business.applicationStatus || business["APPLICATION STATUS"] || "N/A";
+
     // Format dates if they exist
-    const dateOfApplication = business.dateOfApplication;
+    const dateOfApplication =
+      business.dateOfApplication || business["DATE OF APPLICATION"];
     document.getElementById("modalDateOfApplication").textContent =
       dateOfApplication
         ? new Date(dateOfApplication).toLocaleDateString()
         : "N/A";
-    document.getElementById("modalOrNo").textContent = business.orNo || "N/A";
+
+    document.getElementById("modalOrNo").textContent =
+      business.orNo || business["OR NO"] || "N/A";
     document.getElementById("modalAmountPaid").textContent =
-      business.amountPaid || "N/A";
-    const dateOfPayment = business.dateOfPayment;
+      business.amountPaid || business["AMOUNT PAID"] || "N/A";
+
+    const dateOfPayment = business.dateOfPayment || business["DATE OF PAYMENT"];
     document.getElementById("modalDateOfPayment").textContent = dateOfPayment
       ? new Date(dateOfPayment).toLocaleDateString()
       : "N/A";
+
+    document.getElementById("modalRemarks").textContent =
+      business.remarks || business.REMARKS || "N/A";
+
     // Show the modal
     document.getElementById("businessDetailsModal").style.display = "block";
   } catch (error) {
@@ -1157,23 +1206,30 @@ function printAEC() {
   const amountPaid = document.getElementById("modalAmountPaid").textContent;
   const dateOfPayment =
     document.getElementById("modalDateOfPayment").textContent;
-  // Get current year and date
-  const currentYear = new Date().getFullYear();
+
+  // Get the selected year from the year selector dropdown
+  const selectedYear = document.getElementById("yearSelect").value;
+
+  // Get current date for the certificate
   const currentDate = new Date().toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+
   // Get generated date and time
   const generatedDateTime =
     new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString();
+
   // Show instruction alert before printing
   alert(
     'Please select "Page 1" only in the the avoid printing a blank second page.'
   );
+
   // Create a hidden div for printing
   const printContent = document.createElement("div");
   printContent.className = "print-area";
+
   // Create the print content positioned at top-left corner
   printContent.innerHTML = `
         <style>
@@ -1348,13 +1404,13 @@ function printAEC() {
             <div class="certify-section">
                 <div class="certify-text">This is to certify that</div>
                 <div class="business-name">${businessName}</div>
-                <div class="business-info">located at ${address}, has paid environmental protection and preservation fee of ${currentYear}</div>
+                <div class="business-info">located at ${address}, has paid environmental protection and preservation fee of ${selectedYear}</div>
             </div>
             
             <!-- Info Box -->
             <div class="info-box">
                 Valid for 1 year<br>
-                Subject for inspection in ${currentYear}<br>
+                Subject for inspection in ${selectedYear}<br>
                 Subject to annual renewal and payment of environmental compliance fee
             </div>
             
@@ -1377,8 +1433,10 @@ function printAEC() {
             </div>
         </div>
     `;
+
   // Add to body
   document.body.appendChild(printContent);
+
   // Wait for images to load before printing
   const images = printContent.querySelectorAll("img");
   let loadedImages = 0;
@@ -1393,6 +1451,7 @@ function printAEC() {
       }, 100);
     }
   };
+
   // If images are already cached, they might not trigger load event
   const checkIfLoaded = () => {
     let allLoaded = true;
@@ -1405,6 +1464,7 @@ function printAEC() {
       onImageLoad();
     }
   };
+
   // Add load event listeners to images
   images.forEach((img) => {
     if (img.complete) {
@@ -1414,6 +1474,7 @@ function printAEC() {
       img.addEventListener("error", onImageLoad); // Continue even if an image fails to load
     }
   });
+
   // Check if images are already loaded (cached)
   checkIfLoaded();
 }
@@ -1449,7 +1510,7 @@ async function handleDelete() {
     deleteBtn.disabled = true;
     // Send delete request to server
     const response = await fetch(
-      `/api/business/account/${encodeURIComponent(accountNo)}`,
+      `/api/business${currentYear}/account/${encodeURIComponent(accountNo)}`,
       {
         method: "DELETE",
       }
@@ -1504,7 +1565,9 @@ async function addNewBusiness() {
       amountPaid:
         parseFloat(document.getElementById("addAmountPaid").value) || 0,
       dateOfPayment: document.getElementById("addDateOfPayment").value || null,
+      remarks: document.getElementById("addRemarks").value.trim(),
     };
+
     // Validate required fields
     const requiredFields = [
       { id: "addAccountNo", name: "Account No" },
@@ -1517,6 +1580,7 @@ async function addNewBusiness() {
       { id: "addApplicationStatus", name: "Application Status" },
       { id: "addDateOfApplication", name: "Date of Application" },
     ];
+
     // Check if all required fields are filled
     for (const field of requiredFields) {
       const element = document.getElementById(field.id);
@@ -1549,6 +1613,7 @@ async function addNewBusiness() {
         }
       }
     }
+
     // Validate amount paid is a positive number if provided
     const amountPaid = document.getElementById("addAmountPaid").value;
     if (amountPaid && (isNaN(amountPaid) || parseFloat(amountPaid) < 0)) {
@@ -1570,13 +1635,16 @@ async function addNewBusiness() {
       amountField.focus();
       return;
     }
+
     // Check if account number already exists
     console.log(
       "Checking if account number already exists:",
       businessData.accountNo
     );
     const accountCheckResponse = await fetch(
-      `/api/business/account/${encodeURIComponent(businessData.accountNo)}`
+      `/api/business${currentYear}/account/${encodeURIComponent(
+        businessData.accountNo
+      )}`
     );
     if (accountCheckResponse.ok) {
       // Account number already exists
@@ -1598,6 +1666,7 @@ async function addNewBusiness() {
       accountField.focus();
       return;
     }
+
     // Show browser warning popup
     const isConfirmed = window.confirm(
       "Are you sure the data that are filled is correct?"
@@ -1606,31 +1675,46 @@ async function addNewBusiness() {
     if (!isConfirmed) {
       return;
     }
+
     // Show loading state
     const addBtn = document.getElementById("addBusinessBtn");
     const originalText = addBtn.innerHTML;
     addBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
     addBtn.disabled = true;
+
+    // Determine the correct API endpoint based on the current year
+    let apiUrl;
+    if (currentYear === "2026") {
+      apiUrl = "/api/business2026";
+    } else {
+      apiUrl = "/api/business2025";
+    }
+
     // Send create request to server
-    console.log("Sending request to server...");
-    const response = await fetch("/api/business", {
+    console.log("Sending request to server at:", apiUrl);
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(businessData),
     });
+
     // Restore button state
     addBtn.innerHTML = originalText;
     addBtn.disabled = false;
+
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || "Failed to add business");
     }
+
     // Close the add modal
     document.getElementById("businessAddModal").style.display = "none";
+
     // Show success message
     showSuccessMessage("Business added successfully!");
+
     // Refresh the business table
     loadBusinessData();
   } catch (error) {
@@ -1727,6 +1811,7 @@ function handleModify() {
   const amountPaid = document.getElementById("modalAmountPaid").textContent;
   const dateOfPayment =
     document.getElementById("modalDateOfPayment").textContent;
+  const remarks = document.getElementById("modalRemarks").textContent;
   // Close the details modal
   document.getElementById("businessDetailsModal").style.display = "none";
   // Populate the edit form with current data
@@ -1782,10 +1867,11 @@ async function saveBusinessChanges() {
       amountPaid:
         parseFloat(document.getElementById("editAmountPaid").value) || 0,
       dateOfPayment: document.getElementById("editDateOfPayment").value,
+      remarks: document.getElementById("editRemarks").value,
     };
     // Send update request to server
     const response = await fetch(
-      `/api/business/account/${encodeURIComponent(accountNo)}`,
+      `/api/business${currentYear}/account/${encodeURIComponent(accountNo)}`,
       {
         method: "PUT",
         headers: {
@@ -1988,9 +2074,11 @@ async function performSearch() {
     return;
   }
   try {
-    console.log("Searching for account number:", query);
+    console.log(`Searching for account number: ${query} in ${currentYear}`);
     const response = await fetch(
-      `/api/business/search?query=${encodeURIComponent(query)}&field=accountNo`
+      `/api/business${currentYear}/search?query=${encodeURIComponent(
+        query
+      )}&field=accountNo`
     );
     if (!response.ok) {
       throw new Error("Search failed");

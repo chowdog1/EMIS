@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reports | CENRO San Juan City EMIS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="dashboard.css" />
+    <style>
+      .report-section {
+        padding: 20px;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        margin-bottom: 20px;
+      }
+      .report-title {
+        font-size: 24px;
+        font-weight: bold;
+        text-decoration: underline;
+        color: #2c3e50;
+        cursor: pointer;
+        transition: color 0.3s;
+        margin-bottom: 20px;
+      }
+      .report-title:hover {
+        color: #3498db;
+      }
+      .report-container {
+        padding: 20px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+      .year-selector {
+        margin-bottom: 20px;
+      }
+      .year-selector select {
+        padding: 8px 12px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        font-size: 16px;
+      }
+      .report-description {
+        margin-bottom: 20px;
+        color: #555;
+      }
+      .special-reports {
+        margin-top: 30px;
+      }
+      .special-reports h3 {
+        margin-bottom: 15px;
+        color: #2c3e50;
+      }
+      .btn-report {
+        background-color: #3498db;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        margin-right: 10px;
+        margin-bottom: 10px;
+        transition: background-color 0.3s;
+      }
+      .btn-report:hover {
+        background-color: #2980b9;
+      }
+      .btn-report.special {
+        background-color: #e74c3c;
+      }
+      .btn-report.special:hover {
+        background-color: #c0392b;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dashboard-container">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-title">
+            <i class="fas fa-leaf"></i>
+            <span>CENRO EMIS</span>
+          </div>
+        </div>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="/dashboard">
+              <i class="fas fa-tachometer-alt"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="/businesses">
+              <i class="fas fa-building"></i>
+              <span>Businesses</span>
+            </a>
+          </li>
+          <li>
+            <a href="/reports" class="active">
+              <i class="fas fa-file-alt"></i>
+              <span>Reports</span>
+            </a>
+          </li>
+          <li>
+            <a href="#">
+              <i class="fas fa-users"></i>
+              <span>Users</span>
+            </a>
+          </li>
+          <li>
+            <a href="#">
+              <i class="fas fa-cog"></i>
+              <span>Settings</span>
+            </a>
+          </li>
+        </ul>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Header -->
+        <header class="header">
+          <h1 class="header-title">Reports</h1>
+          <div class="user-info">
+            <div class="user-avatar" id="userAvatar">
+              <img
+                id="userAvatarImage"
+                src="https://via.placeholder.com/40"
+                alt="User Avatar"
+              />
+              <div id="userAvatarFallback" class="avatar-fallback">U</div>
+            </div>
+            <div class="user-dropdown">
+              <button class="dropdown-toggle" id="userDropdown">
+                <span id="userEmail">Loading...</span>
+                <i class="fas fa-chevron-down"></i>
+              </button>
+              <div class="dropdown-menu" id="userDropdownMenu">
+                <a href="profile.html" class="dropdown-item">Profile</a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item" id="logoutBtn">Logout</a>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Report Section -->
+        <div class="table-section">
+          <div class="report-section">
+            <h2 class="table-title">Generate Environmental Clearance Report</h2>
+
+            <div class="report-container">
+              <div class="year-selector">
+                <label for="reportYear">Select Year: </label>
+                <select id="reportYear">
+                  <option value="2023">2023</option>
+                  <option value="2024">2024</option>
+                  <option value="2025" selected>2025</option>
+                  <option value="2026">2026</option>
+                  <option value="2027">2027</option>
+                </select>
+              </div>
+
+              <div class="report-title" id="generateReportBtn">
+                APPLICATION FOR ENVIRONMENTAL CLEARANCE -
+                <span id="selectedYear">2025</span>
+              </div>
+
+              <p class="report-description">
+                Click on the title above to generate a complete report for the
+                selected year. This will include all businesses in the database
+                regardless of their application or payment dates.
+              </p>
+            </div>
+
+            <div class="special-reports">
+              <h3>Special Reports</h3>
+              <button id="noPaymentsReportBtn" class="btn-report special">
+                <i class="fas fa-file-excel"></i> Generate No Payments Report
+              </button>
+              <p class="report-description">
+                Generate a report of businesses without payments for the
+                selected year. This is useful for identifying businesses that
+                need to renew their environmental clearance.
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="./js/imageUtils.js"></script>
+    <script src="./js/authUtils.js"></script>
+    <script src="reports.js"></script>
+  </body>
+</html>

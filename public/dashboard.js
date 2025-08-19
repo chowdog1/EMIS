@@ -6,6 +6,7 @@ class DashboardManager {
     this.warningTimer = null;
     this.inactivityTimeout = 180 * 1000; // 1 minute in milliseconds
     this.warningTimeout = 160 * 1000; // Show warning 20 seconds before logout
+    this.currentYear = "2025"; // Default year
     this.init();
   }
 
@@ -17,6 +18,8 @@ class DashboardManager {
     this.setupDropdown();
     // Setup logout functionality
     this.setupLogout();
+    // Setup year selector
+    this.setupYearSelector();
     // Fetch dashboard data
     this.fetchDashboardData();
     // Start periodic session check
@@ -25,6 +28,32 @@ class DashboardManager {
     this.setupInactivityDetection();
     // Create inactivity warning popup
     this.createInactivityWarning();
+  }
+
+  // Setup year selector
+  setupYearSelector() {
+    const yearSelect = document.getElementById("yearSelect");
+    if (yearSelect) {
+      // Set the initial value
+      yearSelect.value = this.currentYear;
+
+      // Add change event listener
+      yearSelect.addEventListener("change", (e) => {
+        this.currentYear = e.target.value;
+        console.log(`Year changed to: ${this.currentYear}`);
+
+        // Update the year display in the header
+        const selectedYearElement = document.getElementById("selectedYear");
+        if (selectedYearElement) {
+          selectedYearElement.textContent = this.currentYear;
+        }
+
+        // Fetch dashboard data for the selected year
+        this.fetchDashboardData();
+      });
+    } else {
+      console.error("Year selector element not found");
+    }
   }
 
   // Function to check authentication
@@ -147,22 +176,35 @@ class DashboardManager {
   // Function to fetch dashboard data
   async fetchDashboardData() {
     try {
-      console.log("Fetching dashboard data...");
+      console.log(`Fetching dashboard data for year: ${this.currentYear}`);
       const token = localStorage.getItem("auth_token");
-      const response = await fetch("/api/business/stats", {
+
+      // Determine the API endpoint based on the current year
+      let apiUrl;
+      if (this.currentYear === "2026") {
+        apiUrl = "/api/business2026/stats";
+      } else {
+        apiUrl = "/api/business2025/stats";
+      }
+
+      const response = await fetch(apiUrl, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
       });
+
       if (!response.ok) {
         throw new Error("Failed to fetch dashboard data");
       }
+
       const data = await response.json();
       console.log("Dashboard data:", data);
+
       // Update dashboard cards
       this.updateDashboardCards(data);
+
       // Create barangay chart
       this.createBarangayChart(data.barangayStats);
     } catch (error) {
@@ -256,7 +298,12 @@ class DashboardManager {
       "#FFCE56",
     ];
     try {
-      new Chart(ctx, {
+      // Destroy existing chart instance if it exists
+      if (this.barangayChartInstance) {
+        this.barangayChartInstance.destroy();
+      }
+
+      this.barangayChartInstance = new Chart(ctx, {
         type: "pie",
         data: {
           labels: labels,
@@ -715,7 +762,6 @@ class DashboardManager {
       console.error("Avatar elements not found");
       return;
     }
-
     // Check if user has a profile picture
     if (user.hasProfilePicture) {
       try {
@@ -726,7 +772,6 @@ class DashboardManager {
           this.showFallbackAvatar(user, fallbackElement);
           return;
         }
-
         // Fetch the profile picture
         const response = await fetch(`/api/auth/profile-picture/${user.id}`, {
           method: "GET",
@@ -734,17 +779,14 @@ class DashboardManager {
             Authorization: `Bearer ${token}`,
           },
         });
-
         if (response.ok) {
           // Convert the response to a blob URL
           const blob = await response.blob();
           const imageUrl = URL.createObjectURL(blob);
-
           // Set the image source and show it
           imageElement.src = imageUrl;
           imageElement.style.display = "block";
           fallbackElement.style.display = "none";
-
           console.log("Profile picture loaded successfully");
         } else {
           console.error("Failed to load profile picture:", response.status);
@@ -768,7 +810,6 @@ class DashboardManager {
     fallbackElement.style.display = "flex";
     fallbackElement.style.alignItems = "center";
     fallbackElement.style.justifyContent = "center";
-
     // Hide the image element
     const imageElement = document.getElementById("userAvatarImage");
     if (imageElement) {

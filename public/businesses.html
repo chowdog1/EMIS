@@ -40,7 +40,7 @@
             </a>
           </li>
           <li>
-            <a href="#">
+            <a href="/reports">
               <i class="fas fa-file-alt"></i>
               <span>Reports</span>
             </a>
@@ -144,6 +144,10 @@
                 <div class="detail-item">
                   <div class="detail-label">Date of Payment:</div>
                   <div class="detail-value" id="modalDateOfPayment">-</div>
+                </div>
+                <div class="detail-item">
+                  <div class="detail-label">Remarks:</div>
+                  <div class="detail-value" id="modalRemarks">-</div>
                 </div>
               </div>
             </div>
@@ -301,6 +305,14 @@
                     class="form-control"
                   />
                 </div>
+                <div class="form-group">
+                  <label for="addRemarks">Remarks:</label>
+                  <textarea
+                    id="addRemarks"
+                    class="form-control"
+                    rows="3"
+                  ></textarea>
+                </div>
               </form>
             </div>
             <div class="modal-footer">
@@ -451,6 +463,14 @@
                     class="form-control"
                   />
                 </div>
+                <div class="form-group">
+                  <label for="editRemarks">Remarks:</label>
+                  <textarea
+                    id="editRemarks"
+                    class="form-control"
+                    rows="3"
+                  ></textarea>
+                </div>
               </form>
             </div>
             <div class="modal-footer">
@@ -474,6 +494,15 @@
           <div class="table-header">
             <h2 class="table-title">Business Directory</h2>
             <div class="table-actions">
+              <div class="year-selector-container">
+                <label for="yearSelect" class="year-selector-label"
+                  >Year:</label
+                >
+                <select id="yearSelect" class="year-selector">
+                  <option value="2025">2025</option>
+                  <option value="2026">2026</option>
+                </select>
+              </div>
               <div class="search-container">
                 <input
                   type="text"

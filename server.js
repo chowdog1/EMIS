@@ -4,7 +4,8 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
 const authRoutes = require("./routes/authRoutes");
-const { establishmentsDB } = require("./db"); // Import from db.js
+const { establishmentsDB } = require("./db.js"); // Add .js extension
+const reportRoutes = require("./routes/reportRoutes");
 const app = express();
 const PORT = 3000;
 
@@ -20,12 +21,10 @@ app.use(
       ) {
         return callback(null, true);
       }
-
       // Allow any IP in the 192.168.55.x subnet (both CENRO and CGSJ_OSS)
       if (origin && origin.match(/^http:\/\/192\.168\.55\.\d{1,3}:3000$/)) {
         return callback(null, true);
       }
-
       callback(new Error("Not allowed by CORS"));
     },
     methods: ["GET", "POST", "PUT", "DELETE"],
@@ -48,11 +47,16 @@ mongoose
   });
 
 // Now require businessRoutes AFTER establishing the connection
-const businessRoutes = require("./routes/businessRoutes");
+const business2025Routes = require("./routes/business2025Routes.js");
+
+// connection for 2026
+const business2026Routes = require("./routes/business2026Routes.js");
 
 // API Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/business", businessRoutes);
+app.use("/api/business2025", business2025Routes);
+app.use("/api/business2026", business2026Routes);
+app.use("/api/reports", reportRoutes);
 
 // Dashboard route
 app.get("/dashboard", (req, res) => {
@@ -67,6 +71,11 @@ app.get("/dashboard.html", (req, res) => {
 // Businesses route
 app.get("/businesses", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "businesses.html"));
+});
+
+// Reports route
+app.get("/reports", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "reports.html"));
 });
 
 //for profile.html route
@@ -87,7 +96,7 @@ app.use((req, res) => {
 // Start server - listen on all interfaces (0.0.0.0) to allow network access
 const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
-  console.log(`🌐 CENRO Network: http://192.168.55.41:${PORT}`);
+  console.log(`🌐 CENRO Network: http://192.168.55.38:${PORT}`);
   console.log(`🏢 CGSJ_OSS Network: http://192.168.55.229:${PORT}`);
   console.log(`📡 Any device on 192.168.55.x subnet can access the server`);
 });
