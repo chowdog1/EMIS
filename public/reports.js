@@ -1,32 +1,77 @@
 // Wait for DOM to be fully loaded
 window.addEventListener("load", function () {
   console.log("Reports page loaded, initializing");
-
   // Check if user is logged in
   checkAuthentication();
-
   // Setup dropdown functionality
   setupDropdown();
-
   // Setup logout functionality
   setupLogout();
-
   // Setup report generation
   setupReportGeneration();
+  // Populate year dropdown with available years
+  populateYearDropdown();
 });
+
+// Function to populate year dropdown with available years
+async function populateYearDropdown() {
+  const reportYearSelect = document.getElementById("reportYear");
+
+  try {
+    // Fetch available years from the server
+    const response = await fetch("/api/reports/available-years");
+    if (!response.ok) throw new Error("Failed to fetch available years");
+
+    const years = await response.json();
+
+    // Clear existing options
+    reportYearSelect.innerHTML = "";
+
+    // Add each year as an option
+    years.forEach((year) => {
+      const option = document.createElement("option");
+      option.value = year;
+      option.textContent = year;
+      reportYearSelect.appendChild(option);
+    });
+
+    // Set the current year as default
+    const currentYear = new Date().getFullYear().toString();
+    if (years.includes(currentYear)) {
+      reportYearSelect.value = currentYear;
+      document.getElementById("selectedYear").textContent = currentYear;
+    } else if (years.length > 0) {
+      reportYearSelect.value = years[0];
+      document.getElementById("selectedYear").textContent = years[0];
+    }
+  } catch (error) {
+    console.error("Error populating year dropdown:", error);
+    // Fallback to hardcoded years if API fails
+    const fallbackYears = ["2025", "2026"];
+    fallbackYears.forEach((year) => {
+      const option = document.createElement("option");
+      option.value = year;
+      option.textContent = year;
+      reportYearSelect.appendChild(option);
+    });
+
+    if (fallbackYears.length > 0) {
+      reportYearSelect.value = fallbackYears[0];
+      document.getElementById("selectedYear").textContent = fallbackYears[0];
+    }
+  }
+}
 
 // Function to check authentication
 function checkAuthentication() {
   console.log("=== Checking Authentication ===");
   const token = localStorage.getItem("auth_token");
   const userData = localStorage.getItem("user_data");
-
   if (!token || !userData) {
     console.log("No token or user data found, redirecting to login");
     window.location.href = "/";
     return;
   }
-
   try {
     // Check if token is expired locally first
     if (isTokenExpired(token)) {
@@ -36,13 +81,10 @@ function checkAuthentication() {
       window.location.href = "/";
       return;
     }
-
     const user = JSON.parse(userData);
     console.log("User data parsed successfully:", user);
-
     // Update user info in the UI
     updateUserInterface(user);
-
     // Verify token with server in the background
     verifyTokenWithServer(token).catch((error) => {
       console.error("Token verification failed:", error);
@@ -59,13 +101,10 @@ async function updateUserInterface(user) {
   const userEmailElement = document.getElementById("userEmail");
   const userAvatarImage = document.getElementById("userAvatarImage");
   const userAvatarFallback = document.getElementById("userAvatarFallback");
-
   // Get the greeting based on current time
   const greeting = getTimeBasedGreeting();
-
   // Get the user's first name if available, otherwise fall back to email
   const displayName = user.firstname || user.email;
-
   if (userEmailElement) {
     // Update with greeting and first name
     userEmailElement.textContent = `${greeting}, ${displayName}!`;
@@ -73,7 +112,6 @@ async function updateUserInterface(user) {
   } else {
     console.error("User email element not found");
   }
-
   // Update avatar using the shared utility function
   updateUserAvatar(user, userAvatarImage, userAvatarFallback);
 }
@@ -108,16 +146,13 @@ function setupReportGeneration() {
     const isConfirmed = confirm(
       `Are you sure you want to create a report for the year ${year}?`
     );
-
     if (isConfirmed) {
       // Show loading state
       generateReportBtn.innerHTML =
         '<i class="fas fa-spinner fa-spin"></i> Generating Report...';
       generateReportBtn.disabled = true;
-
       // Make request to generate CSV
       window.location.href = `/api/reports/csv/${year}`;
-
       // Reset button after a delay
       setTimeout(() => {
         generateReportBtn.innerHTML = `APPLICATION FOR ENVIRONMENTAL CLEARANCE - <span id="selectedYear">${year}</span>`;
@@ -132,16 +167,13 @@ function setupReportGeneration() {
     const isConfirmed = confirm(
       `Are you sure you want to create a no-payments report for the year ${year}?`
     );
-
     if (isConfirmed) {
       // Show loading state
       noPaymentsReportBtn.innerHTML =
         '<i class="fas fa-spinner fa-spin"></i> Generating Report...';
       noPaymentsReportBtn.disabled = true;
-
       // Make request to generate CSV
       window.location.href = `/api/reports/csv/${year}/no-payments`;
-
       // Reset button after a delay
       setTimeout(() => {
         noPaymentsReportBtn.innerHTML =
@@ -157,25 +189,20 @@ function setupDropdown() {
   console.log("Setting up dropdown functionality");
   const userDropdown = document.getElementById("userDropdown");
   const userDropdownMenu = document.getElementById("userDropdownMenu");
-
   if (!userDropdown || !userDropdownMenu) {
     console.error("Dropdown elements not found");
     return;
   }
-
   // Remove any existing event listeners
   const newUserDropdown = userDropdown.cloneNode(true);
   userDropdown.parentNode.replaceChild(newUserDropdown, userDropdown);
-
   // Add click event listener
   newUserDropdown.addEventListener("click", function (e) {
     e.preventDefault();
     e.stopPropagation();
     console.log("Dropdown clicked");
-
     // Toggle dropdown menu
     userDropdownMenu.classList.toggle("show");
-
     // Close dropdown when clicking outside
     document.addEventListener("click", function closeDropdown(e) {
       if (!e.target.closest(".user-dropdown")) {
@@ -184,7 +211,6 @@ function setupDropdown() {
       }
     });
   });
-
   console.log("Dropdown functionality setup complete");
 }
 
@@ -192,27 +218,22 @@ function setupDropdown() {
 function setupLogout() {
   console.log("Setting up logout functionality");
   const logoutBtn = document.getElementById("logoutBtn");
-
   if (!logoutBtn) {
     console.error("Logout button not found");
     return;
   }
-
   // Remove any existing event listeners
   const newLogoutBtn = logoutBtn.cloneNode(true);
   logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
-
   // Add click event listener
   newLogoutBtn.addEventListener("click", function (e) {
     e.preventDefault();
     console.log("Logout button clicked");
-
     // Logout the user
     localStorage.removeItem("auth_token");
     localStorage.removeItem("user_data");
     window.location.href = "/";
   });
-
   console.log("Logout functionality setup complete");
 }
 
@@ -224,15 +245,12 @@ function isTokenExpired(token) {
     if (parts.length !== 3) {
       return true; // Invalid token format
     }
-
     // Decode the payload
     const payload = JSON.parse(atob(parts[1]));
-
     // Check if it has an expiration time
     if (!payload.exp) {
       return true; // No expiration time
     }
-
     // Check if it's expired
     const now = Math.floor(Date.now() / 1000);
     return payload.exp < now;
@@ -252,12 +270,10 @@ async function verifyTokenWithServer(token) {
         Authorization: `Bearer ${token}`,
       },
     });
-
     if (response.ok) {
       console.log("Token verification successful");
     } else {
       console.log("Token verification failed, status:", response.status);
-
       // Only redirect if the token is actually invalid
       if (response.status === 401) {
         console.log("Token is invalid, redirecting to login");
@@ -279,7 +295,6 @@ async function updateUserAvatar(user, imageElement, fallbackElement) {
     console.error("Avatar elements not found");
     return;
   }
-
   // Check if user has a profile picture
   if (user.hasProfilePicture) {
     try {
@@ -290,7 +305,6 @@ async function updateUserAvatar(user, imageElement, fallbackElement) {
         showFallbackAvatar(user, fallbackElement);
         return;
       }
-
       // Fetch the profile picture
       const response = await fetch(`/api/auth/profile-picture/${user.id}`, {
         method: "GET",
@@ -298,12 +312,10 @@ async function updateUserAvatar(user, imageElement, fallbackElement) {
           Authorization: `Bearer ${token}`,
         },
       });
-
       if (response.ok) {
         // Convert the response to a blob URL
         const blob = await response.blob();
         const imageUrl = URL.createObjectURL(blob);
-
         // Set the image source and show it
         imageElement.src = imageUrl;
         imageElement.style.display = "block";
@@ -331,7 +343,6 @@ function showFallbackAvatar(user, fallbackElement) {
   fallbackElement.style.display = "flex";
   fallbackElement.style.alignItems = "center";
   fallbackElement.style.justifyContent = "center";
-
   // Hide the image element
   const imageElement = document.getElementById("userAvatarImage");
   if (imageElement) {

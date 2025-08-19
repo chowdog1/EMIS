@@ -48,7 +48,6 @@ mongoose
 
 // Now require businessRoutes AFTER establishing the connection
 const business2025Routes = require("./routes/business2025Routes.js");
-
 // connection for 2026
 const business2026Routes = require("./routes/business2026Routes.js");
 
@@ -56,7 +55,9 @@ const business2026Routes = require("./routes/business2026Routes.js");
 app.use("/api/auth", authRoutes);
 app.use("/api/business2025", business2025Routes);
 app.use("/api/business2026", business2026Routes);
-app.use("/api/reports", reportRoutes);
+
+// Initialize reportRoutes with the establishmentsDB connection
+app.use("/api/reports", reportRoutes(establishmentsDB));
 
 // Dashboard route
 app.get("/dashboard", (req, res) => {
