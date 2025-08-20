@@ -1,87 +1,28 @@
-// Wait for DOM to be fully loaded
-window.addEventListener("load", function () {
-  console.log("Reports page loaded, initializing");
+// users.js
+// Debug logging
+console.log("Users.js loaded");
+console.log("Current URL:", window.location.href);
+console.log("Auth token exists:", !!localStorage.getItem("auth_token"));
+console.log("User data exists:", !!localStorage.getItem("user_data"));
+
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("Users page loaded, initializing");
+  // Update current page for user tracking
+  updateCurrentPage("Users");
   // Check if user is logged in
   checkAuthentication();
   // Setup dropdown functionality
   setupDropdown();
   // Setup logout functionality
   setupLogout();
-  // Setup report generation
-  setupReportGeneration();
-  // Populate year dropdown with available years
-  populateYearDropdown();
-  // Update current page for user tracking
-  updateCurrentPage("Reports");
+  // Load users
+  loadUsers();
+  // Set up refresh button
+  const refreshBtn = document.getElementById("refreshBtn");
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", loadUsers);
+  }
 });
-
-// Function to update current page for user tracking
-function updateCurrentPage(page) {
-  const token = localStorage.getItem("auth_token");
-  if (!token) {
-    console.error("No authentication token found");
-    return;
-  }
-  fetch("/api/auth/current-page", {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ page }),
-  })
-    .then((response) => {
-      if (!response.ok) {
-        console.error("Failed to update current page");
-      }
-    })
-    .catch((error) => {
-      console.error("Error updating current page:", error);
-    });
-}
-
-// Function to populate year dropdown with available years
-async function populateYearDropdown() {
-  const reportYearSelect = document.getElementById("reportYear");
-  try {
-    // Fetch available years from the server
-    const response = await fetch("/api/reports/available-years");
-    if (!response.ok) throw new Error("Failed to fetch available years");
-    const years = await response.json();
-    // Clear existing options
-    reportYearSelect.innerHTML = "";
-    // Add each year as an option
-    years.forEach((year) => {
-      const option = document.createElement("option");
-      option.value = year;
-      option.textContent = year;
-      reportYearSelect.appendChild(option);
-    });
-    // Set the current year as default
-    const currentYear = new Date().getFullYear().toString();
-    if (years.includes(currentYear)) {
-      reportYearSelect.value = currentYear;
-      document.getElementById("selectedYear").textContent = currentYear;
-    } else if (years.length > 0) {
-      reportYearSelect.value = years[0];
-      document.getElementById("selectedYear").textContent = years[0];
-    }
-  } catch (error) {
-    console.error("Error populating year dropdown:", error);
-    // Fallback to hardcoded years if API fails
-    const fallbackYears = ["2025", "2026"];
-    fallbackYears.forEach((year) => {
-      const option = document.createElement("option");
-      option.value = year;
-      option.textContent = year;
-      reportYearSelect.appendChild(option);
-    });
-    if (fallbackYears.length > 0) {
-      reportYearSelect.value = fallbackYears[0];
-      document.getElementById("selectedYear").textContent = fallbackYears[0];
-    }
-  }
-}
 
 // Function to check authentication
 function checkAuthentication() {
@@ -149,57 +90,205 @@ function getTimeBasedGreeting() {
   }
 }
 
-// Function to setup report generation
-function setupReportGeneration() {
-  const reportYearSelect = document.getElementById("reportYear");
-  const selectedYearSpan = document.getElementById("selectedYear");
-  const generateReportBtn = document.getElementById("generateReportBtn");
-  const noPaymentsReportBtn = document.getElementById("noPaymentsReportBtn");
-  // Update the displayed year when selection changes
-  reportYearSelect.addEventListener("change", function () {
-    selectedYearSpan.textContent = this.value;
-  });
-  // Setup main report generation
-  generateReportBtn.addEventListener("click", function () {
-    const year = reportYearSelect.value;
-    const isConfirmed = confirm(
-      `Are you sure you want to create a report for the year ${year}?`
-    );
-    if (isConfirmed) {
-      // Show loading state
-      generateReportBtn.innerHTML =
-        '<i class="fas fa-spinner fa-spin"></i> Generating Report...';
-      generateReportBtn.disabled = true;
-      // Make request to generate CSV
-      window.location.href = `/api/reports/csv/${year}`;
-      // Reset button after a delay
-      setTimeout(() => {
-        generateReportBtn.innerHTML = `APPLICATION FOR ENVIRONMENTAL CLEARANCE - <span id="selectedYear">${year}</span>`;
-        generateReportBtn.disabled = false;
-      }, 2000);
+function updateCurrentPage(page) {
+  const token = localStorage.getItem("auth_token");
+  if (!token) {
+    console.error("No authentication token found");
+    return;
+  }
+  fetch("/api/auth/current-page", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ page }),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        console.error("Failed to update current page");
+      }
+    })
+    .catch((error) => {
+      console.error("Error updating current page:", error);
+    });
+}
+
+function loadUsers() {
+  const token = localStorage.getItem("auth_token");
+  const refreshBtn = document.getElementById("refreshBtn");
+
+  // Check if token exists
+  if (!token) {
+    console.error("No authentication token found");
+    window.location.href = "/";
+    return;
+  }
+
+  // Show loading state
+  if (refreshBtn) {
+    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+    refreshBtn.disabled = true;
+  }
+
+  fetch("/api/auth/users", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+    .then((response) => {
+      console.log("Response status:", response.status);
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Token is invalid or expired
+          console.error("Authentication failed, redirecting to login");
+          localStorage.removeItem("auth_token");
+          localStorage.removeItem("user_data");
+          window.location.href = "/";
+          throw new Error("Authentication failed");
+        }
+        throw new Error(`Failed to load users: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then((users) => {
+      console.log("Users loaded:", users);
+      displayUsers(users);
+    })
+    .catch((error) => {
+      console.error("Error loading users:", error);
+
+      // Only show error in table if not redirecting
+      if (!error.message.includes("Authentication failed")) {
+        const tbody = document.getElementById("usersTableBody");
+        if (tbody) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 20px; color: #dc3545;">
+                Failed to load users. ${error.message}
+              </td>
+            </tr>
+          `;
+        }
+      }
+    })
+    .finally(() => {
+      // Reset button state
+      if (refreshBtn) {
+        refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+        refreshBtn.disabled = false;
+      }
+    });
+}
+
+function displayUsers(users) {
+  const tbody = document.getElementById("usersTableBody");
+  if (!tbody) {
+    console.error("Users table body not found");
+    return;
+  }
+  // Clear existing content
+  tbody.innerHTML = "";
+  // Check if users array is empty
+  if (!users || users.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; padding: 20px;">
+          No users found.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  // Add each user to the table
+  users.forEach((user) => {
+    const row = document.createElement("tr");
+    // Name cell
+    const nameCell = document.createElement("td");
+    nameCell.textContent =
+      `${user.firstname || ""} ${user.lastname || ""}`.trim() || "N/A";
+    // Email cell
+    const emailCell = document.createElement("td");
+    emailCell.textContent = user.email || "N/A";
+    // Role cell
+    const roleCell = document.createElement("td");
+    roleCell.textContent = user.role || "N/A";
+    // Status cell
+    const statusCell = document.createElement("td");
+    const statusContainer = document.createElement("div");
+    statusContainer.style.display = "flex";
+    statusContainer.style.alignItems = "center";
+    const statusIndicator = document.createElement("span");
+    statusIndicator.className = `status-indicator ${
+      user.isOnline ? "status-online" : "status-offline"
+    }`;
+    const statusText = document.createElement("span");
+
+    // Calculate relative time since last activity
+    const getRelativeTime = (date) => {
+      if (!date) return "Never active";
+
+      const now = new Date();
+      const diffInSeconds = Math.floor((now - new Date(date)) / 1000);
+
+      if (diffInSeconds < 30) {
+        return "Active now";
+      } else if (diffInSeconds < 60) {
+        return "Active few seconds ago";
+      } else if (diffInSeconds < 120) {
+        return "Active 1 minute ago";
+      } else if (diffInSeconds < 3600) {
+        const minutes = Math.floor(diffInSeconds / 60);
+        return `Active ${minutes} minutes ago`;
+      } else if (diffInSeconds < 7200) {
+        return "Active 1 hour ago";
+      } else if (diffInSeconds < 86400) {
+        const hours = Math.floor(diffInSeconds / 3600);
+        return `Active ${hours} hours ago`;
+      } else if (diffInSeconds < 172800) {
+        return "Active yesterday";
+      } else if (diffInSeconds < 604800) {
+        const days = Math.floor(diffInSeconds / 86400);
+        return `Active ${days} days ago`;
+      } else if (diffInSeconds < 2592000) {
+        const weeks = Math.floor(diffInSeconds / 604800);
+        return `Active ${weeks} week${weeks > 1 ? "s" : ""} ago`;
+      } else if (diffInSeconds < 31536000) {
+        const months = Math.floor(diffInSeconds / 2592000);
+        return `Active ${months} month${months > 1 ? "s" : ""} ago`;
+      } else {
+        const years = Math.floor(diffInSeconds / 31536000);
+        return `Active ${years} year${years > 1 ? "s" : ""} ago`;
+      }
+    };
+
+    statusText.textContent = getRelativeTime(user.lastActivity);
+
+    statusContainer.appendChild(statusIndicator);
+    statusContainer.appendChild(statusText);
+    statusCell.appendChild(statusContainer);
+    // Current page cell
+    const pageCell = document.createElement("td");
+    pageCell.textContent = user.currentPage || "N/A";
+    // Last activity cell
+    const activityCell = document.createElement("td");
+    if (user.lastActivity) {
+      const date = new Date(user.lastActivity);
+      activityCell.textContent = date.toLocaleString();
+    } else {
+      activityCell.textContent = "Never";
     }
+    // Append all cells to the row
+    row.appendChild(nameCell);
+    row.appendChild(emailCell);
+    row.appendChild(roleCell);
+    row.appendChild(statusCell);
+    row.appendChild(pageCell);
+    row.appendChild(activityCell);
+    // Append the row to the table body
+    tbody.appendChild(row);
   });
-  // Setup no payments report generation
-  noPaymentsReportBtn.addEventListener("click", function () {
-    const year = reportYearSelect.value;
-    const isConfirmed = confirm(
-      `Are you sure you want to create a no-payments report for the year ${year}?`
-    );
-    if (isConfirmed) {
-      // Show loading state
-      noPaymentsReportBtn.innerHTML =
-        '<i class="fas fa-spinner fa-spin"></i> Generating Report...';
-      noPaymentsReportBtn.disabled = true;
-      // Make request to generate CSV
-      window.location.href = `/api/reports/csv/${year}/no-payments`;
-      // Reset button after a delay
-      setTimeout(() => {
-        noPaymentsReportBtn.innerHTML =
-          '<i class="fas fa-file-excel"></i> Generate No Payments Report';
-        noPaymentsReportBtn.disabled = false;
-      }, 2000);
-    }
-  });
+  console.log("Users table populated with", users.length, "users");
 }
 
 // Function to setup dropdown functionality
@@ -318,9 +407,12 @@ async function verifyTokenWithServer(token) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
+      body: JSON.stringify({ token }), // Add this line
     });
+
     if (response.ok) {
       console.log("Token verification successful");
+      return true;
     } else {
       console.log("Token verification failed, status:", response.status);
       // Only redirect if the token is actually invalid
@@ -329,12 +421,30 @@ async function verifyTokenWithServer(token) {
         localStorage.removeItem("auth_token");
         localStorage.removeItem("user_data");
         window.location.href = "/";
+        return false;
       }
+      return false;
     }
   } catch (error) {
     console.error("Error verifying token:", error);
     // If server is unavailable, continue with session but log the error
     console.log("Continuing with session despite token verification error");
+    return false;
+  }
+}
+
+// Helper function to get user initials
+function getUserInitials(user) {
+  if (user.firstname && user.lastname) {
+    return `${user.firstname.charAt(0)}${user.lastname.charAt(
+      0
+    )}`.toUpperCase();
+  } else if (user.firstname) {
+    return user.firstname.charAt(0).toUpperCase();
+  } else if (user.lastname) {
+    return user.lastname.charAt(0).toUpperCase();
+  } else {
+    return user.email.charAt(0).toUpperCase();
   }
 }
 
@@ -396,20 +506,5 @@ function showFallbackAvatar(user, fallbackElement) {
   const imageElement = document.getElementById("userAvatarImage");
   if (imageElement) {
     imageElement.style.display = "none";
-  }
-}
-
-// Helper function to get user initials
-function getUserInitials(user) {
-  if (user.firstname && user.lastname) {
-    return `${user.firstname.charAt(0)}${user.lastname.charAt(
-      0
-    )}`.toUpperCase();
-  } else if (user.firstname) {
-    return user.firstname.charAt(0).toUpperCase();
-  } else if (user.lastname) {
-    return user.lastname.charAt(0).toUpperCase();
-  } else {
-    return user.email.charAt(0).toUpperCase();
   }
 }

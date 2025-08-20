@@ -3,10 +3,8 @@ const User = require("../models/user");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const JWT_SECRET = "your_jwt_secret_key";
-
 // Debug: Log when the controller is loaded
 console.log("AuthController loaded");
-
 //for logging in
 const login = async (req, res) => {
   const { email, password } = req.body;
@@ -26,12 +24,10 @@ const login = async (req, res) => {
       console.log("❌ Account inactive");
       return res.status(403).json({ message: "Account is inactive" });
     }
-
     // Check if user is already logged in
     if (user.currentSessionId) {
       const sessionAge = Date.now() - user.lastLoginAt.getTime();
       const sessionThreshold = 30 * 60 * 1000; // 30 minutes
-
       // If session is older than threshold, clear it and allow login
       if (sessionAge > sessionThreshold) {
         console.log("🔄 Clearing stale session");
@@ -46,7 +42,6 @@ const login = async (req, res) => {
         });
       }
     }
-
     // Create JWT token
     const sessionId = require("crypto").randomBytes(16).toString("hex");
     const token = jwt.sign(
@@ -54,12 +49,10 @@ const login = async (req, res) => {
       JWT_SECRET,
       { expiresIn: "24h" }
     );
-
     // Update user session info
     user.currentSessionId = sessionId;
     user.lastLoginAt = new Date();
     await user.save();
-
     console.log("✅ Login successful");
     // Return the token and user information
     res.json({
@@ -80,7 +73,6 @@ const login = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-
 // logout function
 const logout = async (req, res) => {
   try {
@@ -88,12 +80,19 @@ const logout = async (req, res) => {
     if (!token) {
       return res.status(400).json({ message: "No token provided" });
     }
+
     const decoded = jwt.verify(token, JWT_SECRET);
     const user = await User.findById(decoded.userId);
+
     if (user) {
+      // Update user's online status and clear session info
       user.currentSessionId = null;
+      user.isOnline = false;
+      user.lastActivity = new Date(); // Update last activity to logout time
       await user.save();
+      console.log(`User ${user.email} logged out successfully`);
     }
+
     res.json({ message: "Logout successful" });
   } catch (error) {
     console.error("❌ Logout error:", error);
@@ -124,7 +123,6 @@ const checkEmail = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
 //for user register
 const register = async (req, res) => {
   const { firstname, lastname, email, password, role } = req.body;
@@ -152,30 +150,22 @@ const register = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-
 //for verifying user - renamed to avoid conflict with middleware
-const verifyTokenEndpoint = async (req, res) => {
+const verifyToken = async (req, res) => {
   try {
     const token = req.headers.authorization?.split(" ")[1];
     if (!token) {
       return res.status(401).json({ message: "No token provided" });
     }
-    // First, try to decode the token without verification to check if it's malformed
-    const decoded = jwt.decode(token);
-    if (!decoded) {
-      return res.status(401).json({ message: "Invalid token format" });
-    }
-    // Check if the token is expired
-    const now = Math.floor(Date.now() / 1000);
-    if (decoded.exp && decoded.exp < now) {
-      return res.status(401).json({ message: "Token expired" });
-    }
-    // If the token looks valid, verify it with the secret
+
+    // Verify the token with the secret
     const verified = jwt.verify(token, JWT_SECRET);
     const user = await User.findById(verified.userId);
+
     if (!user || !user.isActive) {
       return res.status(401).json({ message: "Invalid token" });
     }
+
     res.json({
       valid: true,
       user: {
@@ -189,18 +179,20 @@ const verifyTokenEndpoint = async (req, res) => {
     });
   } catch (error) {
     console.error("Token verification error:", error);
-    // Only return 401 if the token is actually invalid
-    if (
-      error.name === "JsonWebTokenError" ||
-      error.name === "TokenExpiredError"
-    ) {
-      return res.status(401).json({ message: "Invalid token" });
+
+    // Handle specific token errors
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({ message: "Invalid token format" });
     }
+
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Token expired" });
+    }
+
     // For other errors, return 500
     res.status(500).json({ message: "Internal server error" });
   }
 };
-
 // Update user profile
 const updateProfile = async (req, res) => {
   try {
@@ -241,7 +233,6 @@ const updateProfile = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-
 // Upload profile picture
 const uploadProfilePicture = async (req, res) => {
   try {
@@ -269,7 +260,6 @@ const uploadProfilePicture = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-
 // Get profile picture
 const getProfilePicture = async (req, res) => {
   try {
@@ -285,7 +275,6 @@ const getProfilePicture = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-
 // Change password
 const changePassword = async (req, res) => {
   try {
@@ -312,28 +301,99 @@ const changePassword = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+// Get all users with online status and current page
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find({}, "-password"); // Exclude password
+    // Calculate online status based on lastActivity
+    const usersWithStatus = users.map((user) => {
+      const now = new Date();
+      const lastActivity = user.lastActivity || new Date(0);
+      const timeDiff = now - lastActivity;
+      const fiveMinutes = 5 * 60 * 1000; // 5 minutes threshold
+
+      // If user is marked as online but hasn't had recent activity, update their status
+      if (user.isOnline && timeDiff > fiveMinutes) {
+        // Update user in database
+        User.findByIdAndUpdate(user._id, { isOnline: false }).catch((err) => {
+          console.error(`Failed to update user ${user.email} status:`, err);
+        });
+        return {
+          id: user._id,
+          email: user.email,
+          firstname: user.firstname,
+          lastname: user.lastname,
+          role: user.role,
+          isOnline: false, // Override with actual status
+          currentPage: user.currentPage || "N/A",
+          lastActivity: user.lastActivity,
+        };
+      }
+
+      return {
+        id: user._id,
+        email: user.email,
+        firstname: user.firstname,
+        lastname: user.lastname,
+        role: user.role,
+        isOnline: user.isOnline,
+        currentPage: user.currentPage || "N/A",
+        lastActivity: user.lastActivity,
+      };
+    });
+    res.json(usersWithStatus);
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+// Update user's current page
+const updateCurrentPage = async (req, res) => {
+  try {
+    const { page } = req.body;
+    if (!page) {
+      return res.status(400).json({ message: "Page is required" });
+    }
+    const userId = req.user.userId;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    user.currentPage = page;
+    user.lastActivity = new Date();
+    user.isOnline = true;
+    await user.save();
+    res.json({ message: "Current page updated successfully" });
+  } catch (error) {
+    console.error("Error updating current page:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
 
 // Debug: Log before exporting
 console.log("Exporting methods:", {
   login,
   register,
   checkEmail,
-  verifyTokenEndpoint,
+  verifyToken,
   updateProfile,
   uploadProfilePicture,
   changePassword,
   getProfilePicture,
   logout,
+  getAllUsers,
+  updateCurrentPage,
 });
-
 module.exports = {
   login,
   register,
   checkEmail,
-  verifyToken: verifyTokenEndpoint, // Export as verifyToken for compatibility
+  verifyToken,
   updateProfile,
   uploadProfilePicture,
   changePassword,
   getProfilePicture,
   logout,
+  getAllUsers,
+  updateCurrentPage,
 };

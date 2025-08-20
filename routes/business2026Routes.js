@@ -13,7 +13,6 @@ const {
 // Helper function to convert string values to uppercase
 function convertStringsToUppercase(data) {
   const processedData = { ...data };
-
   // List of fields that should be converted to uppercase
   const stringFields = [
     "accountNo",
@@ -27,14 +26,12 @@ function convertStringsToUppercase(data) {
     "orNo",
     "remarks",
   ];
-
   // Convert each string field to uppercase if it exists
   stringFields.forEach((field) => {
     if (processedData[field] && typeof processedData[field] === "string") {
       processedData[field] = processedData[field].toUpperCase();
     }
   });
-
   return processedData;
 }
 
@@ -56,6 +53,8 @@ function transformToDatabaseFormat(data) {
     BARANGAY: data.barangay,
     "NATURE OF BUSINESS": data.natureOfBusiness,
     REMARKS: data.remarks,
+    "2026_STATUS": data.status2026, // Map 2026 specific fields
+    "2026_NOTES": data.notes2026, // Map 2026 specific fields
   };
 }
 
@@ -195,15 +194,12 @@ router.get("/account/:accountNo", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     console.log("Received data for 2026 business:", req.body);
-
     // Convert string fields to uppercase
     const processedBody = convertStringsToUppercase(req.body);
     console.log("Processed data (uppercase):", processedBody);
-
     // Transform to database format
     const dbData = transformToDatabaseFormat(processedBody);
     console.log("Transformed data for database:", dbData);
-
     // Check if account number already exists
     const existingBusiness = await Business2026.findOne({
       "ACCOUNT NO": dbData["ACCOUNT NO"],
@@ -211,12 +207,9 @@ router.post("/", async (req, res) => {
     if (existingBusiness) {
       return res.status(400).json({ message: "Account number already exists" });
     }
-
-    // Create new business with transformed data
-    const newBusiness = new Business2026(dbData);
-    const savedBusiness = await newBusiness.save();
+    // Use the service function instead of directly creating and saving
+    const savedBusiness = await addBusiness2026(dbData);
     console.log("Business added to 2026:", savedBusiness);
-
     res.status(201).json(savedBusiness);
   } catch (error) {
     console.error("Error adding 2026 business:", error);
@@ -229,10 +222,8 @@ router.put("/account/:accountNo", async (req, res) => {
   try {
     // Convert string fields to uppercase
     const processedBody = convertStringsToUppercase(req.body);
-
     // Transform to database format
     const dbData = transformToDatabaseFormat(processedBody);
-
     const business = await updateBusiness2026(req.params.accountNo, dbData);
     if (!business) {
       return res.status(404).json({ message: "Business not found" });

@@ -9,7 +9,6 @@ class DashboardManager {
     this.currentYear = "2025"; // Default year
     this.init();
   }
-
   init() {
     console.log("Initializing dashboard manager");
     // Check if user is logged in
@@ -29,25 +28,21 @@ class DashboardManager {
     // Create inactivity warning popup
     this.createInactivityWarning();
   }
-
   // Setup year selector
   setupYearSelector() {
     const yearSelect = document.getElementById("yearSelect");
     if (yearSelect) {
       // Set the initial value
       yearSelect.value = this.currentYear;
-
       // Add change event listener
       yearSelect.addEventListener("change", (e) => {
         this.currentYear = e.target.value;
         console.log(`Year changed to: ${this.currentYear}`);
-
         // Update the year display in the header
         const selectedYearElement = document.getElementById("selectedYear");
         if (selectedYearElement) {
           selectedYearElement.textContent = this.currentYear;
         }
-
         // Fetch dashboard data for the selected year
         this.fetchDashboardData();
       });
@@ -55,7 +50,6 @@ class DashboardManager {
       console.error("Year selector element not found");
     }
   }
-
   // Function to check authentication
   async checkAuthentication() {
     console.log("=== Checking Authentication ===");
@@ -91,7 +85,6 @@ class DashboardManager {
       window.location.href = "/";
     }
   }
-
   // Function to get time-based greeting
   getTimeBasedGreeting() {
     const hour = new Date().getHours();
@@ -103,7 +96,6 @@ class DashboardManager {
       return "Good evening";
     }
   }
-
   // Function to update user interface
   async updateUserInterface(user) {
     console.log("Updating user interface with user:", user);
@@ -124,7 +116,6 @@ class DashboardManager {
     // Update avatar using the shared utility function
     this.updateUserAvatar(user, userAvatarImage, userAvatarFallback);
   }
-
   // Helper function to get user initials
   getUserInitials(user) {
     if (user.firstname && user.lastname) {
@@ -139,7 +130,6 @@ class DashboardManager {
       return user.email.charAt(0).toUpperCase();
     }
   }
-
   // Function to verify token with server
   async verifyTokenWithServer(token) {
     try {
@@ -172,13 +162,11 @@ class DashboardManager {
       return true; // Changed to true to allow offline access
     }
   }
-
   // Function to fetch dashboard data
   async fetchDashboardData() {
     try {
       console.log(`Fetching dashboard data for year: ${this.currentYear}`);
       const token = localStorage.getItem("auth_token");
-
       // Determine the API endpoint based on the current year
       let apiUrl;
       if (this.currentYear === "2026") {
@@ -186,7 +174,6 @@ class DashboardManager {
       } else {
         apiUrl = "/api/business2025/stats";
       }
-
       const response = await fetch(apiUrl, {
         method: "GET",
         headers: {
@@ -194,17 +181,13 @@ class DashboardManager {
           Authorization: `Bearer ${token}`,
         },
       });
-
       if (!response.ok) {
         throw new Error("Failed to fetch dashboard data");
       }
-
       const data = await response.json();
       console.log("Dashboard data:", data);
-
       // Update dashboard cards
       this.updateDashboardCards(data);
-
       // Create barangay chart
       this.createBarangayChart(data.barangayStats);
     } catch (error) {
@@ -213,7 +196,6 @@ class DashboardManager {
       this.loadBusinessData();
     }
   }
-
   // Function to update dashboard cards
   updateDashboardCards(data) {
     console.log("Updating dashboard cards with data:", data);
@@ -263,7 +245,6 @@ class DashboardManager {
       console.error("Renewal element not found");
     }
   }
-
   // Function to create barangay chart
   createBarangayChart(barangayStats) {
     console.log("Creating barangay chart with data:", barangayStats);
@@ -302,7 +283,6 @@ class DashboardManager {
       if (this.barangayChartInstance) {
         this.barangayChartInstance.destroy();
       }
-
       this.barangayChartInstance = new Chart(ctx, {
         type: "pie",
         data: {
@@ -341,7 +321,6 @@ class DashboardManager {
       console.error("Error creating chart:", error);
     }
   }
-
   // Function to setup dropdown functionality
   setupDropdown() {
     console.log("Setting up dropdown functionality");
@@ -371,7 +350,6 @@ class DashboardManager {
     });
     console.log("Dropdown functionality setup complete");
   }
-
   // Function to setup logout functionality
   setupLogout() {
     console.log("Setting up logout functionality");
@@ -391,7 +369,6 @@ class DashboardManager {
     });
     console.log("Logout functionality setup complete");
   }
-
   // Logout function
   async logout() {
     try {
@@ -419,7 +396,6 @@ class DashboardManager {
       window.location.href = "/";
     }
   }
-
   // Clear session data
   clearSessionData() {
     console.log("Clearing session data");
@@ -434,7 +410,6 @@ class DashboardManager {
     // Clear sessionStorage
     sessionStorage.clear();
   }
-
   // Check if token is expired (simplified version for browser)
   isTokenExpired(token) {
     try {
@@ -457,7 +432,6 @@ class DashboardManager {
       return true; // Assume expired if there's an error
     }
   }
-
   // Get user from token (simplified version for browser)
   getUserFromToken(token) {
     try {
@@ -473,7 +447,6 @@ class DashboardManager {
       return null;
     }
   }
-
   // Check session validity
   async checkSessionValidity() {
     try {
@@ -493,7 +466,6 @@ class DashboardManager {
       return true;
     }
   }
-
   // Start periodic session check
   startSessionCheck() {
     // Clear any existing interval
@@ -511,7 +483,6 @@ class DashboardManager {
     }, 1 * 60 * 1000); // 1 minute
     console.log("Session check started (1 minute interval)");
   }
-
   // Stop session check
   stopSessionCheck() {
     if (this.sessionCheckInterval) {
@@ -520,7 +491,6 @@ class DashboardManager {
       console.log("Session check stopped");
     }
   }
-
   // Setup inactivity detection
   setupInactivityDetection() {
     console.log("Setting up inactivity detection");
@@ -547,7 +517,6 @@ class DashboardManager {
     this.resetInactivityTimer();
     console.log("Inactivity detection setup complete");
   }
-
   // Reset inactivity timer
   resetInactivityTimer() {
     // Clear existing timers
@@ -575,7 +544,6 @@ class DashboardManager {
       } seconds of inactivity)`
     );
   }
-
   // Create inactivity warning popup
   createInactivityWarning() {
     // Create popup container
@@ -712,7 +680,6 @@ class DashboardManager {
     document.body.appendChild(popup);
     console.log("Inactivity warning popup created");
   }
-
   // Show inactivity warning popup
   showInactivityWarning() {
     const popup = document.getElementById("inactivityWarning");
@@ -735,7 +702,6 @@ class DashboardManager {
       popup.countdownInterval = countdownInterval;
     }
   }
-
   // Hide inactivity warning popup
   hideInactivityWarning() {
     const popup = document.getElementById("inactivityWarning");
@@ -749,13 +715,11 @@ class DashboardManager {
       }
     }
   }
-
   // Load business data (fallback method)
   loadBusinessData() {
     console.log("Loading business data as fallback");
     // This is a placeholder - implement as needed
   }
-
   // Update user avatar - FIXED VERSION
   async updateUserAvatar(user, imageElement, fallbackElement) {
     if (!imageElement || !fallbackElement) {
@@ -802,7 +766,6 @@ class DashboardManager {
       this.showFallbackAvatar(user, fallbackElement);
     }
   }
-
   // Show fallback avatar with initials
   showFallbackAvatar(user, fallbackElement) {
     const initials = this.getUserInitials(user);
@@ -816,6 +779,31 @@ class DashboardManager {
       imageElement.style.display = "none";
     }
   }
+
+  // Add updateCurrentPage method to DashboardManager class
+  updateCurrentPage(page) {
+    const token = localStorage.getItem("auth_token");
+    if (!token) {
+      console.error("No authentication token found");
+      return;
+    }
+    fetch("/api/auth/current-page", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ page }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          console.error("Failed to update current page");
+        }
+      })
+      .catch((error) => {
+        console.error("Error updating current page:", error);
+      });
+  }
 }
 
 // Wait for DOM to be fully loaded
@@ -823,6 +811,8 @@ window.addEventListener("DOMContentLoaded", function () {
   console.log("DOM fully loaded, initializing dashboard");
   // Create dashboard manager instance
   window.dashboardManager = new DashboardManager();
+  // Update current page for user tracking - FIXED: use the method from the dashboardManager instance
+  window.dashboardManager.updateCurrentPage("Dashboard");
 });
 
 // Handle page visibility change

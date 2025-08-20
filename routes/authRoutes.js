@@ -5,7 +5,6 @@ const authController = require("../controllers/authController");
 const { verifyToken } = require("../middleware/authMiddleware"); // Import middleware
 const multer = require("multer");
 const upload = multer({ storage: multer.memoryStorage() });
-
 // Debug: Check if authController and its methods are properly loaded
 console.log("AuthController loaded:", authController);
 console.log("AuthController.login type:", typeof authController.login);
@@ -18,17 +17,22 @@ console.log(
   "AuthController.verifyToken type:",
   typeof authController.verifyToken
 );
-
+console.log(
+  "AuthController.getAllUsers type:",
+  typeof authController.getAllUsers
+);
+console.log(
+  "AuthController.updateCurrentPage type:",
+  typeof authController.updateCurrentPage
+);
 // Debug: Check if middleware is properly loaded
 console.log("verifyToken middleware type:", typeof verifyToken);
-
 // POST /api/auth/login
 router.post("/login", authController.login);
 router.post("/register", authController.register);
 router.post("/check-email", authController.checkEmail);
 router.post("/verify-token", authController.verifyToken); // This now uses the renamed method
 router.post("/logout", authController.logout); // Add logout route
-
 // Protected routes - use the middleware
 router.put("/update-profile", verifyToken, authController.updateProfile);
 router.post(
@@ -43,5 +47,6 @@ router.get(
   verifyToken,
   authController.getProfilePicture
 );
-
+router.get("/users", verifyToken, authController.getAllUsers);
+router.put("/current-page", verifyToken, authController.updateCurrentPage);
 module.exports = router;

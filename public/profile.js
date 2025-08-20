@@ -1,6 +1,8 @@
 // profile.js
 window.addEventListener("load", function () {
   console.log("Profile page loaded, initializing");
+  // Update current page for user tracking
+  updateCurrentPage("Profile");
   // Check if user is logged in
   checkAuthentication();
   // Setup dropdown functionality
@@ -19,22 +21,80 @@ window.addEventListener("load", function () {
   createInactivityWarning();
 });
 
+// Function to update current page for user tracking
+function updateCurrentPage(page) {
+  const token = localStorage.getItem("auth_token");
+  if (!token) {
+    console.error("No authentication token found");
+    return;
+  }
+  fetch("/api/auth/current-page", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ page }),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        console.error("Failed to update current page");
+      }
+    })
+    .catch((error) => {
+      console.error("Error updating current page:", error);
+    });
+}
+
 // Global variables for inactivity tracking
 let inactivityTimer = null;
 let warningTimer = null;
-const inactivityTimeout = 180 * 1000; // 1 minute in milliseconds
+const inactivityTimeout = 180 * 1000; // 3 minutes in milliseconds
 const warningTimeout = 160 * 1000; // Show warning 20 seconds before logout
+
+//Update Current Page
+//updateCurrentPage("Business Directory");
 
 // Function to setup inactivity detection
 function setupInactivityDetection() {
   console.log("Setting up inactivity detection");
-
-  // Reset inactivity timer on user activity
-  const resetInactivityTimer = () => {
-    console.log("User activity detected, resetting inactivity timer");
-    resetInactivityTimer();
-  };
-
+  // Function to reset inactivity timer
+  function resetInactivityTimer() {
+    // Clear existing timers
+    if (inactivityTimer) {
+      clearTimeout(inactivityTimer);
+    }
+    if (warningTimer) {
+      clearTimeout(warningTimer);
+    }
+    // Hide warning popup if it's visible
+    hideInactivityWarning();
+    // Set warning timer (160 seconds before logout)
+    warningTimer = setTimeout(() => {
+      console.log("Showing inactivity warning");
+      showInactivityWarning();
+    }, warningTimeout);
+    // Set logout timer (180 seconds total)
+    inactivityTimer = setTimeout(() => {
+      console.log("User inactive for 3 minutes, logging out");
+      logout();
+    }, inactivityTimeout);
+    console.log(
+      `Inactivity timer reset (will logout after ${
+        inactivityTimeout / 1000
+      } seconds of inactivity)`
+    );
+  }
+  // Throttle function to limit how often the timer is reset
+  let lastResetTime = 0;
+  const throttleDelay = 1000; // 1 second
+  function throttledReset() {
+    const now = Date.now();
+    if (now - lastResetTime > throttleDelay) {
+      lastResetTime = now;
+      resetInactivityTimer();
+    }
+  }
   // Add event listeners for user activity
   const events = [
     "mousedown",
@@ -46,46 +106,12 @@ function setupInactivityDetection() {
     "keydown",
     "input",
   ];
-
   events.forEach((event) => {
-    document.addEventListener(event, resetInactivityTimer, true);
+    document.addEventListener(event, throttledReset, true);
   });
-
   // Start the inactivity timer
   resetInactivityTimer();
   console.log("Inactivity detection setup complete");
-}
-
-// Function to reset inactivity timer
-function resetInactivityTimer() {
-  // Clear existing timers
-  if (inactivityTimer) {
-    clearTimeout(inactivityTimer);
-  }
-  if (warningTimer) {
-    clearTimeout(warningTimer);
-  }
-
-  // Hide warning popup if it's visible
-  hideInactivityWarning();
-
-  // Set warning timer (40 seconds before logout)
-  warningTimer = setTimeout(() => {
-    console.log("Showing inactivity warning");
-    showInactivityWarning();
-  }, warningTimeout);
-
-  // Set logout timer (60 seconds total)
-  inactivityTimer = setTimeout(() => {
-    console.log("User inactive for 1 minute, logging out");
-    logout();
-  }, inactivityTimeout);
-
-  console.log(
-    `Inactivity timer reset (will logout after ${
-      inactivityTimeout / 1000
-    } seconds of inactivity)`
-  );
 }
 
 // Function to create inactivity warning popup
@@ -94,7 +120,6 @@ function createInactivityWarning() {
   if (document.getElementById("inactivityWarning")) {
     return;
   }
-
   // Create popup container
   const popup = document.createElement("div");
   popup.id = "inactivityWarning";
@@ -114,7 +139,6 @@ function createInactivityWarning() {
     text-align: center;
     border: 1px solid #e0e0e0;
   `;
-
   // Create warning icon
   const icon = document.createElement("div");
   icon.innerHTML = `
@@ -125,7 +149,6 @@ function createInactivityWarning() {
     </svg>
   `;
   icon.style.marginBottom = "16px";
-
   // Create warning message
   const message = document.createElement("h3");
   message.textContent = "Session Timeout Warning";
@@ -135,7 +158,6 @@ function createInactivityWarning() {
     font-size: 18px;
     font-weight: 600;
   `;
-
   // Create warning text
   const text = document.createElement("p");
   text.textContent =
@@ -146,7 +168,6 @@ function createInactivityWarning() {
     font-size: 14px;
     line-height: 1.5;
   `;
-
   // Create countdown timer
   const countdown = document.createElement("div");
   countdown.id = "inactivityCountdown";
@@ -157,11 +178,9 @@ function createInactivityWarning() {
     color: #ff9800;
     margin-bottom: 20px;
   `;
-
   // Create buttons container
   const buttons = document.createElement("div");
   buttons.style.cssText = "display: flex; gap: 12px; justify-content: center;";
-
   // Create stay logged in button
   const stayButton = document.createElement("button");
   stayButton.textContent = "Stay Logged In";
@@ -185,7 +204,6 @@ function createInactivityWarning() {
   stayButton.addEventListener("mouseleave", () => {
     stayButton.style.background = "#4caf50";
   });
-
   // Create logout button
   const logoutButton = document.createElement("button");
   logoutButton.textContent = "Logout Now";
@@ -209,7 +227,6 @@ function createInactivityWarning() {
   logoutButton.addEventListener("mouseleave", () => {
     logoutButton.style.background = "#f44336";
   });
-
   // Append elements
   buttons.appendChild(stayButton);
   buttons.appendChild(logoutButton);
@@ -218,7 +235,6 @@ function createInactivityWarning() {
   popup.appendChild(text);
   popup.appendChild(countdown);
   popup.appendChild(buttons);
-
   // Create overlay
   const overlay = document.createElement("div");
   overlay.id = "inactivityOverlay";
@@ -232,7 +248,6 @@ function createInactivityWarning() {
     z-index: 9999;
     display: none;
   `;
-
   // Add to document
   document.body.appendChild(overlay);
   document.body.appendChild(popup);
@@ -244,15 +259,12 @@ function showInactivityWarning() {
   const popup = document.getElementById("inactivityWarning");
   const overlay = document.getElementById("inactivityOverlay");
   const countdown = document.getElementById("inactivityCountdown");
-
   if (popup && overlay && countdown) {
     popup.style.display = "block";
     overlay.style.display = "block";
-
     // Start countdown
     let timeLeft = 20;
     countdown.textContent = timeLeft;
-
     const countdownInterval = setInterval(() => {
       timeLeft--;
       countdown.textContent = timeLeft;
@@ -260,7 +272,6 @@ function showInactivityWarning() {
         clearInterval(countdownInterval);
       }
     }, 1000);
-
     // Store interval ID to clear it later
     popup.countdownInterval = countdownInterval;
   }
@@ -270,11 +281,9 @@ function showInactivityWarning() {
 function hideInactivityWarning() {
   const popup = document.getElementById("inactivityWarning");
   const overlay = document.getElementById("inactivityOverlay");
-
   if (popup && overlay) {
     popup.style.display = "none";
     overlay.style.display = "none";
-
     // Clear countdown interval if it exists
     if (popup.countdownInterval) {
       clearInterval(popup.countdownInterval);
@@ -408,6 +417,67 @@ async function updateUserInterface(user) {
   }
   // Update avatar using the shared utility function
   updateUserAvatar(user, userAvatarImage, userAvatarFallback);
+}
+
+// Helper function to update user avatar
+async function updateUserAvatar(user, imageElement, fallbackElement) {
+  if (!imageElement || !fallbackElement) {
+    console.error("Avatar elements not found");
+    return;
+  }
+  // Check if user has a profile picture
+  if (user.hasProfilePicture) {
+    try {
+      // Get the token for authorization
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        console.error("No auth token found");
+        showFallbackAvatar(user, fallbackElement);
+        return;
+      }
+      // Fetch the profile picture
+      const response = await fetch(`/api/auth/profile-picture/${user.id}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        // Convert the response to a blob URL
+        const blob = await response.blob();
+        const imageUrl = URL.createObjectURL(blob);
+        // Set the image source and show it
+        imageElement.src = imageUrl;
+        imageElement.style.display = "block";
+        fallbackElement.style.display = "none";
+        console.log("Profile picture loaded successfully");
+      } else {
+        console.error("Failed to load profile picture:", response.status);
+        showFallbackAvatar(user, fallbackElement);
+      }
+    } catch (error) {
+      console.error("Error loading profile picture:", error);
+      showFallbackAvatar(user, fallbackElement);
+    }
+  } else {
+    // User doesn't have a profile picture, show fallback
+    console.log("User has no profile picture, showing fallback");
+    showFallbackAvatar(user, fallbackElement);
+  }
+}
+
+// Show fallback avatar with initials
+function showFallbackAvatar(user, fallbackElement) {
+  const initials = getUserInitials(user);
+  fallbackElement.textContent = initials;
+  fallbackElement.style.display = "flex";
+  fallbackElement.style.alignItems = "center";
+  fallbackElement.style.justifyContent = "center";
+  // Hide the image element
+  const imageElement = document.getElementById("userAvatarImage");
+  if (imageElement) {
+    imageElement.style.display = "none";
+  }
 }
 
 // Helper function to get user initials
@@ -988,7 +1058,7 @@ async function verifyTokenWithServer(token) {
   }
 }
 
-// profile.js
+// Function to clear all session data
 function clearAllSessionData() {
   console.log("Clearing all session data");
   // Clear localStorage
@@ -1006,7 +1076,7 @@ function clearAllSessionData() {
   console.log("All session data cleared");
 }
 
-// Update the logout function to use this
+// Function to setup logout functionality
 function setupLogout() {
   console.log("Setting up logout functionality");
   const logoutBtn = document.getElementById("logoutBtn");
@@ -1093,7 +1163,10 @@ document.addEventListener("visibilitychange", () => {
     }
   } else {
     console.log("Page visible - resuming inactivity timer");
-    resetInactivityTimer();
+    // Call the reset function directly
+    if (typeof resetInactivityTimer === "function") {
+      resetInactivityTimer();
+    }
   }
 });
 

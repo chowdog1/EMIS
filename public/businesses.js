@@ -4,15 +4,12 @@ const logoUrls = [
   "/makabagong%20san%20juan%20Logo.png",
   "/cenro%20logo.png",
 ];
-
 let currentYear = "2025"; // Default to 2025
-
 // Pagination variables - Global scope
 let currentPage = 1;
 let pageSize = 10;
 let totalRecords = 0;
 let allBusinesses = []; // Store all businesses for client-side pagination
-
 // Inactivity Manager Class
 class InactivityManager {
   constructor() {
@@ -23,7 +20,6 @@ class InactivityManager {
     this.warningTimeout = 160 * 1000; // Show warning 20 seconds before logout
     this.init();
   }
-
   init() {
     console.log("Initializing inactivity manager");
     // Start periodic session check
@@ -33,14 +29,12 @@ class InactivityManager {
     // Create inactivity warning popup
     this.createInactivityWarning();
   }
-
   // Start periodic session check
   startSessionCheck() {
     // Clear any existing interval
     if (this.sessionCheckInterval) {
       clearInterval(this.sessionCheckInterval);
     }
-
     // Check every 1 minute
     this.sessionCheckInterval = setInterval(async () => {
       const isValid = await this.checkSessionValidity();
@@ -50,10 +44,8 @@ class InactivityManager {
         window.location.href = "/";
       }
     }, 1 * 60 * 1000); // 1 minute
-
     console.log("Session check started (1 minute interval)");
   }
-
   // Stop session check
   stopSessionCheck() {
     if (this.sessionCheckInterval) {
@@ -62,17 +54,14 @@ class InactivityManager {
       console.log("Session check stopped");
     }
   }
-
   // Setup inactivity detection
   setupInactivityDetection() {
     console.log("Setting up inactivity detection");
-
     // Reset inactivity timer on user activity
     const resetInactivityTimer = () => {
       console.log("User activity detected, resetting inactivity timer");
       this.resetInactivityTimer();
     };
-
     // Add event listeners for user activity
     const events = [
       "mousedown",
@@ -84,17 +73,13 @@ class InactivityManager {
       "keydown",
       "input",
     ];
-
     events.forEach((event) => {
       document.addEventListener(event, resetInactivityTimer, true);
     });
-
     // Start the inactivity timer
     this.resetInactivityTimer();
-
     console.log("Inactivity detection setup complete");
   }
-
   // Reset inactivity timer
   resetInactivityTimer() {
     // Clear existing timers
@@ -104,29 +89,24 @@ class InactivityManager {
     if (this.warningTimer) {
       clearTimeout(this.warningTimer);
     }
-
     // Hide warning popup if it's visible
     this.hideInactivityWarning();
-
     // Set warning timer (40 seconds before logout)
     this.warningTimer = setTimeout(() => {
       console.log("Showing inactivity warning");
       this.showInactivityWarning();
     }, this.warningTimeout);
-
     // Set logout timer (60 seconds total)
     this.inactivityTimer = setTimeout(() => {
       console.log("User inactive for 1 minute, logging out");
       this.logout();
     }, this.inactivityTimeout);
-
     console.log(
       `Inactivity timer reset (will logout after ${
         this.inactivityTimeout / 1000
       } seconds of inactivity)`
     );
   }
-
   // Create inactivity warning popup
   createInactivityWarning() {
     // Create popup container
@@ -148,7 +128,6 @@ class InactivityManager {
       text-align: center;
       border: 1px solid #e0e0e0;
     `;
-
     // Create warning icon
     const icon = document.createElement("div");
     icon.innerHTML = `
@@ -159,7 +138,6 @@ class InactivityManager {
       </svg>
     `;
     icon.style.marginBottom = "16px";
-
     // Create warning message
     const message = document.createElement("h3");
     message.textContent = "Session Timeout Warning";
@@ -169,7 +147,6 @@ class InactivityManager {
       font-size: 18px;
       font-weight: 600;
     `;
-
     // Create warning text
     const text = document.createElement("p");
     text.textContent =
@@ -180,7 +157,6 @@ class InactivityManager {
       font-size: 14px;
       line-height: 1.5;
     `;
-
     // Create countdown timer
     const countdown = document.createElement("div");
     countdown.id = "inactivityCountdown";
@@ -191,12 +167,10 @@ class InactivityManager {
       color: #ff9800;
       margin-bottom: 20px;
     `;
-
     // Create buttons container
     const buttons = document.createElement("div");
     buttons.style.cssText =
       "display: flex; gap: 12px; justify-content: center;";
-
     // Create stay logged in button
     const stayButton = document.createElement("button");
     stayButton.textContent = "Stay Logged In";
@@ -220,7 +194,6 @@ class InactivityManager {
     stayButton.addEventListener("mouseleave", () => {
       stayButton.style.background = "#4caf50";
     });
-
     // Create logout button
     const logoutButton = document.createElement("button");
     logoutButton.textContent = "Logout Now";
@@ -244,7 +217,6 @@ class InactivityManager {
     logoutButton.addEventListener("mouseleave", () => {
       logoutButton.style.background = "#f44336";
     });
-
     // Append elements
     buttons.appendChild(stayButton);
     buttons.appendChild(logoutButton);
@@ -253,7 +225,6 @@ class InactivityManager {
     popup.appendChild(text);
     popup.appendChild(countdown);
     popup.appendChild(buttons);
-
     // Create overlay
     const overlay = document.createElement("div");
     overlay.id = "inactivityOverlay";
@@ -267,63 +238,51 @@ class InactivityManager {
       z-index: 9999;
       display: none;
     `;
-
     // Add to document
     document.body.appendChild(overlay);
     document.body.appendChild(popup);
     console.log("Inactivity warning popup created");
   }
-
   // Show inactivity warning popup
   showInactivityWarning() {
     const popup = document.getElementById("inactivityWarning");
     const overlay = document.getElementById("inactivityOverlay");
     const countdown = document.getElementById("inactivityCountdown");
-
     if (popup && overlay && countdown) {
       popup.style.display = "block";
       overlay.style.display = "block";
-
       // Start countdown
       let timeLeft = 20;
       countdown.textContent = timeLeft;
-
       const countdownInterval = setInterval(() => {
         timeLeft--;
         countdown.textContent = timeLeft;
-
         if (timeLeft <= 0) {
           clearInterval(countdownInterval);
         }
       }, 1000);
-
       // Store interval ID to clear it later
       popup.countdownInterval = countdownInterval;
     }
   }
-
   // Hide inactivity warning popup
   hideInactivityWarning() {
     const popup = document.getElementById("inactivityWarning");
     const overlay = document.getElementById("inactivityOverlay");
-
     if (popup && overlay) {
       popup.style.display = "none";
       overlay.style.display = "none";
-
       // Clear countdown interval if it exists
       if (popup.countdownInterval) {
         clearInterval(popup.countdownInterval);
       }
     }
   }
-
   // Check session validity
   async checkSessionValidity() {
     try {
       const token = localStorage.getItem("auth_token");
       if (!token) return false;
-
       const response = await fetch("/api/auth/verify-token", {
         method: "POST",
         headers: {
@@ -331,7 +290,6 @@ class InactivityManager {
           "Content-Type": "application/json",
         },
       });
-
       return response.ok;
     } catch (error) {
       console.error("Session check error:", error);
@@ -339,29 +297,24 @@ class InactivityManager {
       return true;
     }
   }
-
   // Clear session data
   clearSessionData() {
     console.log("Clearing session data");
     localStorage.removeItem("auth_token");
     localStorage.removeItem("user_data");
-
     // Clear all cookies
     document.cookie.split(";").forEach(function (c) {
       document.cookie = c
         .replace(/^ +/, "")
         .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
     });
-
     // Clear sessionStorage
     sessionStorage.clear();
   }
-
   // Logout function
   async logout() {
     try {
       const token = localStorage.getItem("auth_token");
-
       if (token) {
         // Call server logout endpoint
         const response = await fetch("/api/auth/logout", {
@@ -371,7 +324,6 @@ class InactivityManager {
             "Content-Type": "application/json",
           },
         });
-
         if (response.ok) {
           console.log("Server logout successful");
         } else {
@@ -387,10 +339,33 @@ class InactivityManager {
     }
   }
 }
+// Function to update current page for user tracking
+function updateCurrentPage(page) {
+  const token = localStorage.getItem("auth_token");
+  if (!token) return;
 
+  fetch("/api/auth/current-page", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ page }),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        console.error("Failed to update current page");
+      }
+    })
+    .catch((error) => {
+      console.error("Error updating current page:", error);
+    });
+}
 // Wait for DOM to be fully loaded
 window.addEventListener("load", function () {
   console.log("Businesses page loaded, initializing");
+  // Update current page for user tracking
+  updateCurrentPage("Business Directory");
   //Preload logos
   preloadLogos();
   // Check if user is logged in
@@ -410,7 +385,6 @@ window.addEventListener("load", function () {
   // Initialize inactivity manager
   window.inactivityManager = new InactivityManager();
 });
-
 // Handle page visibility change
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
@@ -427,14 +401,12 @@ document.addEventListener("visibilitychange", () => {
     }
   }
 });
-
 // Handle beforeunload event
 window.addEventListener("beforeunload", () => {
   // Note: This won't reliably call the server logout
   // It's better to rely on the periodic session check
   console.log("Page is unloading");
 });
-
 // Function to check authentication
 function checkAuthentication() {
   console.log("=== Checking Authentication ===");
@@ -481,7 +453,6 @@ function checkAuthentication() {
     window.location.href = "/";
   }
 }
-
 // Function to get time-based greeting
 function getTimeBasedGreeting() {
   const hour = new Date().getHours();
@@ -493,7 +464,6 @@ function getTimeBasedGreeting() {
     return "Good evening";
   }
 }
-
 // Function to update user interface
 async function updateUserInterface(user) {
   console.log("Updating user interface with user:", user);
@@ -514,7 +484,6 @@ async function updateUserInterface(user) {
   // Update avatar using the shared utility function
   updateUserAvatar(user, userAvatarImage, userAvatarFallback);
 }
-
 // Helper function to get user initials
 function getUserInitials(user) {
   if (user.firstname && user.lastname) {
@@ -529,7 +498,6 @@ function getUserInitials(user) {
     return user.email.charAt(0).toUpperCase();
   }
 }
-
 // Function to verify token with server
 async function verifyTokenWithServer(token) {
   try {
@@ -565,7 +533,6 @@ async function verifyTokenWithServer(token) {
     console.log("Continuing with session despite token verification error");
   }
 }
-
 // Function to initialize business table
 function initializeBusinessTable() {
   console.log("Initializing business table");
@@ -578,7 +545,6 @@ function initializeBusinessTable() {
   // Setup add business button
   setupAddBusinessButton();
 }
-
 // Function to load business data
 async function loadBusinessData() {
   try {
@@ -625,19 +591,16 @@ async function loadBusinessData() {
     showTableError(`Failed to load business data: ${error.message}`);
   }
 }
-
 // Function to setup year selection
 function setupYearSelection() {
   const yearSelect = document.getElementById("yearSelect");
   if (yearSelect) {
     // Set the current value
     yearSelect.value = currentYear;
-
     // Add change event listener
     yearSelect.addEventListener("change", function () {
       currentYear = this.value;
       console.log(`Year changed to ${currentYear}`);
-
       // Show a brief loading message
       const tableRoot = document.getElementById("businessTable");
       if (tableRoot) {
@@ -648,13 +611,11 @@ function setupYearSelection() {
           </div>
         `;
       }
-
       // Load data for the selected year
       loadBusinessData();
     });
   }
 }
-
 // Function to get paginated data
 function getPaginatedData() {
   if (!allBusinesses || allBusinesses.length === 0) {
@@ -664,7 +625,6 @@ function getPaginatedData() {
   const endIndex = startIndex + pageSize;
   return allBusinesses.slice(startIndex, endIndex);
 }
-
 // Function to update business table using React
 function updateBusinessTable(businesses) {
   const tableRoot = document.getElementById("businessTable");
@@ -925,7 +885,6 @@ function updateBusinessTable(businesses) {
     renderSimpleTable(businesses);
   }
 }
-
 // Also update the renderSimpleTable function to include the new columns
 function renderSimpleTable(businesses) {
   const tableRoot = document.getElementById("businessTable");
@@ -1047,7 +1006,6 @@ function renderSimpleTable(businesses) {
   tableRoot.appendChild(table);
   console.log("Simple table rendered successfully");
 }
-
 // Function to show business details modal
 async function showBusinessDetails(accountNo) {
   try {
@@ -1062,7 +1020,6 @@ async function showBusinessDetails(accountNo) {
     }
     const business = await response.json();
     console.log("Business details:", business);
-
     // Populate modal with business details - try both camelCase and original property names
     document.getElementById("modalAccountNo").textContent =
       business.accountNo || business["ACCOUNT NO"] || "N/A";
@@ -1080,7 +1037,6 @@ async function showBusinessDetails(accountNo) {
       business.status || business.STATUS || "N/A";
     document.getElementById("modalApplicationStatus").textContent =
       business.applicationStatus || business["APPLICATION STATUS"] || "N/A";
-
     // Format dates if they exist
     const dateOfApplication =
       business.dateOfApplication || business["DATE OF APPLICATION"];
@@ -1088,20 +1044,16 @@ async function showBusinessDetails(accountNo) {
       dateOfApplication
         ? new Date(dateOfApplication).toLocaleDateString()
         : "N/A";
-
     document.getElementById("modalOrNo").textContent =
       business.orNo || business["OR NO"] || "N/A";
     document.getElementById("modalAmountPaid").textContent =
       business.amountPaid || business["AMOUNT PAID"] || "N/A";
-
     const dateOfPayment = business.dateOfPayment || business["DATE OF PAYMENT"];
     document.getElementById("modalDateOfPayment").textContent = dateOfPayment
       ? new Date(dateOfPayment).toLocaleDateString()
       : "N/A";
-
     document.getElementById("modalRemarks").textContent =
       business.remarks || business.REMARKS || "N/A";
-
     // Show the modal
     document.getElementById("businessDetailsModal").style.display = "block";
   } catch (error) {
@@ -1109,7 +1061,6 @@ async function showBusinessDetails(accountNo) {
     alert("Failed to fetch business details. Please try again.");
   }
 }
-
 // Function to setup modal event listeners
 function setupModalEventListeners() {
   // Get business details modal elements
@@ -1186,7 +1137,6 @@ function setupModalEventListeners() {
   }
   console.log("Modal event listeners setup complete");
 }
-
 // Preload logos when the page loads
 function preloadLogos() {
   logoUrls.forEach((url) => {
@@ -1194,7 +1144,6 @@ function preloadLogos() {
     img.src = url;
   });
 }
-
 // Function to print AEC
 function printAEC() {
   // Get the business details from the modal
@@ -1206,30 +1155,24 @@ function printAEC() {
   const amountPaid = document.getElementById("modalAmountPaid").textContent;
   const dateOfPayment =
     document.getElementById("modalDateOfPayment").textContent;
-
   // Get the selected year from the year selector dropdown
   const selectedYear = document.getElementById("yearSelect").value;
-
   // Get current date for the certificate
   const currentDate = new Date().toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
-
   // Get generated date and time
   const generatedDateTime =
     new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString();
-
   // Show instruction alert before printing
   alert(
     'Please select "Page 1" only in the the avoid printing a blank second page.'
   );
-
   // Create a hidden div for printing
   const printContent = document.createElement("div");
   printContent.className = "print-area";
-
   // Create the print content positioned at top-left corner
   printContent.innerHTML = `
         <style>
@@ -1433,10 +1376,8 @@ function printAEC() {
             </div>
         </div>
     `;
-
   // Add to body
   document.body.appendChild(printContent);
-
   // Wait for images to load before printing
   const images = printContent.querySelectorAll("img");
   let loadedImages = 0;
@@ -1451,7 +1392,6 @@ function printAEC() {
       }, 100);
     }
   };
-
   // If images are already cached, they might not trigger load event
   const checkIfLoaded = () => {
     let allLoaded = true;
@@ -1464,7 +1404,6 @@ function printAEC() {
       onImageLoad();
     }
   };
-
   // Add load event listeners to images
   images.forEach((img) => {
     if (img.complete) {
@@ -1474,11 +1413,9 @@ function printAEC() {
       img.addEventListener("error", onImageLoad); // Continue even if an image fails to load
     }
   });
-
   // Check if images are already loaded (cached)
   checkIfLoaded();
 }
-
 // Function to setup add business button
 function setupAddBusinessButton() {
   const addBusinessBtn = document.getElementById("headerAddBusinessBtn");
@@ -1489,7 +1426,6 @@ function setupAddBusinessButton() {
     console.error("Add Business button not found");
   }
 }
-
 // Function to handle delete button click
 async function handleDelete() {
   // Get the account number from the modal
@@ -1532,7 +1468,6 @@ async function handleDelete() {
     showErrorMessage(`Failed to delete business: ${error.message}`);
   }
 }
-
 // Function to handle add business button click
 function handleAddBusiness() {
   console.log("Add Business button clicked");
@@ -1544,7 +1479,6 @@ function handleAddBusiness() {
   // Show the add modal
   document.getElementById("businessAddModal").style.display = "block";
 }
-
 // Function to add a new business (with browser warning popup)
 async function addNewBusiness() {
   try {
@@ -1567,7 +1501,6 @@ async function addNewBusiness() {
       dateOfPayment: document.getElementById("addDateOfPayment").value || null,
       remarks: document.getElementById("addRemarks").value.trim(),
     };
-
     // Validate required fields
     const requiredFields = [
       { id: "addAccountNo", name: "Account No" },
@@ -1580,7 +1513,6 @@ async function addNewBusiness() {
       { id: "addApplicationStatus", name: "Application Status" },
       { id: "addDateOfApplication", name: "Date of Application" },
     ];
-
     // Check if all required fields are filled
     for (const field of requiredFields) {
       const element = document.getElementById(field.id);
@@ -1613,7 +1545,6 @@ async function addNewBusiness() {
         }
       }
     }
-
     // Validate amount paid is a positive number if provided
     const amountPaid = document.getElementById("addAmountPaid").value;
     if (amountPaid && (isNaN(amountPaid) || parseFloat(amountPaid) < 0)) {
@@ -1635,7 +1566,6 @@ async function addNewBusiness() {
       amountField.focus();
       return;
     }
-
     // Check if account number already exists
     console.log(
       "Checking if account number already exists:",
@@ -1666,7 +1596,6 @@ async function addNewBusiness() {
       accountField.focus();
       return;
     }
-
     // Show browser warning popup
     const isConfirmed = window.confirm(
       "Are you sure the data that are filled is correct?"
@@ -1675,13 +1604,11 @@ async function addNewBusiness() {
     if (!isConfirmed) {
       return;
     }
-
     // Show loading state
     const addBtn = document.getElementById("addBusinessBtn");
     const originalText = addBtn.innerHTML;
     addBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
     addBtn.disabled = true;
-
     // Determine the correct API endpoint based on the current year
     let apiUrl;
     if (currentYear === "2026") {
@@ -1689,7 +1616,6 @@ async function addNewBusiness() {
     } else {
       apiUrl = "/api/business2025";
     }
-
     // Send create request to server
     console.log("Sending request to server at:", apiUrl);
     const response = await fetch(apiUrl, {
@@ -1699,22 +1625,17 @@ async function addNewBusiness() {
       },
       body: JSON.stringify(businessData),
     });
-
     // Restore button state
     addBtn.innerHTML = originalText;
     addBtn.disabled = false;
-
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || "Failed to add business");
     }
-
     // Close the add modal
     document.getElementById("businessAddModal").style.display = "none";
-
     // Show success message
     showSuccessMessage("Business added successfully!");
-
     // Refresh the business table
     loadBusinessData();
   } catch (error) {
@@ -1722,7 +1643,6 @@ async function addNewBusiness() {
     showErrorMessage(`Failed to add business: ${error.message}`);
   }
 }
-
 // Function to show success message
 function showSuccessMessage(message) {
   // Create success alert element
@@ -1755,7 +1675,6 @@ function showSuccessMessage(message) {
     }, 500);
   }, 3000);
 }
-
 // Function to show error message
 function showErrorMessage(message) {
   // Create error alert element
@@ -1788,7 +1707,6 @@ function showErrorMessage(message) {
     }, 500);
   }, 5000);
 }
-
 // Function to handle modify button click
 function handleModify() {
   // Get the business details from the modal
@@ -1848,7 +1766,6 @@ function handleModify() {
   // Show the edit modal
   document.getElementById("businessEditModal").style.display = "block";
 }
-
 // Function to save business changes
 async function saveBusinessChanges() {
   try {
@@ -1894,7 +1811,6 @@ async function saveBusinessChanges() {
     alert("Failed to save business changes. Please try again.");
   }
 }
-
 // Function to show error in table
 function showTableError(message) {
   const tableRoot = document.getElementById("businessTable");
@@ -1912,7 +1828,6 @@ function showTableError(message) {
         </div>
     `;
 }
-
 // Function to update pagination controls
 function updatePaginationControls() {
   if (totalRecords === 0) {
@@ -1954,7 +1869,6 @@ function updatePaginationControls() {
   if (lastPageBtn)
     lastPageBtn.disabled = currentPage === totalPages || totalPages === 0;
 }
-
 // Function to setup pagination controls
 function setupPaginationControls() {
   // Set initial page size from the select element
@@ -2019,7 +1933,6 @@ function setupPaginationControls() {
     });
   }
 }
-
 // Function to setup refresh button
 function setupRefreshButton() {
   const refreshBtn = document.getElementById("refreshBtn");
@@ -2045,7 +1958,6 @@ function setupRefreshButton() {
     });
   }
 }
-
 // Function to setup search functionality
 function setupSearch() {
   const searchInput = document.getElementById("searchInput");
@@ -2063,7 +1975,6 @@ function setupSearch() {
     }
   });
 }
-
 // Function to perform search
 async function performSearch() {
   const searchInput = document.getElementById("searchInput");
@@ -2097,7 +2008,6 @@ async function performSearch() {
     console.error("Error searching businesses:", error);
   }
 }
-
 // Function to setup dropdown functionality
 function setupDropdown() {
   console.log("Setting up dropdown functionality");
@@ -2127,7 +2037,6 @@ function setupDropdown() {
   });
   console.log("Dropdown functionality setup complete");
 }
-
 // Function to setup logout functionality
 function setupLogout() {
   console.log("Setting up logout functionality");
@@ -2155,7 +2064,6 @@ function setupLogout() {
   });
   console.log("Logout functionality setup complete");
 }
-
 // Helper functions for token handling
 function isTokenExpired(token) {
   try {
@@ -2178,7 +2086,6 @@ function isTokenExpired(token) {
     return true; // Assume expired if there's an error
   }
 }
-
 function getUserFromToken(token) {
   try {
     // Split the token and get the payload
@@ -2193,14 +2100,12 @@ function getUserFromToken(token) {
     return null;
   }
 }
-
 // Helper function to update user avatar
 async function updateUserAvatar(user, imageElement, fallbackElement) {
   if (!imageElement || !fallbackElement) {
     console.error("Avatar elements not found");
     return;
   }
-
   // Check if user has a profile picture
   if (user.hasProfilePicture) {
     try {
@@ -2211,7 +2116,6 @@ async function updateUserAvatar(user, imageElement, fallbackElement) {
         this.showFallbackAvatar(user, fallbackElement);
         return;
       }
-
       // Fetch the profile picture
       const response = await fetch(`/api/auth/profile-picture/${user.id}`, {
         method: "GET",
@@ -2219,17 +2123,14 @@ async function updateUserAvatar(user, imageElement, fallbackElement) {
           Authorization: `Bearer ${token}`,
         },
       });
-
       if (response.ok) {
         // Convert the response to a blob URL
         const blob = await response.blob();
         const imageUrl = URL.createObjectURL(blob);
-
         // Set the image source and show it
         imageElement.src = imageUrl;
         imageElement.style.display = "block";
         fallbackElement.style.display = "none";
-
         console.log("Profile picture loaded successfully");
       } else {
         console.error("Failed to load profile picture:", response.status);
@@ -2245,7 +2146,6 @@ async function updateUserAvatar(user, imageElement, fallbackElement) {
     this.showFallbackAvatar(user, fallbackElement);
   }
 }
-
 // Show fallback avatar with initials
 function showFallbackAvatar(user, fallbackElement) {
   const initials = getUserInitials(user);
@@ -2253,7 +2153,6 @@ function showFallbackAvatar(user, fallbackElement) {
   fallbackElement.style.display = "flex";
   fallbackElement.style.alignItems = "center";
   fallbackElement.style.justifyContent = "center";
-
   // Hide the image element
   const imageElement = document.getElementById("userAvatarImage");
   if (imageElement) {

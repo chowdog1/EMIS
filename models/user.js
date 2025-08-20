@@ -10,7 +10,7 @@ const userSchema = new mongoose.Schema({
     data: Buffer,
     contentType: String,
     url: String,
-  }, // Store as binary data instead of base64 string
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -22,6 +22,13 @@ const userSchema = new mongoose.Schema({
   // For session tracking
   currentSessionId: String,
   lastLoginAt: Date,
+  // user tracking
+  currentPage: String,
+  lastActivity: Date,
+  isOnline: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 module.exports = mongoose.model("User", userSchema);

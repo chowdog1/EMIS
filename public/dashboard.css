@@ -811,3 +811,31 @@ body {
     width: 100%;
   }
 }
+
+.status-indicator {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.status-online {
+  background-color: #28a745; /* Green */
+  box-shadow: 0 0 5px rgba(40, 167, 69, 0.5);
+}
+
+.status-offline {
+  background-color: #dc3545; /* Red */
+}
+
+/* Add subtle animations for status changes */
+.status-indicator {
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Style for status text to make it more readable */
+.status-container span:last-child {
+  font-size: 0.9em;
+  color: #6c757d;
+}

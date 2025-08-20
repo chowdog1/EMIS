@@ -5,10 +5,10 @@ const cors = require("cors");
 const path = require("path");
 const authRoutes = require("./routes/authRoutes");
 const { establishmentsDB } = require("./db.js"); // Add .js extension
+const { cleanupInactiveUsers } = require("./controllers/authController.js");
 const reportRoutes = require("./routes/reportRoutes");
 const app = express();
 const PORT = 3000;
-
 // Enhanced CORS configuration for the same subnet
 app.use(
   cors({
@@ -31,12 +31,9 @@ app.use(
     credentials: true,
   })
 );
-
 app.use(express.json());
-
 // Serve static files from /public
 app.use(express.static(path.join(__dirname, "public")));
-
 // Connect to MongoDB for auth
 mongoose
   .connect("mongodb://localhost:27017/logindb")
@@ -45,55 +42,52 @@ mongoose
     console.error("❌ Auth MongoDB connection error:", err);
     process.exit(1); // Exit if auth DB fails
   });
-
 // Now require businessRoutes AFTER establishing the connection
 const business2025Routes = require("./routes/business2025Routes.js");
 // connection for 2026
 const business2026Routes = require("./routes/business2026Routes.js");
-
 // API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/business2025", business2025Routes);
 app.use("/api/business2026", business2026Routes);
-
 // Initialize reportRoutes with the establishmentsDB connection
 app.use("/api/reports", reportRoutes(establishmentsDB));
-
 // Dashboard route
 app.get("/dashboard", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "dashboard.html"));
 });
-
 // Dashboard.html route (for backward compatibility)
 app.get("/dashboard.html", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "dashboard.html"));
 });
-
 // Businesses route
 app.get("/businesses", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "businesses.html"));
 });
-
 // Reports route
 app.get("/reports", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "reports.html"));
 });
-
 //for profile.html route
 app.get("/profile", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "profile.html"));
 });
-
+//users route - serving from root directory
+app.get("/users", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "users.html"));
+});
+// Serve users.js from root directory
+app.get("/users.js", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "users.js"));
+});
 // Root route - serves login page
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
-
 // Handle 404 for any other routes
 app.use((req, res) => {
   res.status(404).sendFile(path.join(__dirname, "public", "index.html"));
 });
-
 // Start server - listen on all interfaces (0.0.0.0) to allow network access
 const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);

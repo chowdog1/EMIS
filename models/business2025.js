@@ -21,13 +21,13 @@ const businessSchema = new mongoose.Schema(
   { collection: "business2025" }
 );
 
-let Business2025; // Fixed variable name
+let Business2025;
 if (establishmentsDB) {
-  Business2025 = establishmentsDB.model("Business2025", businessSchema); // Fixed variable name
+  Business2025 = establishmentsDB.model("Business2025", businessSchema);
 } else {
   console.error(
     "❌ Cannot create Business2025 model - database connection not available"
   );
 }
 
-module.exports = Business2025; // Fixed export
+module.exports = Business2025;
