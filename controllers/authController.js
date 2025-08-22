@@ -80,10 +80,8 @@ const logout = async (req, res) => {
     if (!token) {
       return res.status(400).json({ message: "No token provided" });
     }
-
     const decoded = jwt.verify(token, JWT_SECRET);
     const user = await User.findById(decoded.userId);
-
     if (user) {
       // Update user's online status and clear session info
       user.currentSessionId = null;
@@ -92,14 +90,12 @@ const logout = async (req, res) => {
       await user.save();
       console.log(`User ${user.email} logged out successfully`);
     }
-
     res.json({ message: "Logout successful" });
   } catch (error) {
     console.error("❌ Logout error:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
-
 // Check if email exists
 const checkEmail = async (req, res) => {
   try {
@@ -157,15 +153,12 @@ const verifyToken = async (req, res) => {
     if (!token) {
       return res.status(401).json({ message: "No token provided" });
     }
-
     // Verify the token with the secret
     const verified = jwt.verify(token, JWT_SECRET);
     const user = await User.findById(verified.userId);
-
     if (!user || !user.isActive) {
       return res.status(401).json({ message: "Invalid token" });
     }
-
     res.json({
       valid: true,
       user: {
@@ -179,16 +172,13 @@ const verifyToken = async (req, res) => {
     });
   } catch (error) {
     console.error("Token verification error:", error);
-
     // Handle specific token errors
     if (error.name === "JsonWebTokenError") {
       return res.status(401).json({ message: "Invalid token format" });
     }
-
     if (error.name === "TokenExpiredError") {
       return res.status(401).json({ message: "Token expired" });
     }
-
     // For other errors, return 500
     res.status(500).json({ message: "Internal server error" });
   }
@@ -311,7 +301,6 @@ const getAllUsers = async (req, res) => {
       const lastActivity = user.lastActivity || new Date(0);
       const timeDiff = now - lastActivity;
       const fiveMinutes = 5 * 60 * 1000; // 5 minutes threshold
-
       // If user is marked as online but hasn't had recent activity, update their status
       if (user.isOnline && timeDiff > fiveMinutes) {
         // Update user in database
@@ -327,9 +316,11 @@ const getAllUsers = async (req, res) => {
           isOnline: false, // Override with actual status
           currentPage: user.currentPage || "N/A",
           lastActivity: user.lastActivity,
+          hasProfilePicture: !!(
+            user.profilePicture && user.profilePicture.data
+          ), // ADD THIS LINE
         };
       }
-
       return {
         id: user._id,
         email: user.email,
@@ -339,6 +330,7 @@ const getAllUsers = async (req, res) => {
         isOnline: user.isOnline,
         currentPage: user.currentPage || "N/A",
         lastActivity: user.lastActivity,
+        hasProfilePicture: !!(user.profilePicture && user.profilePicture.data), // ADD THIS LINE
       };
     });
     res.json(usersWithStatus);
@@ -369,7 +361,6 @@ const updateCurrentPage = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-
 // Debug: Log before exporting
 console.log("Exporting methods:", {
   login,

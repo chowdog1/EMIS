@@ -10,6 +10,23 @@ let currentPage = 1;
 let pageSize = 10;
 let totalRecords = 0;
 let allBusinesses = []; // Store all businesses for client-side pagination
+
+// Helper function to get the authentication token
+function getAuthToken() {
+  const token = localStorage.getItem("auth_token");
+  if (!token) {
+    throw new Error("Authentication token not found. Please login again.");
+  }
+  return token;
+}
+
+// Helper function to handle 401 errors
+function handleUnauthorizedError() {
+  localStorage.removeItem("auth_token");
+  localStorage.removeItem("user_data");
+  window.location.href = "/";
+}
+
 // Inactivity Manager Class
 class InactivityManager {
   constructor() {
@@ -339,11 +356,11 @@ class InactivityManager {
     }
   }
 }
+
 // Function to update current page for user tracking
 function updateCurrentPage(page) {
   const token = localStorage.getItem("auth_token");
   if (!token) return;
-
   fetch("/api/auth/current-page", {
     method: "PUT",
     headers: {
@@ -361,6 +378,7 @@ function updateCurrentPage(page) {
       console.error("Error updating current page:", error);
     });
 }
+
 // Wait for DOM to be fully loaded
 window.addEventListener("load", function () {
   console.log("Businesses page loaded, initializing");
@@ -385,6 +403,7 @@ window.addEventListener("load", function () {
   // Initialize inactivity manager
   window.inactivityManager = new InactivityManager();
 });
+
 // Handle page visibility change
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
@@ -401,12 +420,14 @@ document.addEventListener("visibilitychange", () => {
     }
   }
 });
+
 // Handle beforeunload event
 window.addEventListener("beforeunload", () => {
   // Note: This won't reliably call the server logout
   // It's better to rely on the periodic session check
   console.log("Page is unloading");
 });
+
 // Function to check authentication
 function checkAuthentication() {
   console.log("=== Checking Authentication ===");
@@ -453,6 +474,7 @@ function checkAuthentication() {
     window.location.href = "/";
   }
 }
+
 // Function to get time-based greeting
 function getTimeBasedGreeting() {
   const hour = new Date().getHours();
@@ -464,6 +486,7 @@ function getTimeBasedGreeting() {
     return "Good evening";
   }
 }
+
 // Function to update user interface
 async function updateUserInterface(user) {
   console.log("Updating user interface with user:", user);
@@ -484,6 +507,7 @@ async function updateUserInterface(user) {
   // Update avatar using the shared utility function
   updateUserAvatar(user, userAvatarImage, userAvatarFallback);
 }
+
 // Helper function to get user initials
 function getUserInitials(user) {
   if (user.firstname && user.lastname) {
@@ -498,6 +522,7 @@ function getUserInitials(user) {
     return user.email.charAt(0).toUpperCase();
   }
 }
+
 // Function to verify token with server
 async function verifyTokenWithServer(token) {
   try {
@@ -533,6 +558,7 @@ async function verifyTokenWithServer(token) {
     console.log("Continuing with session despite token verification error");
   }
 }
+
 // Function to initialize business table
 function initializeBusinessTable() {
   console.log("Initializing business table");
@@ -545,6 +571,7 @@ function initializeBusinessTable() {
   // Setup add business button
   setupAddBusinessButton();
 }
+
 // Function to load business data
 async function loadBusinessData() {
   try {
@@ -563,10 +590,19 @@ async function loadBusinessData() {
     // Use the appropriate API endpoint based on the current year
     const apiUrl =
       currentYear === "2026" ? "/api/business2026" : "/api/business2025";
-    const response = await fetch(apiUrl);
+    const token = getAuthToken();
+    const response = await fetch(apiUrl, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     console.log("Response status:", response.status);
     console.log("Response ok:", response.ok);
     if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorizedError();
+        return;
+      }
       const errorText = await response.text();
       console.error("Error response:", errorText);
       throw new Error(
@@ -591,6 +627,7 @@ async function loadBusinessData() {
     showTableError(`Failed to load business data: ${error.message}`);
   }
 }
+
 // Function to setup year selection
 function setupYearSelection() {
   const yearSelect = document.getElementById("yearSelect");
@@ -616,6 +653,7 @@ function setupYearSelection() {
     });
   }
 }
+
 // Function to get paginated data
 function getPaginatedData() {
   if (!allBusinesses || allBusinesses.length === 0) {
@@ -625,6 +663,7 @@ function getPaginatedData() {
   const endIndex = startIndex + pageSize;
   return allBusinesses.slice(startIndex, endIndex);
 }
+
 // Function to update business table using React
 function updateBusinessTable(businesses) {
   const tableRoot = document.getElementById("businessTable");
@@ -885,6 +924,7 @@ function updateBusinessTable(businesses) {
     renderSimpleTable(businesses);
   }
 }
+
 // Also update the renderSimpleTable function to include the new columns
 function renderSimpleTable(businesses) {
   const tableRoot = document.getElementById("businessTable");
@@ -1006,16 +1046,27 @@ function renderSimpleTable(businesses) {
   tableRoot.appendChild(table);
   console.log("Simple table rendered successfully");
 }
+
 // Function to show business details modal
 async function showBusinessDetails(accountNo) {
   try {
     console.log(
       `Fetching details for account number: ${accountNo} from ${currentYear}`
     );
+    const token = getAuthToken();
     const response = await fetch(
-      `/api/business${currentYear}/account/${encodeURIComponent(accountNo)}`
+      `/api/business${currentYear}/account/${encodeURIComponent(accountNo)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
     );
     if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorizedError();
+        return;
+      }
       throw new Error("Failed to fetch business details");
     }
     const business = await response.json();
@@ -1054,13 +1105,30 @@ async function showBusinessDetails(accountNo) {
       : "N/A";
     document.getElementById("modalRemarks").textContent =
       business.remarks || business.REMARKS || "N/A";
+
     // Show the modal
-    document.getElementById("businessDetailsModal").style.display = "block";
+    const modal = document.getElementById("businessDetailsModal");
+    modal.style.display = "block";
+
+    // Setup delete button event listener after modal is shown
+    const deleteBtn = document.getElementById("deleteBtn");
+    if (deleteBtn) {
+      // Remove any existing event listeners to prevent duplicates
+      const newDeleteBtn = deleteBtn.cloneNode(true);
+      deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
+
+      // Add event listener to the new button
+      newDeleteBtn.addEventListener("click", handleDelete);
+      console.log("Delete button event listener attached");
+    } else {
+      console.error("Delete button not found in modal");
+    }
   } catch (error) {
     console.error("Error fetching business details:", error);
-    alert("Failed to fetch business details. Please try again.");
+    showErrorMessage(`Failed to fetch business details: ${error.message}`);
   }
 }
+
 // Function to setup modal event listeners
 function setupModalEventListeners() {
   // Get business details modal elements
@@ -1068,39 +1136,40 @@ function setupModalEventListeners() {
   const detailsCloseBtns = detailsModal.querySelectorAll(
     ".modal-close, .modal-close-btn"
   );
+
   // Add click event to close buttons for details modal
   detailsCloseBtns.forEach((btn) => {
     btn.addEventListener("click", function () {
       detailsModal.style.display = "none";
     });
   });
+
   // Get business edit modal elements
   const editModal = document.getElementById("businessEditModal");
   const editCloseBtns = editModal.querySelectorAll(
     ".modal-close, .modal-close-btn"
   );
+
   // Add click event to close buttons for edit modal
   editCloseBtns.forEach((btn) => {
     btn.addEventListener("click", function () {
       editModal.style.display = "none";
     });
   });
+
   // Get business add modal elements
   const addModal = document.getElementById("businessAddModal");
   const addCloseBtns = addModal.querySelectorAll(
     ".modal-close, .modal-close-btn"
   );
-  // Add click event to Delete button
-  const deleteBtn = document.getElementById("deleteBtn");
-  if (deleteBtn) {
-    deleteBtn.addEventListener("click", handleDelete);
-  }
+
   // Add click event to close buttons for add modal
   addCloseBtns.forEach((btn) => {
     btn.addEventListener("click", function () {
       addModal.style.display = "none";
     });
   });
+
   // Close modals when clicking outside of them
   window.addEventListener("click", function (event) {
     if (event.target === detailsModal) {
@@ -1113,21 +1182,25 @@ function setupModalEventListeners() {
       addModal.style.display = "none";
     }
   });
+
   // Add click event to Print AEC button
   const printAecBtn = document.getElementById("printAecBtn");
   if (printAecBtn) {
     printAecBtn.addEventListener("click", printAEC);
   }
+
   // Add click event to Modify button
   const modifyBtn = document.getElementById("modifyBtn");
   if (modifyBtn) {
     modifyBtn.addEventListener("click", handleModify);
   }
+
   // Add click event to Save Changes button
   const saveBusinessBtn = document.getElementById("saveBusinessBtn");
   if (saveBusinessBtn) {
     saveBusinessBtn.addEventListener("click", saveBusinessChanges);
   }
+
   // Add click event to Add Business button in the modal
   const modalAddBusinessBtn = document.querySelector(
     "#businessAddModal #addBusinessBtn"
@@ -1135,8 +1208,10 @@ function setupModalEventListeners() {
   if (modalAddBusinessBtn) {
     modalAddBusinessBtn.addEventListener("click", addNewBusiness);
   }
+
   console.log("Modal event listeners setup complete");
 }
+
 // Preload logos when the page loads
 function preloadLogos() {
   logoUrls.forEach((url) => {
@@ -1144,6 +1219,7 @@ function preloadLogos() {
     img.src = url;
   });
 }
+
 // Function to print AEC
 function printAEC() {
   // Get the business details from the modal
@@ -1416,6 +1492,7 @@ function printAEC() {
   // Check if images are already loaded (cached)
   checkIfLoaded();
 }
+
 // Function to setup add business button
 function setupAddBusinessButton() {
   const addBusinessBtn = document.getElementById("headerAddBusinessBtn");
@@ -1426,6 +1503,7 @@ function setupAddBusinessButton() {
     console.error("Add Business button not found");
   }
 }
+
 // Function to handle delete button click
 async function handleDelete() {
   // Get the account number from the modal
@@ -1445,16 +1523,24 @@ async function handleDelete() {
     deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
     deleteBtn.disabled = true;
     // Send delete request to server
+    const token = getAuthToken();
     const response = await fetch(
       `/api/business${currentYear}/account/${encodeURIComponent(accountNo)}`,
       {
         method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       }
     );
     // Restore button state
     deleteBtn.innerHTML = originalText;
     deleteBtn.disabled = false;
     if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorizedError();
+        return;
+      }
       throw new Error("Failed to delete business");
     }
     // Close the modal
@@ -1468,6 +1554,7 @@ async function handleDelete() {
     showErrorMessage(`Failed to delete business: ${error.message}`);
   }
 }
+
 // Function to handle add business button click
 function handleAddBusiness() {
   console.log("Add Business button clicked");
@@ -1479,6 +1566,7 @@ function handleAddBusiness() {
   // Show the add modal
   document.getElementById("businessAddModal").style.display = "block";
 }
+
 // Function to add a new business (with browser warning popup)
 async function addNewBusiness() {
   try {
@@ -1571,10 +1659,16 @@ async function addNewBusiness() {
       "Checking if account number already exists:",
       businessData.accountNo
     );
+    const token = getAuthToken();
     const accountCheckResponse = await fetch(
       `/api/business${currentYear}/account/${encodeURIComponent(
         businessData.accountNo
-      )}`
+      )}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
     );
     if (accountCheckResponse.ok) {
       // Account number already exists
@@ -1622,6 +1716,7 @@ async function addNewBusiness() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(businessData),
     });
@@ -1629,6 +1724,10 @@ async function addNewBusiness() {
     addBtn.innerHTML = originalText;
     addBtn.disabled = false;
     if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorizedError();
+        return;
+      }
       const errorData = await response.json();
       throw new Error(errorData.message || "Failed to add business");
     }
@@ -1643,6 +1742,7 @@ async function addNewBusiness() {
     showErrorMessage(`Failed to add business: ${error.message}`);
   }
 }
+
 // Function to show success message
 function showSuccessMessage(message) {
   // Create success alert element
@@ -1675,6 +1775,7 @@ function showSuccessMessage(message) {
     }, 500);
   }, 3000);
 }
+
 // Function to show error message
 function showErrorMessage(message) {
   // Create error alert element
@@ -1707,6 +1808,7 @@ function showErrorMessage(message) {
     }, 500);
   }, 5000);
 }
+
 // Function to handle modify button click
 function handleModify() {
   // Get the business details from the modal
@@ -1766,6 +1868,7 @@ function handleModify() {
   // Show the edit modal
   document.getElementById("businessEditModal").style.display = "block";
 }
+
 // Function to save business changes
 async function saveBusinessChanges() {
   try {
@@ -1786,6 +1889,8 @@ async function saveBusinessChanges() {
       dateOfPayment: document.getElementById("editDateOfPayment").value,
       remarks: document.getElementById("editRemarks").value,
     };
+    // Get authentication token
+    const token = getAuthToken();
     // Send update request to server
     const response = await fetch(
       `/api/business${currentYear}/account/${encodeURIComponent(accountNo)}`,
@@ -1793,24 +1898,30 @@ async function saveBusinessChanges() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(businessData),
       }
     );
     if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorizedError();
+        return;
+      }
       throw new Error("Failed to update business details");
     }
     // Close the edit modal
     document.getElementById("businessEditModal").style.display = "none";
     // Show success message
-    alert("Business details updated successfully!");
+    showSuccessMessage("Business details updated successfully!");
     // Refresh the business table
     loadBusinessData();
   } catch (error) {
     console.error("Error saving business changes:", error);
-    alert("Failed to save business changes. Please try again.");
+    showErrorMessage(`Failed to save business changes: ${error.message}`);
   }
 }
+
 // Function to show error in table
 function showTableError(message) {
   const tableRoot = document.getElementById("businessTable");
@@ -1828,6 +1939,7 @@ function showTableError(message) {
         </div>
     `;
 }
+
 // Function to update pagination controls
 function updatePaginationControls() {
   if (totalRecords === 0) {
@@ -1869,6 +1981,7 @@ function updatePaginationControls() {
   if (lastPageBtn)
     lastPageBtn.disabled = currentPage === totalPages || totalPages === 0;
 }
+
 // Function to setup pagination controls
 function setupPaginationControls() {
   // Set initial page size from the select element
@@ -1933,6 +2046,7 @@ function setupPaginationControls() {
     });
   }
 }
+
 // Function to setup refresh button
 function setupRefreshButton() {
   const refreshBtn = document.getElementById("refreshBtn");
@@ -1958,6 +2072,7 @@ function setupRefreshButton() {
     });
   }
 }
+
 // Function to setup search functionality
 function setupSearch() {
   const searchInput = document.getElementById("searchInput");
@@ -1975,6 +2090,7 @@ function setupSearch() {
     }
   });
 }
+
 // Function to perform search
 async function performSearch() {
   const searchInput = document.getElementById("searchInput");
@@ -1986,12 +2102,22 @@ async function performSearch() {
   }
   try {
     console.log(`Searching for account number: ${query} in ${currentYear}`);
+    const token = getAuthToken();
     const response = await fetch(
       `/api/business${currentYear}/search?query=${encodeURIComponent(
         query
-      )}&field=accountNo`
+      )}&field=accountNo`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
     );
     if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorizedError();
+        return;
+      }
       throw new Error("Search failed");
     }
     const businesses = await response.json();
@@ -2006,8 +2132,10 @@ async function performSearch() {
     updatePaginationControls();
   } catch (error) {
     console.error("Error searching businesses:", error);
+    showErrorMessage(`Search failed: ${error.message}`);
   }
 }
+
 // Function to setup dropdown functionality
 function setupDropdown() {
   console.log("Setting up dropdown functionality");
@@ -2037,6 +2165,7 @@ function setupDropdown() {
   });
   console.log("Dropdown functionality setup complete");
 }
+
 // Function to setup logout functionality
 function setupLogout() {
   console.log("Setting up logout functionality");
@@ -2064,6 +2193,7 @@ function setupLogout() {
   });
   console.log("Logout functionality setup complete");
 }
+
 // Helper functions for token handling
 function isTokenExpired(token) {
   try {
@@ -2086,6 +2216,7 @@ function isTokenExpired(token) {
     return true; // Assume expired if there's an error
   }
 }
+
 function getUserFromToken(token) {
   try {
     // Split the token and get the payload
@@ -2100,6 +2231,7 @@ function getUserFromToken(token) {
     return null;
   }
 }
+
 // Helper function to update user avatar
 async function updateUserAvatar(user, imageElement, fallbackElement) {
   if (!imageElement || !fallbackElement) {
@@ -2146,6 +2278,7 @@ async function updateUserAvatar(user, imageElement, fallbackElement) {
     this.showFallbackAvatar(user, fallbackElement);
   }
 }
+
 // Show fallback avatar with initials
 function showFallbackAvatar(user, fallbackElement) {
   const initials = getUserInitials(user);

@@ -2,13 +2,8 @@
 const express = require("express");
 const router = express.Router();
 const Business2026 = require("../models/business2026");
-const {
-  getAllBusinesses2026,
-  getBusinessByAccountNo2026,
-  addBusiness2026,
-  updateBusiness2026,
-  deleteBusiness2026,
-} = require("../services/business2026Service.js");
+const { verifyToken } = require("../middleware/authMiddleware");
+const { logAction } = require("../services/auditService");
 
 // Helper function to convert string values to uppercase
 function convertStringsToUppercase(data) {
@@ -58,10 +53,24 @@ function transformToDatabaseFormat(data) {
   };
 }
 
+// Helper function to get changes between documents
+function getChanges(before, after) {
+  const changes = {};
+  for (const key in after) {
+    if (before[key] !== after[key]) {
+      changes[key] = {
+        before: before[key],
+        after: after[key],
+      };
+    }
+  }
+  return changes;
+}
+
 // Get all businesses from 2026
 router.get("/", async (req, res) => {
   try {
-    const businesses = await getAllBusinesses2026();
+    const businesses = await Business2026.find({});
     res.json(businesses);
   } catch (error) {
     console.error("Error fetching 2026 businesses:", error);
@@ -179,7 +188,9 @@ router.get("/search", async (req, res) => {
 // Get a specific business from 2026
 router.get("/account/:accountNo", async (req, res) => {
   try {
-    const business = await getBusinessByAccountNo2026(req.params.accountNo);
+    const business = await Business2026.findOne({
+      "ACCOUNT NO": req.params.accountNo,
+    });
     if (!business) {
       return res.status(404).json({ message: "Business not found" });
     }
@@ -191,15 +202,18 @@ router.get("/account/:accountNo", async (req, res) => {
 });
 
 // Add a new business to 2026
-router.post("/", async (req, res) => {
+router.post("/", verifyToken, async (req, res) => {
   try {
     console.log("Received data for 2026 business:", req.body);
+
     // Convert string fields to uppercase
     const processedBody = convertStringsToUppercase(req.body);
     console.log("Processed data (uppercase):", processedBody);
+
     // Transform to database format
     const dbData = transformToDatabaseFormat(processedBody);
     console.log("Transformed data for database:", dbData);
+
     // Check if account number already exists
     const existingBusiness = await Business2026.findOne({
       "ACCOUNT NO": dbData["ACCOUNT NO"],
@@ -207,9 +221,27 @@ router.post("/", async (req, res) => {
     if (existingBusiness) {
       return res.status(400).json({ message: "Account number already exists" });
     }
-    // Use the service function instead of directly creating and saving
-    const savedBusiness = await addBusiness2026(dbData);
+
+    // Create and save the new business
+    const newBusiness = new Business2026(dbData);
+    const savedBusiness = await newBusiness.save();
     console.log("Business added to 2026:", savedBusiness);
+
+    // Extract account number explicitly
+    const accountNo = savedBusiness["ACCOUNT NO"];
+    console.log("Account number for CREATE audit log:", accountNo);
+
+    // Log the CREATE action with account number
+    await logAction(
+      "CREATE",
+      "business2026",
+      savedBusiness._id,
+      req.user.userId,
+      savedBusiness.toObject(),
+      req,
+      accountNo // Add account number
+    );
+
     res.status(201).json(savedBusiness);
   } catch (error) {
     console.error("Error adding 2026 business:", error);
@@ -218,17 +250,50 @@ router.post("/", async (req, res) => {
 });
 
 // Update a business in 2026
-router.put("/account/:accountNo", async (req, res) => {
+router.put("/account/:accountNo", verifyToken, async (req, res) => {
   try {
-    // Convert string fields to uppercase
-    const processedBody = convertStringsToUppercase(req.body);
-    // Transform to database format
-    const dbData = transformToDatabaseFormat(processedBody);
-    const business = await updateBusiness2026(req.params.accountNo, dbData);
-    if (!business) {
+    // Get the current document before update
+    const currentBusiness = await Business2026.findOne({
+      "ACCOUNT NO": req.params.accountNo,
+    });
+    if (!currentBusiness) {
       return res.status(404).json({ message: "Business not found" });
     }
-    res.json(business);
+
+    // Convert string fields to uppercase
+    const processedBody = convertStringsToUppercase(req.body);
+
+    // Transform to database format
+    const dbData = transformToDatabaseFormat(processedBody);
+
+    const updatedBusiness = await Business2026.findOneAndUpdate(
+      { "ACCOUNT NO": req.params.accountNo },
+      dbData,
+      { new: true }
+    );
+
+    // Get the changes between the old and new document
+    const changes = getChanges(
+      currentBusiness.toObject(),
+      updatedBusiness.toObject()
+    );
+
+    // Extract account number explicitly
+    const accountNo = req.params.accountNo;
+    console.log("Account number for UPDATE audit log:", accountNo);
+
+    // Log the UPDATE action with account number
+    await logAction(
+      "UPDATE",
+      "business2026",
+      updatedBusiness._id,
+      req.user.userId,
+      changes,
+      req,
+      accountNo // Add account number
+    );
+
+    res.json(updatedBusiness);
   } catch (error) {
     console.error("Error updating 2026 business:", error);
     res.status(500).json({ message: "Server error" });
@@ -236,12 +301,35 @@ router.put("/account/:accountNo", async (req, res) => {
 });
 
 // Delete a business from 2026
-router.delete("/account/:accountNo", async (req, res) => {
+router.delete("/account/:accountNo", verifyToken, async (req, res) => {
   try {
-    const result = await deleteBusiness2026(req.params.accountNo);
-    if (result.deletedCount === 0) {
+    // Get the document before deletion
+    const businessToDelete = await Business2026.findOne({
+      "ACCOUNT NO": req.params.accountNo,
+    });
+    if (!businessToDelete) {
       return res.status(404).json({ message: "Business not found" });
     }
+
+    const result = await Business2026.deleteOne({
+      "ACCOUNT NO": req.params.accountNo,
+    });
+
+    // Extract account number explicitly
+    const accountNo = req.params.accountNo;
+    console.log("Account number for DELETE audit log:", accountNo);
+
+    // Log the DELETE action with account number
+    await logAction(
+      "DELETE",
+      "business2026",
+      businessToDelete._id,
+      req.user.userId,
+      businessToDelete.toObject(),
+      req,
+      accountNo // Add account number
+    );
+
     res.json({ message: "Business deleted successfully" });
   } catch (error) {
     console.error("Error deleting 2026 business:", error);

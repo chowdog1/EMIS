@@ -2,6 +2,12 @@
 const express = require("express");
 const router = express.Router();
 const Business2025 = require("../models/business2025");
+const { verifyToken } = require("../middleware/authMiddleware");
+const { logAction } = require("../services/auditService");
+const {
+  syncBusinessTo2026,
+  deleteBusinessFrom2026,
+} = require("../services/businessSyncService");
 
 // Helper function to convert string values to uppercase
 function convertStringsToUppercase(data) {
@@ -47,6 +53,20 @@ function transformToDatabaseFormat(data) {
     "NATURE OF BUSINESS": data.natureOfBusiness,
     REMARKS: data.remarks,
   };
+}
+
+// Helper function to get changes between documents
+function getChanges(before, after) {
+  const changes = {};
+  for (const key in after) {
+    if (before[key] !== after[key]) {
+      changes[key] = {
+        before: before[key],
+        after: after[key],
+      };
+    }
+  }
+  return changes;
 }
 
 // Get all businesses from 2025
@@ -184,15 +204,18 @@ router.get("/account/:accountNo", async (req, res) => {
 });
 
 // Add a new business to 2025
-router.post("/", async (req, res) => {
+router.post("/", verifyToken, async (req, res) => {
   try {
     console.log("Received data for 2025 business:", req.body);
+
     // Convert string fields to uppercase
     const processedBody = convertStringsToUppercase(req.body);
     console.log("Processed data (uppercase):", processedBody);
+
     // Transform to database format
     const dbData = transformToDatabaseFormat(processedBody);
     console.log("Transformed data for database:", dbData);
+
     // Check if account number already exists
     const existingBusiness = await Business2025.findOne({
       "ACCOUNT NO": dbData["ACCOUNT NO"],
@@ -200,10 +223,36 @@ router.post("/", async (req, res) => {
     if (existingBusiness) {
       return res.status(400).json({ message: "Account number already exists" });
     }
+
     // Create and save the new business
     const newBusiness = new Business2025(dbData);
     const savedBusiness = await newBusiness.save();
     console.log("Business added to 2025:", savedBusiness);
+
+    // Extract account number explicitly
+    const accountNo = savedBusiness["ACCOUNT NO"];
+    console.log("Account number for CREATE audit log:", accountNo);
+
+    // Log the CREATE action with account number
+    await logAction(
+      "CREATE",
+      "business2025",
+      savedBusiness._id,
+      req.user.userId,
+      savedBusiness.toObject(),
+      req,
+      accountNo // Add account number
+    );
+
+    // Sync to 2026 collection
+    try {
+      await syncBusinessTo2026(savedBusiness);
+      console.log("Business synced to 2026 collection");
+    } catch (syncError) {
+      console.error("Error syncing business to 2026:", syncError);
+      // Don't fail the request if sync fails
+    }
+
     res.status(201).json(savedBusiness);
   } catch (error) {
     console.error("Error adding 2025 business:", error);
@@ -212,21 +261,59 @@ router.post("/", async (req, res) => {
 });
 
 // Update a business in 2025
-router.put("/account/:accountNo", async (req, res) => {
+router.put("/account/:accountNo", verifyToken, async (req, res) => {
   try {
+    // Get the current document before update
+    const currentBusiness = await Business2025.findOne({
+      "ACCOUNT NO": req.params.accountNo,
+    });
+    if (!currentBusiness) {
+      return res.status(404).json({ message: "Business not found" });
+    }
+
     // Convert string fields to uppercase
     const processedBody = convertStringsToUppercase(req.body);
+
     // Transform to database format
     const dbData = transformToDatabaseFormat(processedBody);
-    const business = await Business2025.findOneAndUpdate(
+
+    const updatedBusiness = await Business2025.findOneAndUpdate(
       { "ACCOUNT NO": req.params.accountNo },
       dbData,
       { new: true }
     );
-    if (!business) {
-      return res.status(404).json({ message: "Business not found" });
+
+    // Get the changes between the old and new document
+    const changes = getChanges(
+      currentBusiness.toObject(),
+      updatedBusiness.toObject()
+    );
+
+    // Extract account number explicitly
+    const accountNo = req.params.accountNo;
+    console.log("Account number for UPDATE audit log:", accountNo);
+
+    // Log the UPDATE action with account number
+    await logAction(
+      "UPDATE",
+      "business2025",
+      updatedBusiness._id,
+      req.user.userId,
+      changes,
+      req,
+      accountNo // Add account number
+    );
+
+    // Sync to 2026 collection
+    try {
+      await syncBusinessTo2026(updatedBusiness);
+      console.log("Business changes synced to 2026 collection");
+    } catch (syncError) {
+      console.error("Error syncing business changes to 2026:", syncError);
+      // Don't fail the request if sync fails
     }
-    res.json(business);
+
+    res.json(updatedBusiness);
   } catch (error) {
     console.error("Error updating 2025 business:", error);
     res.status(500).json({ message: "Server error" });
@@ -234,14 +321,44 @@ router.put("/account/:accountNo", async (req, res) => {
 });
 
 // Delete a business from 2025
-router.delete("/account/:accountNo", async (req, res) => {
+router.delete("/account/:accountNo", verifyToken, async (req, res) => {
   try {
+    // Get the document before deletion
+    const businessToDelete = await Business2025.findOne({
+      "ACCOUNT NO": req.params.accountNo,
+    });
+    if (!businessToDelete) {
+      return res.status(404).json({ message: "Business not found" });
+    }
+
     const result = await Business2025.deleteOne({
       "ACCOUNT NO": req.params.accountNo,
     });
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ message: "Business not found" });
+
+    // Extract account number explicitly
+    const accountNo = req.params.accountNo;
+    console.log("Account number for DELETE audit log:", accountNo);
+
+    // Log the DELETE action with account number
+    await logAction(
+      "DELETE",
+      "business2025",
+      businessToDelete._id,
+      req.user.userId,
+      businessToDelete.toObject(),
+      req,
+      accountNo // Add account number
+    );
+
+    // Delete from 2026 collection
+    try {
+      await deleteBusinessFrom2026(req.params.accountNo);
+      console.log("Business deleted from 2026 collection");
+    } catch (syncError) {
+      console.error("Error deleting business from 2026:", syncError);
+      // Don't fail the request if sync fails
     }
+
     res.json({ message: "Business deleted successfully" });
   } catch (error) {
     console.error("Error deleting 2025 business:", error);

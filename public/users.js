@@ -508,3 +508,32 @@ function showFallbackAvatar(user, fallbackElement) {
     imageElement.style.display = "none";
   }
 }
+
+function startChat(userId, userName) {
+  if (window.chatbox) {
+    window.chatbox.openChatWithUser(userId, userName);
+  }
+}
+
+// Example of how to add a chat button to each user in your user list
+function renderUserList(users) {
+  const userListContainer = document.getElementById("user-list");
+  userListContainer.innerHTML = "";
+
+  users.forEach((user) => {
+    const userEl = document.createElement("div");
+    userEl.className = "user-item";
+
+    // Add user details...
+
+    const chatBtn = document.createElement("button");
+    chatBtn.textContent = "Chat";
+    chatBtn.className = "btn btn-primary";
+    chatBtn.addEventListener("click", () =>
+      startChat(user.id, `${user.firstname} ${user.lastname}`)
+    );
+
+    userEl.appendChild(chatBtn);
+    userListContainer.appendChild(userEl);
+  });
+}
