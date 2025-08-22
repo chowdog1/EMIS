@@ -841,7 +841,7 @@ function updateBusinessTable(businesses) {
             "tbody",
             null,
             businesses.map((business, index) => {
-              // Try both normalized and original field names
+              // normalized and original field names
               const accountNo =
                 business["accountNo"] || business["ACCOUNT NO"] || "N/A";
               const businessName =
