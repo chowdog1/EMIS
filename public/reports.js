@@ -1,3 +1,4 @@
+// reports.js
 // Wait for DOM to be fully loaded
 window.addEventListener("load", function () {
   console.log("Reports page loaded, initializing");
@@ -13,6 +14,9 @@ window.addEventListener("load", function () {
   populateYearDropdown();
   // Update current page for user tracking
   updateCurrentPage("Reports");
+  // Start updating the datetime
+  updateDateTime();
+  setInterval(updateDateTime, 1000);
 });
 
 // Function to update current page for user tracking
@@ -411,5 +415,25 @@ function getUserInitials(user) {
     return user.lastname.charAt(0).toUpperCase();
   } else {
     return user.email.charAt(0).toUpperCase();
+  }
+}
+
+// Function to update the date and time display
+function updateDateTime() {
+  const now = new Date();
+  const options = {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  };
+  const dateTimeString = now.toLocaleDateString("en-US", options);
+  const datetimeElement = document.getElementById("datetime");
+  if (datetimeElement) {
+    datetimeElement.textContent = dateTimeString;
   }
 }

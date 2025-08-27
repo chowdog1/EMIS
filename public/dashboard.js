@@ -85,6 +85,7 @@ class DashboardManager {
       window.location.href = "/";
     }
   }
+
   // Function to get time-based greeting
   getTimeBasedGreeting() {
     const hour = new Date().getHours();
@@ -96,6 +97,7 @@ class DashboardManager {
       return "Good evening";
     }
   }
+
   // Function to update user interface
   async updateUserInterface(user) {
     console.log("Updating user interface with user:", user);
@@ -116,6 +118,7 @@ class DashboardManager {
     // Update avatar using the shared utility function
     this.updateUserAvatar(user, userAvatarImage, userAvatarFallback);
   }
+
   // Helper function to get user initials
   getUserInitials(user) {
     if (user.firstname && user.lastname) {
@@ -130,6 +133,7 @@ class DashboardManager {
       return user.email.charAt(0).toUpperCase();
     }
   }
+
   // Function to verify token with server
   async verifyTokenWithServer(token) {
     try {
@@ -162,6 +166,7 @@ class DashboardManager {
       return true; // Changed to true to allow offline access
     }
   }
+
   // Function to fetch dashboard data
   async fetchDashboardData() {
     try {
@@ -196,6 +201,7 @@ class DashboardManager {
       this.loadBusinessData();
     }
   }
+
   // Function to update dashboard cards
   updateDashboardCards(data) {
     console.log("Updating dashboard cards with data:", data);
@@ -245,7 +251,8 @@ class DashboardManager {
       console.error("Renewal element not found");
     }
   }
-  // Function to create barangay chart
+
+  // Function to create barangay chart (MODIFIED TO USE BAR CHART)
   createBarangayChart(barangayStats) {
     console.log("Creating barangay chart with data:", barangayStats);
     const ctx = document.getElementById("barangayChart");
@@ -258,39 +265,28 @@ class DashboardManager {
       console.error("Chart.js is not loaded");
       return;
     }
+    // Sort barangayStats by count (descending) for better visualization
+    barangayStats.sort((a, b) => b.count - a.count);
     // Prepare data for the chart
     const labels = barangayStats.map((item) => item._id);
     const data = barangayStats.map((item) => item.count);
     console.log("Chart labels:", labels);
     console.log("Chart data:", data);
-    // Generate colors for each barangay
-    const colors = [
-      "#FF6384",
-      "#36A2EB",
-      "#FFCE56",
-      "#4BC0C0",
-      "#9966FF",
-      "#FF9F40",
-      "#FF6384",
-      "#C9CBCF",
-      "#4BC0C0",
-      "#FF6384",
-      "#36A2EB",
-      "#FFCE56",
-    ];
     try {
       // Destroy existing chart instance if it exists
       if (this.barangayChartInstance) {
         this.barangayChartInstance.destroy();
       }
       this.barangayChartInstance = new Chart(ctx, {
-        type: "pie",
+        type: "bar", // Changed from 'pie' to 'bar'
         data: {
           labels: labels,
           datasets: [
             {
+              label: "Number of Businesses",
               data: data,
-              backgroundColor: colors.slice(0, labels.length),
+              backgroundColor: "rgba(45, 90, 39, 0.7)", // Primary green with opacity
+              borderColor: "rgba(45, 90, 39, 1)", // Solid primary green
               borderWidth: 1,
             },
           ],
@@ -298,29 +294,41 @@ class DashboardManager {
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: "Number of Businesses",
+              },
+            },
+            x: {
+              title: {
+                display: true,
+                text: "Barangay",
+              },
+            },
+          },
           plugins: {
             legend: {
-              position: "right",
+              display: false, // We don't need a legend for a single dataset bar chart
             },
             tooltip: {
               callbacks: {
                 label: function (context) {
-                  const label = context.label || "";
-                  const value = context.raw || 0;
-                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                  const percentage = Math.round((value / total) * 100);
-                  return `${label}: ${value} (${percentage}%)`;
+                  return `Businesses: ${context.raw}`;
                 },
               },
             },
           },
         },
       });
-      console.log("Chart created successfully");
+      console.log("Bar chart created successfully");
     } catch (error) {
       console.error("Error creating chart:", error);
     }
   }
+
   // Function to setup dropdown functionality
   setupDropdown() {
     console.log("Setting up dropdown functionality");
@@ -350,6 +358,7 @@ class DashboardManager {
     });
     console.log("Dropdown functionality setup complete");
   }
+
   // Function to setup logout functionality
   setupLogout() {
     console.log("Setting up logout functionality");
@@ -369,9 +378,22 @@ class DashboardManager {
     });
     console.log("Logout functionality setup complete");
   }
+
   // Logout function
   async logout() {
     try {
+      // Notify server that user is going offline
+      if (this.socket && this.socket.connected) {
+        const userData = JSON.parse(localStorage.getItem("user_data") || "{}");
+        if (userData.id) {
+          this.socket.emit("user-offline", {
+            id: userData.id,
+            firstname: userData.firstname,
+            lastname: userData.lastname,
+            email: userData.email,
+          });
+        }
+      }
       const token = localStorage.getItem("auth_token");
       if (token) {
         // Call server logout endpoint
@@ -396,6 +418,7 @@ class DashboardManager {
       window.location.href = "/";
     }
   }
+
   // Clear session data
   clearSessionData() {
     console.log("Clearing session data");
@@ -410,6 +433,7 @@ class DashboardManager {
     // Clear sessionStorage
     sessionStorage.clear();
   }
+
   // Check if token is expired (simplified version for browser)
   isTokenExpired(token) {
     try {
@@ -432,6 +456,7 @@ class DashboardManager {
       return true; // Assume expired if there's an error
     }
   }
+
   // Get user from token (simplified version for browser)
   getUserFromToken(token) {
     try {
@@ -447,6 +472,7 @@ class DashboardManager {
       return null;
     }
   }
+
   // Check session validity
   async checkSessionValidity() {
     try {
@@ -466,6 +492,7 @@ class DashboardManager {
       return true;
     }
   }
+
   // Start periodic session check
   startSessionCheck() {
     // Clear any existing interval
@@ -483,6 +510,7 @@ class DashboardManager {
     }, 1 * 60 * 1000); // 1 minute
     console.log("Session check started (1 minute interval)");
   }
+
   // Stop session check
   stopSessionCheck() {
     if (this.sessionCheckInterval) {
@@ -491,6 +519,7 @@ class DashboardManager {
       console.log("Session check stopped");
     }
   }
+
   // Setup inactivity detection
   setupInactivityDetection() {
     console.log("Setting up inactivity detection");
@@ -517,6 +546,7 @@ class DashboardManager {
     this.resetInactivityTimer();
     console.log("Inactivity detection setup complete");
   }
+
   // Reset inactivity timer
   resetInactivityTimer() {
     // Clear existing timers
@@ -544,8 +574,14 @@ class DashboardManager {
       } seconds of inactivity)`
     );
   }
+
   // Create inactivity warning popup
   createInactivityWarning() {
+    // Check if popup already exists
+    if (document.getElementById("inactivityWarning")) {
+      return;
+    }
+
     // Create popup container
     const popup = document.createElement("div");
     popup.id = "inactivityWarning";
@@ -680,6 +716,7 @@ class DashboardManager {
     document.body.appendChild(popup);
     console.log("Inactivity warning popup created");
   }
+
   // Show inactivity warning popup
   showInactivityWarning() {
     const popup = document.getElementById("inactivityWarning");
@@ -702,6 +739,7 @@ class DashboardManager {
       popup.countdownInterval = countdownInterval;
     }
   }
+
   // Hide inactivity warning popup
   hideInactivityWarning() {
     const popup = document.getElementById("inactivityWarning");
@@ -715,11 +753,13 @@ class DashboardManager {
       }
     }
   }
+
   // Load business data (fallback method)
   loadBusinessData() {
     console.log("Loading business data as fallback");
     // This is a placeholder - implement as needed
   }
+
   // Update user avatar - FIXED VERSION
   async updateUserAvatar(user, imageElement, fallbackElement) {
     if (!imageElement || !fallbackElement) {
@@ -766,6 +806,7 @@ class DashboardManager {
       this.showFallbackAvatar(user, fallbackElement);
     }
   }
+
   // Show fallback avatar with initials
   showFallbackAvatar(user, fallbackElement) {
     const initials = this.getUserInitials(user);
@@ -806,13 +847,36 @@ class DashboardManager {
   }
 }
 
+// Function to update the date and time display
+function updateDateTime() {
+  const now = new Date();
+  const options = {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  };
+  const dateTimeString = now.toLocaleDateString("en-US", options);
+  const datetimeElement = document.getElementById("datetime");
+  if (datetimeElement) {
+    datetimeElement.textContent = dateTimeString;
+  }
+}
+
 // Wait for DOM to be fully loaded
 window.addEventListener("DOMContentLoaded", function () {
   console.log("DOM fully loaded, initializing dashboard");
   // Create dashboard manager instance
   window.dashboardManager = new DashboardManager();
-  // Update current page for user tracking - FIXED: use the method from the dashboardManager instance
+  // Update current page for user tracking
   window.dashboardManager.updateCurrentPage("Dashboard");
+  // Start updating the datetime
+  updateDateTime();
+  setInterval(updateDateTime, 1000);
 });
 
 // Handle page visibility change
@@ -830,11 +894,4 @@ document.addEventListener("visibilitychange", () => {
       window.dashboardManager.resetInactivityTimer();
     }
   }
-});
-
-// Handle beforeunload event
-window.addEventListener("beforeunload", () => {
-  // Note: This won't reliably call the server logout
-  // It's better to rely on the periodic session check
-  console.log("Page is unloading");
 });

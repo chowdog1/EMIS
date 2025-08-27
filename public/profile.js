@@ -19,6 +19,9 @@ window.addEventListener("load", function () {
   setupInactivityDetection();
   // Create inactivity warning popup
   createInactivityWarning();
+  // Start updating the datetime
+  updateDateTime();
+  setInterval(updateDateTime, 1000);
 });
 
 // Function to update current page for user tracking
@@ -52,29 +55,21 @@ let warningTimer = null;
 const inactivityTimeout = 180 * 1000; // 3 minutes in milliseconds
 const warningTimeout = 160 * 1000; // Show warning 20 seconds before logout
 
-//Update Current Page
-//updateCurrentPage("Business Directory");
-
 // Function to setup inactivity detection
 function setupInactivityDetection() {
   console.log("Setting up inactivity detection");
-  // Function to reset inactivity timer
   function resetInactivityTimer() {
-    // Clear existing timers
     if (inactivityTimer) {
       clearTimeout(inactivityTimer);
     }
     if (warningTimer) {
       clearTimeout(warningTimer);
     }
-    // Hide warning popup if it's visible
     hideInactivityWarning();
-    // Set warning timer (160 seconds before logout)
     warningTimer = setTimeout(() => {
       console.log("Showing inactivity warning");
       showInactivityWarning();
     }, warningTimeout);
-    // Set logout timer (180 seconds total)
     inactivityTimer = setTimeout(() => {
       console.log("User inactive for 3 minutes, logging out");
       logout();
@@ -85,9 +80,8 @@ function setupInactivityDetection() {
       } seconds of inactivity)`
     );
   }
-  // Throttle function to limit how often the timer is reset
   let lastResetTime = 0;
-  const throttleDelay = 1000; // 1 second
+  const throttleDelay = 1000;
   function throttledReset() {
     const now = Date.now();
     if (now - lastResetTime > throttleDelay) {
@@ -95,7 +89,6 @@ function setupInactivityDetection() {
       resetInactivityTimer();
     }
   }
-  // Add event listeners for user activity
   const events = [
     "mousedown",
     "mousemove",
@@ -109,18 +102,15 @@ function setupInactivityDetection() {
   events.forEach((event) => {
     document.addEventListener(event, throttledReset, true);
   });
-  // Start the inactivity timer
   resetInactivityTimer();
   console.log("Inactivity detection setup complete");
 }
 
 // Function to create inactivity warning popup
 function createInactivityWarning() {
-  // Check if popup already exists
   if (document.getElementById("inactivityWarning")) {
     return;
   }
-  // Create popup container
   const popup = document.createElement("div");
   popup.id = "inactivityWarning";
   popup.style.cssText = `
@@ -139,7 +129,6 @@ function createInactivityWarning() {
     text-align: center;
     border: 1px solid #e0e0e0;
   `;
-  // Create warning icon
   const icon = document.createElement("div");
   icon.innerHTML = `
     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ff9800" stroke-width="2">
@@ -149,7 +138,6 @@ function createInactivityWarning() {
     </svg>
   `;
   icon.style.marginBottom = "16px";
-  // Create warning message
   const message = document.createElement("h3");
   message.textContent = "Session Timeout Warning";
   message.style.cssText = `
@@ -158,7 +146,6 @@ function createInactivityWarning() {
     font-size: 18px;
     font-weight: 600;
   `;
-  // Create warning text
   const text = document.createElement("p");
   text.textContent =
     "You have been inactive for a while. You will be automatically logged out in 20 seconds.";
@@ -168,7 +155,6 @@ function createInactivityWarning() {
     font-size: 14px;
     line-height: 1.5;
   `;
-  // Create countdown timer
   const countdown = document.createElement("div");
   countdown.id = "inactivityCountdown";
   countdown.textContent = "20";
@@ -178,10 +164,8 @@ function createInactivityWarning() {
     color: #ff9800;
     margin-bottom: 20px;
   `;
-  // Create buttons container
   const buttons = document.createElement("div");
   buttons.style.cssText = "display: flex; gap: 12px; justify-content: center;";
-  // Create stay logged in button
   const stayButton = document.createElement("button");
   stayButton.textContent = "Stay Logged In";
   stayButton.style.cssText = `
@@ -204,7 +188,6 @@ function createInactivityWarning() {
   stayButton.addEventListener("mouseleave", () => {
     stayButton.style.background = "#4caf50";
   });
-  // Create logout button
   const logoutButton = document.createElement("button");
   logoutButton.textContent = "Logout Now";
   logoutButton.style.cssText = `
@@ -227,7 +210,6 @@ function createInactivityWarning() {
   logoutButton.addEventListener("mouseleave", () => {
     logoutButton.style.background = "#f44336";
   });
-  // Append elements
   buttons.appendChild(stayButton);
   buttons.appendChild(logoutButton);
   popup.appendChild(icon);
@@ -235,7 +217,6 @@ function createInactivityWarning() {
   popup.appendChild(text);
   popup.appendChild(countdown);
   popup.appendChild(buttons);
-  // Create overlay
   const overlay = document.createElement("div");
   overlay.id = "inactivityOverlay";
   overlay.style.cssText = `
@@ -248,7 +229,6 @@ function createInactivityWarning() {
     z-index: 9999;
     display: none;
   `;
-  // Add to document
   document.body.appendChild(overlay);
   document.body.appendChild(popup);
   console.log("Inactivity warning popup created");
@@ -262,7 +242,6 @@ function showInactivityWarning() {
   if (popup && overlay && countdown) {
     popup.style.display = "block";
     overlay.style.display = "block";
-    // Start countdown
     let timeLeft = 20;
     countdown.textContent = timeLeft;
     const countdownInterval = setInterval(() => {
@@ -272,7 +251,6 @@ function showInactivityWarning() {
         clearInterval(countdownInterval);
       }
     }, 1000);
-    // Store interval ID to clear it later
     popup.countdownInterval = countdownInterval;
   }
 }
@@ -284,7 +262,6 @@ function hideInactivityWarning() {
   if (popup && overlay) {
     popup.style.display = "none";
     overlay.style.display = "none";
-    // Clear countdown interval if it exists
     if (popup.countdownInterval) {
       clearInterval(popup.countdownInterval);
     }
@@ -296,7 +273,6 @@ async function logout() {
   try {
     const token = localStorage.getItem("auth_token");
     if (token) {
-      // Call server logout endpoint
       const response = await fetch("/api/auth/logout", {
         method: "POST",
         headers: {
@@ -313,7 +289,6 @@ async function logout() {
   } catch (error) {
     console.error("Error during logout:", error);
   } finally {
-    // Always clear local data and redirect
     clearAllSessionData();
     window.location.href = "/";
   }
@@ -332,7 +307,6 @@ function checkAuthentication() {
     return;
   }
   try {
-    // Check if token has valid format first
     if (!window.isValidTokenFormat(token)) {
       console.log("Invalid token format, clearing data and redirecting");
       localStorage.removeItem("auth_token");
@@ -340,7 +314,6 @@ function checkAuthentication() {
       window.location.href = "/";
       return;
     }
-    // Check if token is expired locally first
     if (window.isTokenExpired(token)) {
       console.log("Token is expired, clearing data and redirecting");
       localStorage.removeItem("auth_token");
@@ -352,7 +325,6 @@ function checkAuthentication() {
     console.log("User data parsed successfully:", user);
     console.log("User ID:", user.id);
     console.log("User Email:", user.email);
-    // Verify that the token user matches the stored user data
     const tokenUser = window.getUserFromToken(token);
     if (!tokenUser || tokenUser.userId !== user.id) {
       console.log("Token user ID doesn't match stored user ID, clearing data");
@@ -361,18 +333,14 @@ function checkAuthentication() {
       window.location.href = "/";
       return;
     }
-    // Update user info in the UI
     updateUserInterface(user);
-    // Load profile data
     loadProfileData(user);
-    // Verify token with server in the background - don't await it
     verifyTokenWithServer(token)
       .then((success) => {
         console.log("Server token verification successful");
       })
       .catch((error) => {
         console.error("Token verification failed:", error);
-        // Only redirect if it's a 401 error
         if (error.status === 401) {
           console.log("Server rejected token, logging out");
           localStorage.removeItem("auth_token");
@@ -404,80 +372,15 @@ async function updateUserInterface(user) {
   const userEmailElement = document.getElementById("userEmail");
   const userAvatarImage = document.getElementById("userAvatarImage");
   const userAvatarFallback = document.getElementById("userAvatarFallback");
-  // Get the greeting based on current time
   const greeting = getTimeBasedGreeting();
-  // Get the user's first name if available, otherwise fall back to email
   const displayName = user.firstname || user.email;
   if (userEmailElement) {
-    // Update with greeting and first name
     userEmailElement.textContent = `${greeting}, ${displayName}!`;
     console.log("Updated user greeting to:", userEmailElement.textContent);
   } else {
     console.error("User email element not found");
   }
-  // Update avatar using the shared utility function
   updateUserAvatar(user, userAvatarImage, userAvatarFallback);
-}
-
-// Helper function to update user avatar
-async function updateUserAvatar(user, imageElement, fallbackElement) {
-  if (!imageElement || !fallbackElement) {
-    console.error("Avatar elements not found");
-    return;
-  }
-  // Check if user has a profile picture
-  if (user.hasProfilePicture) {
-    try {
-      // Get the token for authorization
-      const token = localStorage.getItem("auth_token");
-      if (!token) {
-        console.error("No auth token found");
-        showFallbackAvatar(user, fallbackElement);
-        return;
-      }
-      // Fetch the profile picture
-      const response = await fetch(`/api/auth/profile-picture/${user.id}`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (response.ok) {
-        // Convert the response to a blob URL
-        const blob = await response.blob();
-        const imageUrl = URL.createObjectURL(blob);
-        // Set the image source and show it
-        imageElement.src = imageUrl;
-        imageElement.style.display = "block";
-        fallbackElement.style.display = "none";
-        console.log("Profile picture loaded successfully");
-      } else {
-        console.error("Failed to load profile picture:", response.status);
-        showFallbackAvatar(user, fallbackElement);
-      }
-    } catch (error) {
-      console.error("Error loading profile picture:", error);
-      showFallbackAvatar(user, fallbackElement);
-    }
-  } else {
-    // User doesn't have a profile picture, show fallback
-    console.log("User has no profile picture, showing fallback");
-    showFallbackAvatar(user, fallbackElement);
-  }
-}
-
-// Show fallback avatar with initials
-function showFallbackAvatar(user, fallbackElement) {
-  const initials = getUserInitials(user);
-  fallbackElement.textContent = initials;
-  fallbackElement.style.display = "flex";
-  fallbackElement.style.alignItems = "center";
-  fallbackElement.style.justifyContent = "center";
-  // Hide the image element
-  const imageElement = document.getElementById("userAvatarImage");
-  if (imageElement) {
-    imageElement.style.display = "none";
-  }
 }
 
 // Helper function to get user initials
@@ -498,7 +401,6 @@ function getUserInitials(user) {
 // In loadProfileData function
 async function loadProfileData(user) {
   console.log("Loading profile data for user:", user);
-  // Update profile name and email
   const profileName = document.getElementById("profileName");
   const profileEmail = document.getElementById("profileEmail");
   if (profileName) {
@@ -507,19 +409,16 @@ async function loadProfileData(user) {
   if (profileEmail) {
     profileEmail.textContent = user.email;
   }
-  // Update form fields
   const firstNameInput = document.getElementById("firstName");
   const lastNameInput = document.getElementById("lastName");
   const emailInput = document.getElementById("email");
   if (firstNameInput) firstNameInput.value = user.firstname || "";
   if (lastNameInput) lastNameInput.value = user.lastname || "";
   if (emailInput) emailInput.value = user.email || "";
-  // Load profile picture if available
   const profilePicture = document.getElementById("profilePicture");
   if (profilePicture) {
     if (user.hasProfilePicture) {
       try {
-        // Show loading state
         profilePicture.style.display = "none";
         let loadingIndicator = profilePicture.nextElementSibling;
         if (
@@ -535,20 +434,15 @@ async function loadProfileData(user) {
           );
         }
         loadingIndicator.style.display = "flex";
-        // Fetch the profile picture with authentication
         const imageUrl = await fetchProfilePicture(user.id);
-        // Hide loading indicator
         loadingIndicator.style.display = "none";
-        // Set the image source to the blob URL
         profilePicture.src = imageUrl;
         profilePicture.style.display = "block";
-        // Clean up the blob URL when the page unloads
         window.addEventListener("beforeunload", () => {
           URL.revokeObjectURL(imageUrl);
         });
       } catch (error) {
         console.error("Failed to load profile picture:", error);
-        // Hide loading indicator
         const loadingIndicator = profilePicture.nextElementSibling;
         if (
           loadingIndicator &&
@@ -556,7 +450,6 @@ async function loadProfileData(user) {
         ) {
           loadingIndicator.style.display = "none";
         }
-        // Show fallback
         profilePicture.style.display = "none";
         let fallback = profilePicture.nextElementSibling;
         if (
@@ -575,7 +468,6 @@ async function loadProfileData(user) {
         fallback.style.display = "flex";
       }
     } else {
-      // No profile picture, show initials
       profilePicture.style.display = "none";
       let fallback = profilePicture.nextElementSibling;
       if (
@@ -608,27 +500,22 @@ function setupProfileForm() {
     const firstName = document.getElementById("firstName").value.trim();
     const lastName = document.getElementById("lastName").value.trim();
     const email = document.getElementById("email").value.trim();
-    // Validate form
     if (!firstName || !lastName || !email) {
       showErrorMessage("Please fill in all required fields");
       return;
     }
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       showErrorMessage("Please enter a valid email address");
       return;
     }
     try {
-      // Show loading state
       const saveBtn = document.getElementById("saveProfileBtn");
       const originalText = saveBtn.innerHTML;
       saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
       saveBtn.disabled = true;
-      // Get user data from localStorage
       const userData = JSON.parse(localStorage.getItem("user_data"));
       const token = localStorage.getItem("auth_token");
-      // Send update request
       const response = await fetch("/api/auth/update-profile", {
         method: "PUT",
         headers: {
@@ -645,7 +532,6 @@ function setupProfileForm() {
       if (!response.ok) {
         throw new Error(result.message || "Failed to update profile");
       }
-      // Update localStorage with new user data
       const updatedUserData = {
         ...userData,
         firstname: firstName,
@@ -653,16 +539,13 @@ function setupProfileForm() {
         email: email,
       };
       localStorage.setItem("user_data", JSON.stringify(updatedUserData));
-      // Update UI
       updateUserInterface(updatedUserData);
       loadProfileData(updatedUserData);
-      // Show success message
       showSuccessMessage("Profile updated successfully!");
     } catch (error) {
       console.error("Error updating profile:", error);
       showErrorMessage(error.message || "Failed to update profile");
     } finally {
-      // Restore button state
       const saveBtn = document.getElementById("saveProfileBtn");
       saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Changes';
       saveBtn.disabled = false;
@@ -686,21 +569,17 @@ function setupProfilePictureUpload() {
   profilePictureInput.addEventListener("change", async function (e) {
     const file = e.target.files[0];
     if (!file) return;
-    // Validate file type
     if (!file.type.startsWith("image/")) {
       showErrorMessage("Please select an image file");
       return;
     }
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       showErrorMessage("Image size must be less than 5MB");
       return;
     }
     try {
-      // Show loading state
       const profilePicture = document.getElementById("profilePicture");
       const originalSrc = profilePicture.src;
-      // Instead of using a placeholder, show a loading indicator
       profilePicture.style.display = "none";
       let loadingIndicator = profilePicture.nextElementSibling;
       if (
@@ -716,12 +595,9 @@ function setupProfilePictureUpload() {
         );
       }
       loadingIndicator.style.display = "flex";
-      // Create FormData
       const formData = new FormData();
       formData.append("profilePicture", file);
-      // Get token
       const token = localStorage.getItem("auth_token");
-      // Send upload request
       const response = await fetch("/api/auth/upload-profile-picture", {
         method: "POST",
         headers: {
@@ -734,32 +610,24 @@ function setupProfilePictureUpload() {
         throw new Error(result.message || "Failed to upload profile picture");
       }
       console.log("Profile picture upload successful");
-      // Update user data
       const userData = JSON.parse(localStorage.getItem("user_data"));
       userData.hasProfilePicture = true;
       localStorage.setItem("user_data", JSON.stringify(userData));
-      // Hide loading indicator
       loadingIndicator.style.display = "none";
-      // Fetch the newly uploaded profile picture with authentication
       const imageUrl = await fetchProfilePicture(userData.id);
-      // Update profile picture
       profilePicture.src = imageUrl;
       profilePicture.style.display = "block";
-      // Update the avatar in the header
       const userAvatarImage = document.getElementById("userAvatarImage");
       userAvatarImage.src = imageUrl;
       userAvatarImage.style.display = "block";
       document.getElementById("userAvatarFallback").style.display = "none";
-      // Clean up the blob URL when the page unloads
       window.addEventListener("beforeunload", () => {
         URL.revokeObjectURL(imageUrl);
       });
-      // Show success message
       showSuccessMessage("Profile picture updated successfully!");
     } catch (error) {
       console.error("Error uploading profile picture:", error);
       showErrorMessage(error.message || "Failed to upload profile picture");
-      // Hide loading indicator and restore original image
       const loadingIndicator = profilePicture.nextElementSibling;
       if (
         loadingIndicator &&
@@ -779,7 +647,6 @@ function updateHeaderAvatar(profilePictureUrl) {
   const userAvatarFallback = document.getElementById("userAvatarFallback");
   if (userAvatarImage) {
     userAvatarImage.src = profilePictureUrl;
-    // Hide fallback when image is set
     if (userAvatarFallback) {
       userAvatarFallback.style.display = "none";
     }
@@ -794,25 +661,21 @@ function setupChangePasswordModal() {
     ".modal-close, .modal-close-btn"
   );
   const updatePasswordBtn = document.getElementById("updatePasswordBtn");
-  // Open modal
   changePasswordBtn.addEventListener("click", function () {
     changePasswordModal.style.display = "block";
     document.getElementById("changePasswordForm").reset();
     document.getElementById("passwordStrength").textContent = "";
   });
-  // Close modal
   modalCloseBtns.forEach((btn) => {
     btn.addEventListener("click", function () {
       changePasswordModal.style.display = "none";
     });
   });
-  // Close modal when clicking outside
   window.addEventListener("click", function (e) {
     if (e.target === changePasswordModal) {
       changePasswordModal.style.display = "none";
     }
   });
-  // Setup password toggles
   const passwordToggles = document.querySelectorAll(".password-toggle");
   passwordToggles.forEach((toggle) => {
     toggle.addEventListener("click", function () {
@@ -830,15 +693,12 @@ function setupChangePasswordModal() {
       }
     });
   });
-  // Setup password strength checker
   const newPasswordInput = document.getElementById("newPassword");
   newPasswordInput.addEventListener("input", checkPasswordStrength);
-  // Handle password update
   updatePasswordBtn.addEventListener("click", async function () {
     const currentPassword = document.getElementById("currentPassword").value;
     const newPassword = document.getElementById("newPassword").value;
     const confirmPassword = document.getElementById("confirmPassword").value;
-    // Validate passwords
     if (!currentPassword || !newPassword || !confirmPassword) {
       showErrorMessage("Please fill in all password fields");
       return;
@@ -852,14 +712,11 @@ function setupChangePasswordModal() {
       return;
     }
     try {
-      // Show loading state
       const originalText = updatePasswordBtn.innerHTML;
       updatePasswordBtn.innerHTML =
         '<i class="fas fa-spinner fa-spin"></i> Updating...';
       updatePasswordBtn.disabled = true;
-      // Get token
       const token = localStorage.getItem("auth_token");
-      // Send update request
       const response = await fetch("/api/auth/change-password", {
         method: "POST",
         headers: {
@@ -875,15 +732,12 @@ function setupChangePasswordModal() {
       if (!response.ok) {
         throw new Error(result.message || "Failed to update password");
       }
-      // Close modal
       changePasswordModal.style.display = "none";
-      // Show success message
       showSuccessMessage("Password updated successfully!");
     } catch (error) {
       console.error("Error updating password:", error);
       showErrorMessage(error.message || "Failed to update password");
     } finally {
-      // Restore button state
       updatePasswordBtn.innerHTML = originalText;
       updatePasswordBtn.disabled = false;
     }
@@ -997,17 +851,13 @@ function setupDropdown() {
     console.error("Dropdown elements not found");
     return;
   }
-  // Remove any existing event listeners
   const newUserDropdown = userDropdown.cloneNode(true);
   userDropdown.parentNode.replaceChild(newUserDropdown, userDropdown);
-  // Add click event listener
   newUserDropdown.addEventListener("click", function (e) {
     e.preventDefault();
     e.stopPropagation();
     console.log("Dropdown clicked");
-    // Toggle dropdown menu
     userDropdownMenu.classList.toggle("show");
-    // Close dropdown when clicking outside
     document.addEventListener("click", function closeDropdown(e) {
       if (!e.target.closest(".user-dropdown")) {
         userDropdownMenu.classList.remove("show");
@@ -1036,7 +886,6 @@ async function verifyTokenWithServer(token) {
       console.log("Token verification successful");
       const data = await response.json();
       console.log("Response data:", data);
-      // Update localStorage with fresh user data
       if (data.user && data.valid) {
         localStorage.setItem("user_data", JSON.stringify(data.user));
         console.log("Updated localStorage with fresh user data");
@@ -1044,16 +893,13 @@ async function verifyTokenWithServer(token) {
       return true;
     } else {
       console.log("Token verification failed, status:", response.status);
-      // Only reject if the token is actually invalid (401)
       if (response.status === 401) {
         throw new Error("Invalid token");
       }
-      // For other errors, don't reject
       return true;
     }
   } catch (error) {
     console.error("Error verifying token:", error);
-    // For network errors or other issues, don't reject
     return true;
   }
 }
@@ -1061,17 +907,14 @@ async function verifyTokenWithServer(token) {
 // Function to clear all session data
 function clearAllSessionData() {
   console.log("Clearing all session data");
-  // Clear localStorage
   localStorage.removeItem("auth_token");
   localStorage.removeItem("user_data");
   localStorage.removeItem("cenro_sanjuan_emis_login_data");
-  // Clear all cookies
   document.cookie.split(";").forEach(function (c) {
     document.cookie = c
       .replace(/^ +/, "")
       .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
   });
-  // Clear sessionStorage
   sessionStorage.clear();
   console.log("All session data cleared");
 }
@@ -1084,10 +927,8 @@ function setupLogout() {
     console.error("Logout button not found");
     return;
   }
-  // Remove any existing event listeners
   const newLogoutBtn = logoutBtn.cloneNode(true);
   logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
-  // Add click event listener
   newLogoutBtn.addEventListener("click", function (e) {
     e.preventDefault();
     console.log("Logout button clicked");
@@ -1163,7 +1004,6 @@ document.addEventListener("visibilitychange", () => {
     }
   } else {
     console.log("Page visible - resuming inactivity timer");
-    // Call the reset function directly
     if (typeof resetInactivityTimer === "function") {
       resetInactivityTimer();
     }
@@ -1172,7 +1012,6 @@ document.addEventListener("visibilitychange", () => {
 
 // Handle beforeunload event
 window.addEventListener("beforeunload", () => {
-  // Clear timers to prevent memory leaks
   if (inactivityTimer) {
     clearTimeout(inactivityTimer);
   }
@@ -1180,3 +1019,23 @@ window.addEventListener("beforeunload", () => {
     clearTimeout(warningTimer);
   }
 });
+
+// Function to update the date and time display
+function updateDateTime() {
+  const now = new Date();
+  const options = {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  };
+  const dateTimeString = now.toLocaleDateString("en-US", options);
+  const datetimeElement = document.getElementById("datetime");
+  if (datetimeElement) {
+    datetimeElement.textContent = dateTimeString;
+  }
+}

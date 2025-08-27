@@ -22,6 +22,9 @@ document.addEventListener("DOMContentLoaded", () => {
   if (refreshBtn) {
     refreshBtn.addEventListener("click", loadUsers);
   }
+  // Start updating the datetime
+  updateDateTime();
+  setInterval(updateDateTime, 1000);
 });
 
 // Function to check authentication
@@ -117,20 +120,17 @@ function updateCurrentPage(page) {
 function loadUsers() {
   const token = localStorage.getItem("auth_token");
   const refreshBtn = document.getElementById("refreshBtn");
-
   // Check if token exists
   if (!token) {
     console.error("No authentication token found");
     window.location.href = "/";
     return;
   }
-
   // Show loading state
   if (refreshBtn) {
     refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
     refreshBtn.disabled = true;
   }
-
   fetch("/api/auth/users", {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -157,7 +157,6 @@ function loadUsers() {
     })
     .catch((error) => {
       console.error("Error loading users:", error);
-
       // Only show error in table if not redirecting
       if (!error.message.includes("Authentication failed")) {
         const tbody = document.getElementById("usersTableBody");
@@ -223,14 +222,11 @@ function displayUsers(users) {
       user.isOnline ? "status-online" : "status-offline"
     }`;
     const statusText = document.createElement("span");
-
     // Calculate relative time since last activity
     const getRelativeTime = (date) => {
       if (!date) return "Never active";
-
       const now = new Date();
       const diffInSeconds = Math.floor((now - new Date(date)) / 1000);
-
       if (diffInSeconds < 30) {
         return "Active now";
       } else if (diffInSeconds < 60) {
@@ -261,9 +257,7 @@ function displayUsers(users) {
         return `Active ${years} year${years > 1 ? "s" : ""} ago`;
       }
     };
-
     statusText.textContent = getRelativeTime(user.lastActivity);
-
     statusContainer.appendChild(statusIndicator);
     statusContainer.appendChild(statusText);
     statusCell.appendChild(statusContainer);
@@ -407,9 +401,8 @@ async function verifyTokenWithServer(token) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ token }), // Add this line
+      body: JSON.stringify({ token }),
     });
-
     if (response.ok) {
       console.log("Token verification successful");
       return true;
@@ -519,21 +512,37 @@ function startChat(userId, userName) {
 function renderUserList(users) {
   const userListContainer = document.getElementById("user-list");
   userListContainer.innerHTML = "";
-
   users.forEach((user) => {
     const userEl = document.createElement("div");
     userEl.className = "user-item";
-
     // Add user details...
-
     const chatBtn = document.createElement("button");
     chatBtn.textContent = "Chat";
     chatBtn.className = "btn btn-primary";
     chatBtn.addEventListener("click", () =>
       startChat(user.id, `${user.firstname} ${user.lastname}`)
     );
-
     userEl.appendChild(chatBtn);
     userListContainer.appendChild(userEl);
   });
+}
+
+// Function to update the date and time display
+function updateDateTime() {
+  const now = new Date();
+  const options = {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  };
+  const dateTimeString = now.toLocaleDateString("en-US", options);
+  const datetimeElement = document.getElementById("datetime");
+  if (datetimeElement) {
+    datetimeElement.textContent = dateTimeString;
+  }
 }

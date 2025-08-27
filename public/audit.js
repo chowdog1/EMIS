@@ -25,6 +25,8 @@ window.addEventListener("load", function () {
   setupPaginationControls();
   // Setup modal event listeners
   setupModalEventListeners();
+  updateDateTime();
+  setInterval(updateDateTime, 1000);
 });
 
 // Function to check authentication
@@ -569,6 +571,7 @@ function isTokenExpired(token) {
     return true;
   }
 }
+
 function verifyTokenWithServer(token) {
   return fetch("/api/auth/verify-token", {
     method: "POST",
@@ -593,6 +596,7 @@ function verifyTokenWithServer(token) {
       console.error("Error verifying token:", error);
     });
 }
+
 // Helper function to update user avatar
 async function updateUserAvatar(user, imageElement, fallbackElement) {
   if (!imageElement || !fallbackElement) {
@@ -633,6 +637,7 @@ async function updateUserAvatar(user, imageElement, fallbackElement) {
     showFallbackAvatar(user, fallbackElement);
   }
 }
+
 function showFallbackAvatar(user, fallbackElement) {
   const initials = getUserInitials(user);
   fallbackElement.textContent = initials;
@@ -644,6 +649,7 @@ function showFallbackAvatar(user, fallbackElement) {
     imageElement.style.display = "none";
   }
 }
+
 function getUserInitials(user) {
   if (user.firstname && user.lastname) {
     return `${user.firstname.charAt(0)}${user.lastname.charAt(
@@ -655,5 +661,25 @@ function getUserInitials(user) {
     return user.lastname.charAt(0).toUpperCase();
   } else {
     return user.email.charAt(0).toUpperCase();
+  }
+}
+
+// Function to update the date and time display
+function updateDateTime() {
+  const now = new Date();
+  const options = {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  };
+  const dateTimeString = now.toLocaleDateString("en-US", options);
+  const datetimeElement = document.getElementById("datetime");
+  if (datetimeElement) {
+    datetimeElement.textContent = dateTimeString;
   }
 }

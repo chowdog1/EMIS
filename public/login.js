@@ -263,7 +263,6 @@ class LoginManager {
 
     this.showGlobalError(errorMessage);
   }
-  // login.js
   async logout() {
     try {
       const token = localStorage.getItem("auth_token");
@@ -358,7 +357,6 @@ class LoginManager {
   }
 }
 
-// profile.js
 function validateSession() {
   console.log("=== Validating Session ===");
   const token = localStorage.getItem("auth_token");

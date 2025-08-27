@@ -402,6 +402,9 @@ window.addEventListener("load", function () {
   setupYearSelection();
   // Initialize inactivity manager
   window.inactivityManager = new InactivityManager();
+  // Start updating the datetime
+  updateDateTime();
+  setInterval(updateDateTime, 1000);
 });
 
 // Handle page visibility change
@@ -441,8 +444,16 @@ function checkAuthentication() {
     return;
   }
   try {
+    // Check if token has valid format first
+    if (!window.isValidTokenFormat(token)) {
+      console.log("Invalid token format, clearing data and redirecting");
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("user_data");
+      window.location.href = "/";
+      return;
+    }
     // Check if token is expired locally first
-    if (isTokenExpired(token)) {
+    if (window.isTokenExpired(token)) {
       console.log("Token is expired, clearing data and redirecting");
       localStorage.removeItem("auth_token");
       localStorage.removeItem("user_data");
@@ -454,8 +465,8 @@ function checkAuthentication() {
     console.log("User ID:", user.id);
     console.log("User Email:", user.email);
     // Verify that the token user matches the stored user data
-    const tokenUser = getUserFromToken(token);
-    if (tokenUser && tokenUser.userId !== user.id) {
+    const tokenUser = window.getUserFromToken(token);
+    if (!tokenUser || tokenUser.userId !== user.id) {
       console.log("Token user ID doesn't match stored user ID, clearing data");
       localStorage.removeItem("auth_token");
       localStorage.removeItem("user_data");
@@ -464,11 +475,21 @@ function checkAuthentication() {
     }
     // Update user info in the UI
     updateUserInterface(user);
-    // Verify token with server in the background
-    verifyTokenWithServer(token).catch((error) => {
-      console.error("Token verification failed:", error);
-      // Don't redirect immediately, just log the error
-    });
+    // Verify token with server in the background - don't await it
+    verifyTokenWithServer(token)
+      .then((success) => {
+        console.log("Server token verification successful");
+      })
+      .catch((error) => {
+        console.error("Token verification failed:", error);
+        // Only redirect if it's a 401 error
+        if (error.status === 401) {
+          console.log("Server rejected token, logging out");
+          localStorage.removeItem("auth_token");
+          localStorage.removeItem("user_data");
+          window.location.href = "/";
+        }
+      });
   } catch (e) {
     console.error("Error parsing user data:", e);
     window.location.href = "/";
@@ -526,6 +547,8 @@ function getUserInitials(user) {
 // Function to verify token with server
 async function verifyTokenWithServer(token) {
   try {
+    console.log("=== Verifying Token with Server ===");
+    console.log("Token being verified:", token.substring(0, 20) + "...");
     const response = await fetch("/api/auth/verify-token", {
       method: "POST",
       headers: {
@@ -533,29 +556,31 @@ async function verifyTokenWithServer(token) {
         Authorization: `Bearer ${token}`,
       },
     });
+    console.log("Response status:", response.status);
+    console.log("Response ok:", response.ok);
     if (response.ok) {
       console.log("Token verification successful");
+      const data = await response.json();
+      console.log("Response data:", data);
+      // Update localStorage with fresh user data
+      if (data.user && data.valid) {
+        localStorage.setItem("user_data", JSON.stringify(data.user));
+        console.log("Updated localStorage with fresh user data");
+      }
+      return true;
     } else {
       console.log("Token verification failed, status:", response.status);
-      // Try to get more information about the failure
-      try {
-        const errorData = await response.json();
-        console.log("Error data:", errorData);
-      } catch (e) {
-        console.log("Could not parse error response");
-      }
-      // Only redirect if the token is actually invalid (not for network errors)
+      // Only reject if the token is actually invalid (401)
       if (response.status === 401) {
-        console.log("Token is invalid, redirecting to login");
-        localStorage.removeItem("auth_token");
-        localStorage.removeItem("user_data");
-        window.location.href = "/";
+        throw new Error("Invalid token");
       }
+      // For other errors, don't reject
+      return true;
     }
   } catch (error) {
     console.error("Error verifying token:", error);
-    // If server is unavailable, continue with session but log the error
-    console.log("Continuing with session despite token verification error");
+    // For network errors or other issues, don't reject
+    return true;
   }
 }
 
@@ -1105,18 +1130,15 @@ async function showBusinessDetails(accountNo) {
       : "N/A";
     document.getElementById("modalRemarks").textContent =
       business.remarks || business.REMARKS || "N/A";
-
     // Show the modal
     const modal = document.getElementById("businessDetailsModal");
     modal.style.display = "block";
-
     // Setup delete button event listener after modal is shown
     const deleteBtn = document.getElementById("deleteBtn");
     if (deleteBtn) {
       // Remove any existing event listeners to prevent duplicates
       const newDeleteBtn = deleteBtn.cloneNode(true);
       deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
-
       // Add event listener to the new button
       newDeleteBtn.addEventListener("click", handleDelete);
       console.log("Delete button event listener attached");
@@ -1136,40 +1158,34 @@ function setupModalEventListeners() {
   const detailsCloseBtns = detailsModal.querySelectorAll(
     ".modal-close, .modal-close-btn"
   );
-
   // Add click event to close buttons for details modal
   detailsCloseBtns.forEach((btn) => {
     btn.addEventListener("click", function () {
       detailsModal.style.display = "none";
     });
   });
-
   // Get business edit modal elements
   const editModal = document.getElementById("businessEditModal");
   const editCloseBtns = editModal.querySelectorAll(
     ".modal-close, .modal-close-btn"
   );
-
   // Add click event to close buttons for edit modal
   editCloseBtns.forEach((btn) => {
     btn.addEventListener("click", function () {
       editModal.style.display = "none";
     });
   });
-
   // Get business add modal elements
   const addModal = document.getElementById("businessAddModal");
   const addCloseBtns = addModal.querySelectorAll(
     ".modal-close, .modal-close-btn"
   );
-
   // Add click event to close buttons for add modal
   addCloseBtns.forEach((btn) => {
     btn.addEventListener("click", function () {
       addModal.style.display = "none";
     });
   });
-
   // Close modals when clicking outside of them
   window.addEventListener("click", function (event) {
     if (event.target === detailsModal) {
@@ -1182,25 +1198,21 @@ function setupModalEventListeners() {
       addModal.style.display = "none";
     }
   });
-
   // Add click event to Print AEC button
   const printAecBtn = document.getElementById("printAecBtn");
   if (printAecBtn) {
     printAecBtn.addEventListener("click", printAEC);
   }
-
   // Add click event to Modify button
   const modifyBtn = document.getElementById("modifyBtn");
   if (modifyBtn) {
     modifyBtn.addEventListener("click", handleModify);
   }
-
   // Add click event to Save Changes button
   const saveBusinessBtn = document.getElementById("saveBusinessBtn");
   if (saveBusinessBtn) {
     saveBusinessBtn.addEventListener("click", saveBusinessChanges);
   }
-
   // Add click event to Add Business button in the modal
   const modalAddBusinessBtn = document.querySelector(
     "#businessAddModal #addBusinessBtn"
@@ -1208,7 +1220,6 @@ function setupModalEventListeners() {
   if (modalAddBusinessBtn) {
     modalAddBusinessBtn.addEventListener("click", addNewBusiness);
   }
-
   console.log("Modal event listeners setup complete");
 }
 
@@ -2245,7 +2256,7 @@ async function updateUserAvatar(user, imageElement, fallbackElement) {
       const token = localStorage.getItem("auth_token");
       if (!token) {
         console.error("No auth token found");
-        this.showFallbackAvatar(user, fallbackElement);
+        showFallbackAvatar(user, fallbackElement);
         return;
       }
       // Fetch the profile picture
@@ -2266,16 +2277,16 @@ async function updateUserAvatar(user, imageElement, fallbackElement) {
         console.log("Profile picture loaded successfully");
       } else {
         console.error("Failed to load profile picture:", response.status);
-        this.showFallbackAvatar(user, fallbackElement);
+        showFallbackAvatar(user, fallbackElement);
       }
     } catch (error) {
       console.error("Error loading profile picture:", error);
-      this.showFallbackAvatar(user, fallbackElement);
+      showFallbackAvatar(user, fallbackElement);
     }
   } else {
     // User doesn't have a profile picture, show fallback
     console.log("User has no profile picture, showing fallback");
-    this.showFallbackAvatar(user, fallbackElement);
+    showFallbackAvatar(user, fallbackElement);
   }
 }
 
@@ -2290,5 +2301,25 @@ function showFallbackAvatar(user, fallbackElement) {
   const imageElement = document.getElementById("userAvatarImage");
   if (imageElement) {
     imageElement.style.display = "none";
+  }
+}
+
+// Function to update the date and time display
+function updateDateTime() {
+  const now = new Date();
+  const options = {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  };
+  const dateTimeString = now.toLocaleDateString("en-US", options);
+  const datetimeElement = document.getElementById("datetime");
+  if (datetimeElement) {
+    datetimeElement.textContent = dateTimeString;
   }
 }
