@@ -1,8 +1,8 @@
 // businesses.js
 const logoUrls = [
-  "/bagongpilipinas.png",
+  "https://upload.wikimedia.org/wikipedia/commons/b/b1/Bagong_Pilipinas_logo.png",
+  "https://upload.wikimedia.org/wikipedia/commons/3/34/Seal_of_San_Juan%2C_Metro_Manila.png",
   "/makabagong%20san%20juan%20Logo.png",
-  "/cenro%20logo.png",
 ];
 let currentYear = "2025"; // Default to 2025
 // Pagination variables - Global scope
@@ -1237,271 +1237,243 @@ function printAEC() {
   const accountNo = document.getElementById("modalAccountNo").textContent;
   const businessName = document.getElementById("modalBusinessName").textContent;
   const address = document.getElementById("modalAddress").textContent;
+  const barangay = document.getElementById("modalBarangay").textContent;
   const status = document.getElementById("modalStatus").textContent;
   const orNo = document.getElementById("modalOrNo").textContent;
   const amountPaid = document.getElementById("modalAmountPaid").textContent;
   const dateOfPayment =
     document.getElementById("modalDateOfPayment").textContent;
+
   // Get the selected year from the year selector dropdown
   const selectedYear = document.getElementById("yearSelect").value;
+
   // Get current date for the certificate
   const currentDate = new Date().toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+
   // Get generated date and time
   const generatedDateTime =
     new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString();
-  // Show instruction alert before printing
-  alert(
-    'Please select "Page 1" only in the the avoid printing a blank second page.'
-  );
-  // Create a hidden div for printing
-  const printContent = document.createElement("div");
-  printContent.className = "print-area";
-  // Create the print content positioned at top-left corner
-  printContent.innerHTML = `
-        <style>
-            @media print {
-                body {
-                    margin: 0;
-                    padding: 0;
-                    font-family: Verdana, sans-serif;
-                }
-                .print-container {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 10cm;
-                    height: 12cm;
-                    padding: 0.4cm;
-                    box-sizing: border-box;
-                    font-family: Verdana, sans-serif;
-                    border: 1px solid green;
-                    display: flex;
-                    flex-direction: column;
-                }
-                .logos {
-                    display: flex;
-                    justify-content: center;
-                    gap: 0.3cm;
-                    margin-bottom: 0.3cm;
-                }
-                .logos img {
-                    height: 1.2cm;
-                    width: 1.2cm;
-                    object-fit: contain;
-                }
-                .header-text {
-                    text-align: center;
-                    font-size: 6pt;
-                    margin-bottom: 0.1cm;
-                    line-height: 1.1;
-                    font-family: Verdana, sans-serif;
-                }
-                .certificate-title {
-                    background-color: black;
-                    color: white;
-                    text-align: center;
-                    font-weight: bold;
-                    padding: 0.15cm;
-                    margin-bottom: 0.3cm;
-                    font-size: 10pt;
-                    font-family: Verdana, sans-serif;
-                }
-                .details-row {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 0.3cm;
-                }
-                .details-column {
-                    width: 48%;
-                }
-                .detail-label {
-                    font-size: 6pt;
-                    margin-bottom: 0.1cm;
-                    font-family: Verdana, sans-serif;
-                }
-                .certify-section {
-                    margin-bottom: 0.2cm;
-                }
-                .certify-text {
-                    text-align: center;
-                    font-size: 6pt;
-                    margin-bottom: 0.05cm;
-                    font-family: Verdana, sans-serif;
-                }
-                .business-name {
-                    text-align: center;
-                    font-weight: bold;
-                    font-size: 9pt;
-                    margin-bottom: 0.05cm;
-                    font-family: Verdana, sans-serif;
-                    line-height: 1.1;
-                    max-height: 1.2cm; /* Limit height to prevent excessive space usage */
-                    overflow: hidden;
-                }
-                .business-info {
-                    text-align: left;
-                    font-size: 6pt;
-                    margin-top: 0.5cm;
-                    margin-bottom: 0.2cm;
-                    font-family: Verdana, sans-serif;
-                    line-height: 1.2;
-                }
-                .info-box {
-                    border: 1px solid #000;
-                    padding: 0.15cm;
-                    margin-bottom: 0.4cm; /* Reduced margin */
-                    font-size: 6pt;
-                    font-family: Verdana, sans-serif;
-                    line-height: 1.2;
-                }
-                .signature-section {
-                    margin-bottom: 0.3cm; /* Reduced margin */
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    margin-top: 1.2cm; /* Reduced margin */
-                }
-                .signature-line {
-                    width: 5cm;
-                    border-bottom: 1px solid #000;
-                    margin-bottom: 0.1cm; /* Reduced margin */
-                    font-family: Verdana, sans-serif;
-                }
-                .secretariat-text {
-                    text-align: center;
-                    font-size: 6pt;
-                    margin-top: 0.05cm; /* Reduced margin */
-                    font-family: Verdana, sans-serif;
-                }
-                .footer {
-                    margin-top: auto;
-                    padding-top: 0.2cm; /* Reduced padding */
-                }
-                .footer-row {
-                    display: flex;
-                    justify-content: space-between;
-                    font-size: 6pt;
-                    font-family: Verdana, sans-serif;
-                }
-                .footer-item {
-                    width: 30%;
-                }
-                .generated-datetime {
-                    font-size: 4pt;
-                    font-family: Verdana, sans-serif;
-                    margin-top: 0.05cm; /* Reduced margin */
-                }
-            }
-        </style>
-        
-        <div class="print-container">
-            <!-- Logos -->
-            <div class="logos">
-                <img src="${logoUrls[0]}" alt="Bagong Pilipinas">
-                <img src="${logoUrls[1]}" alt="San Juan Logo">
-                <img src="${logoUrls[2]}" alt="CENRO Logo">
-            </div>
-            
-            <!-- Header Text -->
-            <div class="header-text">CITY GOVERNMENT OF SAN JUAN</div>
-            <div class="header-text">CITY ENVIRONMENT AND NATURAL RESOURCES OFFICE</div>
-            
-            <!-- Certificate Title -->
-            <div class="certificate-title">ASSESSMENT CERTIFICATE</div>
-            
-            <!-- Details Row -->
-            <div class="details-row">
-                <div class="details-column">
-                    <div class="detail-label">Account No.: ${accountNo}</div>
-                    <div class="detail-label">Status: 
-                        <span style="color: ${
-                          status === "HIGHRISK" ? "red" : "green"
-                        }; font-weight: bold;">
-                            ${status === "HIGHRISK" ? "HIGH RISK" : "LOW RISK"}
-                        </span>
-                    </div>
-                </div>
-                <div class="details-column" style="text-align: right;">
-                    <div class="detail-label">Date of Application: ${currentDate}</div>
-                </div>
-            </div>
-            
-            <!-- Certification Section - Grouped together -->
-            <div class="certify-section">
-                <div class="certify-text">This is to certify that</div>
-                <div class="business-name">${businessName}</div>
-                <div class="business-info">located at ${address}, has paid environmental protection and preservation fee of ${selectedYear}</div>
-            </div>
-            
-            <!-- Info Box -->
-            <div class="info-box">
-                Valid for 1 year<br>
-                Subject for inspection in ${selectedYear}<br>
-                Subject to annual renewal and payment of environmental compliance fee
-            </div>
-            
-            <!-- Signature Section -->
-            <div class="signature-section">
-                <div class="signature-line"></div>
-                <div class="secretariat-text">Secretariat</div>
-            </div>
-            
-            <!-- Footer -->
-            <div class="footer">
-                <div class="footer-row">
-                    <div class="footer-item">
-                        OR No.: ${orNo}
-                        <div class="generated-datetime">Generated: ${generatedDateTime}</div>
-                    </div>
-                    <div class="footer-item" style="text-align: center;">Amount Paid: ${amountPaid}</div>
-                    <div class="footer-item" style="text-align: right;">Date: ${dateOfPayment}</div>
-                </div>
-            </div>
+
+  // Create a temporary div with the certificate content
+  const tempDiv = document.createElement("div");
+  tempDiv.style.position = "absolute";
+  tempDiv.style.left = "-9999px";
+  tempDiv.style.width = "10cm";
+  tempDiv.style.height = "12cm";
+  tempDiv.style.padding = "0.4cm";
+  tempDiv.style.boxSizing = "border-box";
+  tempDiv.style.fontFamily = "Verdana, sans-serif";
+  tempDiv.style.border = "1px solid green";
+  tempDiv.style.display = "flex";
+  tempDiv.style.flexDirection = "column";
+
+  // Set the HTML content
+  tempDiv.innerHTML = `
+    <!-- Logos -->
+    <div style="display: flex; justify-content: center; gap: 0.3cm; margin-bottom: 0.3cm;">
+      <img src="${
+        logoUrls[0]
+      }" alt="Bagong Pilipinas" style="height: 1.2cm; width: 1.2cm; object-fit: contain;">
+      <img src="${
+        logoUrls[1]
+      }" alt="San Juan Logo" style="height: 1.2cm; width: 1.2cm; object-fit: contain;">
+      <img src="${
+        logoUrls[2]
+      }" alt="CENRO Logo" style="height: 1.2cm; width: 1.2cm; object-fit: contain;">
+    </div>
+    
+    <!-- Header Text -->
+    <div style="text-align: center; font-size: 6pt; margin-bottom: 0.1cm; line-height: 1.1;">CITY GOVERNMENT OF SAN JUAN</div>
+    <div style="text-align: center; font-size: 6pt; margin-bottom: 0.1cm; line-height: 1.1;">CITY ENVIRONMENT AND NATURAL RESOURCES OFFICE</div>
+    
+    <!-- Certificate Title -->
+    <div style="background-color: #005a08ff; color: white; text-align: center; font-weight: bold; padding: 0.15cm; margin-bottom: 0.3cm; font-size: 10pt;">ASSESSMENT CERTIFICATE</div>
+    
+    <!-- Details Row -->
+    <div style="display: flex; justify-content: space-between; margin-bottom: 0.3cm;">
+      <div style="width: 48%;">
+        <div style="font-size: 6pt; margin-bottom: 0.1cm;">Account No.: ${accountNo}</div>
+        <div style="font-size: 6pt; margin-bottom: 0.1cm;">Status: 
+          <span style="color: ${
+            status === "HIGHRISK" ? "red" : "green"
+          }; font-weight: bold;">
+            ${status === "HIGHRISK" ? "HIGH RISK" : "LOW RISK"}
+          </span>
         </div>
-    `;
-  // Add to body
-  document.body.appendChild(printContent);
-  // Wait for images to load before printing
-  const images = printContent.querySelectorAll("img");
-  let loadedImages = 0;
-  const onImageLoad = () => {
-    loadedImages++;
-    if (loadedImages === images.length) {
-      // All images loaded, now print
-      window.print();
-      // Remove the print content after printing
-      setTimeout(() => {
-        document.body.removeChild(printContent);
-      }, 100);
-    }
-  };
-  // If images are already cached, they might not trigger load event
-  const checkIfLoaded = () => {
-    let allLoaded = true;
+      </div>
+      <div style="width: 48%; text-align: right;">
+        <div style="font-size: 6pt; margin-bottom: 0.1cm;">Date of Application: ${currentDate}</div>
+      </div>
+    </div>
+    
+    <!-- Certification Section -->
+  <div style="margin-bottom: 0.2cm;">
+  <div style="text-align: center; font-size: 6pt; margin-bottom: 0.05cm;">This is to certify that</div>
+  <div style="text-align: center; font-weight: bold; font-size: 9pt; margin-bottom: 0.05cm; line-height: 1.1; max-height: 1.2cm; overflow: hidden;">${businessName}</div>
+  <div style="text-align: left; font-size: 6pt; margin-top: 0.5cm; margin-bottom: 0.2cm; line-height: 1.2;">
+    located at <span style="font-weight: bold;">${address}</span>, 
+    <span style="font-weight: bold;">${barangay}</span>, has paid environmental protection and preservation fee of 
+    <span style="font-weight: bold;">${selectedYear}</span>
+  </div>
+  </div>
+    
+    <!-- Info Box -->
+    <div style="border: 1px solid #000; padding: 0.15cm; margin-bottom: 0.4cm; font-size: 6pt; line-height: 1.2;">
+      Valid for 1 year<br>
+      Subject for inspection in ${selectedYear}<br>
+      Subject to annual renewal and payment of environmental compliance fee
+    </div>
+    
+    <!-- Signature Section -->
+    <div style="margin-bottom: 0.3cm; display: flex; flex-direction: column; align-items: center; margin-top: 1.2cm;">
+      <div style="width: 5cm; border-bottom: 1px solid #000; margin-bottom: 0.1cm;"></div>
+      <div style="text-align: center; font-size: 6pt; margin-top: 0.05cm;">Secretariat</div>
+    </div>
+    
+    <!-- Footer -->
+    <div style="margin-top: auto; padding-top: 0.2cm;">
+      <div style="display: flex; justify-content: space-between; font-size: 6pt;">
+        <div style="width: 30%;">
+          OR No.: ${orNo}
+          <div style="font-size: 4pt; margin-top: 0.05cm;">Generated: ${generatedDateTime}</div>
+        </div>
+        <div style="width: 30%; text-align: center;">Amount Paid: ${amountPaid}</div>
+        <div style="width: 30%; text-align: right;">Date: ${dateOfPayment}</div>
+      </div>
+    </div>
+  `;
+
+  // Add to body temporarily
+  document.body.appendChild(tempDiv);
+
+  // Load libraries if not already loaded
+  loadLibraries(() => {
+    // Wait for images to load
+    const images = tempDiv.querySelectorAll("img");
+    let loadedImages = 0;
+
+    const onImageLoad = () => {
+      loadedImages++;
+      if (loadedImages === images.length) {
+        // All images loaded, now generate PDF
+        generatePDF(tempDiv);
+      }
+    };
+
+    // Check if images are already loaded (cached)
+    const checkIfLoaded = () => {
+      let allLoaded = true;
+      images.forEach((img) => {
+        if (!img.complete) {
+          allLoaded = false;
+        }
+      });
+      if (allLoaded) {
+        onImageLoad();
+      }
+    };
+
+    // Add load event listeners to images
     images.forEach((img) => {
-      if (!img.complete) {
-        allLoaded = false;
+      if (img.complete) {
+        onImageLoad();
+      } else {
+        img.addEventListener("load", onImageLoad);
+        img.addEventListener("error", onImageLoad);
       }
     });
-    if (allLoaded) {
-      onImageLoad();
-    }
-  };
-  // Add load event listeners to images
-  images.forEach((img) => {
-    if (img.complete) {
-      onImageLoad();
-    } else {
-      img.addEventListener("load", onImageLoad);
-      img.addEventListener("error", onImageLoad); // Continue even if an image fails to load
-    }
+
+    // Check if images are already loaded (cached)
+    checkIfLoaded();
   });
-  // Check if images are already loaded (cached)
-  checkIfLoaded();
+}
+
+// Function to load required libraries
+function loadLibraries(callback) {
+  const libraries = [
+    {
+      name: "html2canvas",
+      url: "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",
+    },
+    {
+      name: "jsPDF",
+      url: "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+    },
+  ];
+
+  let loadedCount = 0;
+
+  libraries.forEach((lib) => {
+    if (window[lib.name]) {
+      loadedCount++;
+      if (loadedCount === libraries.length) {
+        callback();
+      }
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = lib.url;
+    script.onload = () => {
+      loadedCount++;
+      if (loadedCount === libraries.length) {
+        callback();
+      }
+    };
+    document.head.appendChild(script);
+  });
+}
+
+// Function to generate PDF from HTML element
+function generatePDF(element) {
+  // Use html2canvas to capture the element
+  html2canvas(element, {
+    scale: 2, // Higher resolution
+    logging: false,
+    useCORS: true, // Allow cross-origin images
+  })
+    .then((canvas) => {
+      // Calculate dimensions
+      const imgWidth = 100; // 10cm in mm
+      const pageHeight = 120; // 12cm in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+
+      // Create PDF
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: [imgWidth, pageHeight],
+      });
+
+      let position = 0;
+
+      // Add image to PDF
+      const imgData = canvas.toDataURL("image/png");
+      doc.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // Remove the temporary element
+      document.body.removeChild(element);
+
+      // Generate PDF as blob and open in new tab
+      const pdfBlob = doc.output("blob");
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      window.open(pdfUrl, "_blank");
+
+      // Show success message
+      alert("PDF generated successfully! It should open in a new tab.");
+    })
+    .catch((error) => {
+      console.error("Error generating PDF:", error);
+      alert("Error generating PDF. Please try again.");
+      document.body.removeChild(element);
+    });
 }
 
 // Function to setup add business button
