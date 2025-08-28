@@ -5,7 +5,6 @@ const cors = require("cors");
 const path = require("path");
 const authRoutes = require("./routes/authRoutes");
 const { establishmentsDB } = require("./db.js");
-const { cleanupInactiveUsers } = require("./controllers/authController.js");
 const reportRoutes = require("./routes/reportRoutes");
 const auditRoutes = require("./routes/auditRoutes.js");
 const http = require("http");
@@ -18,19 +17,17 @@ const PORT = 3000;
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow localhost for development
+      // Allow all origins from the private 192.168.x.x range
+      // Also allow localhost/undefined for development/server-side rendering
       if (
         !origin ||
         origin.startsWith("http://localhost") ||
-        origin.startsWith("http://127.0.0.1")
+        origin.startsWith("http://192.168.")
       ) {
-        return callback(null, true);
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
       }
-      // Allow any IP in the 192.168.55.x subnet (both CENRO and CGSJ_OSS)
-      if (origin && origin.match(/^http:\/\/192\.168\.55\.\d{1,3}:3000$/)) {
-        return callback(null, true);
-      }
-      callback(new Error("Not allowed by CORS"));
     },
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
