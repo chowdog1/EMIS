@@ -1,0 +1,266 @@
+/* seminars.css */
+/* Progress bar styles for sending invitations */
+.progress-container {
+  margin-top: 15px;
+}
+
+.progress-percentage {
+  font-weight: 600;
+  color: var(--success);
+}
+
+.progress-steps {
+  font-size: 0.8rem;
+}
+
+.step {
+  color: var(--gray-600);
+  position: relative;
+  transition: color 0.3s ease;
+}
+
+.step-active {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.step-completed {
+  color: var(--success);
+}
+
+.step-completed::after {
+  content: "✓";
+  margin-left: 5px;
+}
+
+.progress {
+  background-color: var(--gray-200);
+  border-radius: 0.25rem;
+}
+
+.progress-bar {
+  background-color: var(--success);
+  transition: width 0.3s ease;
+}
+
+.alert {
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.25rem;
+  margin-bottom: 0;
+}
+
+.alert-success {
+  color: #155724;
+  background-color: #d4edda;
+  border-color: #c3e6cb;
+}
+
+.alert-danger {
+  color: #721c24;
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+}
+
+/* Spinner animation */
+.spinner-border {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 0.2em solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spinner-border 0.75s linear infinite;
+}
+
+.spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+  border-width: 0.2em;
+}
+
+@keyframes spinner-border {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Progress bar animation */
+.progress-bar-striped {
+  background-image: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.15) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0.15) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 1rem 1rem;
+}
+
+.progress-bar-animated {
+  animation: progress-bar-stripes 1s linear infinite;
+}
+
+@keyframes progress-bar-stripes {
+  0% {
+    background-position: 1rem 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+
+/* Status badge animations */
+.status-badge {
+  transition: all 0.3s ease;
+}
+
+/* Table row hover effect */
+.business-table tr {
+  transition: background-color 0.3s ease;
+}
+
+.business-table tr:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Alert message animations */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.alert {
+  animation: slideInRight 0.3s ease-out;
+}
+
+/* Year selector styling */
+.year-selector-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.year-selector-label {
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+.year-selector {
+  padding: 8px 12px;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--gray-300);
+  background-color: var(--white);
+  color: var(--gray-800);
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.year-selector:focus {
+  outline: none;
+  border-color: var(--primary-green);
+  box-shadow: 0 0 0 2px rgba(45, 90, 39, 0.2);
+}
+
+/* Search and pagination styles */
+.search-container {
+  display: flex;
+  align-items: center;
+  margin-right: 15px;
+}
+
+.search-input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  width: 250px;
+  font-size: 14px;
+}
+
+.search-button {
+  background-color: var(--primary-green);
+  color: white;
+  border: none;
+  border-radius: 0 4px 4px 0;
+  padding: 8px 12px;
+  cursor: pointer;
+  margin-left: -1px;
+}
+
+.search-button:hover {
+  background-color: #2a7d47;
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 15px;
+  padding: 0 15px;
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: #6c757d;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+}
+
+.pagination-btn {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  color: #6c757d;
+  padding: 6px 12px;
+  margin: 0 2px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background-color: #e9ecef;
+}
+
+.pagination-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.page-size-select {
+  margin: 0 10px;
+  padding: 6px;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+}
+
+/* Status badge styles */
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Button styles */
+.btn-outline-primary {
+  color: var(--primary-green);
+  border-color: var(--primary-green);
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--primary-green);
+  color: white;
+}

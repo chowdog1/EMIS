@@ -1118,3 +1118,47 @@ body {
   padding: 5px;
   font-family: "Inter", sans-serif;
 }
+
+/* Form row layout */
+.form-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.form-row .form-group {
+  flex: 1;
+}
+
+/* Modal enhancements */
+.modal-content {
+  max-width: 800px;
+  margin: 50px auto;
+}
+
+.modal-body {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+/* Email preview styling */
+#emailBodyPreview {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#emailBodyPreview h1 {
+  color: #2c5282;
+  text-align: center;
+}
+
+#emailBodyPreview .details {
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 5px;
+  margin: 20px 0;
+}
+
+#emailBodyPreview .details h3 {
+  color: #2c5282;
+  margin-top: 0;
+}

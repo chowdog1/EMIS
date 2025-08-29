@@ -52,11 +52,17 @@ mongoose
 const business2025Routes = require("./routes/business2025Routes.js");
 // connection for 2026
 const business2026Routes = require("./routes/business2026Routes.js");
+// seminar2025
+const seminar2025Routes = require("./routes/seminar2025Routes.js");
+// seminar2026
+const seminar2026Routes = require("./routes/seminar2026Routes.js");
 
 // API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/business2025", business2025Routes);
 app.use("/api/business2026", business2026Routes);
+app.use("/api/seminar2025", seminar2025Routes);
+app.use("/api/seminar2026", seminar2026Routes);
 app.use("/api/messages", messageRoutes); // Add this line - this is crucial!
 app.use("/api/audit", auditRoutes);
 
@@ -81,6 +87,12 @@ app.get("/dashboard.html", (req, res) => {
 // Businesses route
 app.get("/businesses", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "businesses.html"));
+});
+
+// Seminars route
+
+app.get("/seminars", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "seminars.html"));
 });
 
 // Reports route

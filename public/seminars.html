@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seminars | CENRO San Juan City EMIS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="dashboard.css" />
+    <link rel="stylesheet" href="seminars.css" />
+  </head>
+  <body>
+    <div class="dashboard-container">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-title">
+            <i class="fas fa-leaf"></i>
+            <span>CENRO EMIS</span>
+          </div>
+        </div>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="/dashboard">
+              <i class="fas fa-tachometer-alt"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="/businesses">
+              <i class="fas fa-building"></i>
+              <span>Businesses</span>
+            </a>
+          </li>
+          <li>
+            <a href="/seminars" class="active">
+              <i class="fas fa-envelope"></i>
+              <span>Seminars</span>
+            </a>
+          </li>
+          <li>
+            <a href="/reports">
+              <i class="fas fa-file-alt"></i>
+              <span>Reports</span>
+            </a>
+          </li>
+          <li>
+            <a href="/users">
+              <i class="fas fa-users"></i>
+              <span>Users</span>
+            </a>
+          </li>
+          <li>
+            <a href="/audit">
+              <i class="fas fa-history"></i>
+              <span>Audit Trail</span>
+            </a>
+          </li>
+          <div class="sidebar-datetime" id="datetime"></div>
+        </ul>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Header -->
+        <header class="header">
+          <h1 class="header-title">Seminar Invitations</h1>
+          <div class="user-info">
+            <div class="user-avatar" id="userAvatar">
+              <img
+                id="userAvatarImage"
+                src="https://via.placeholder.com/40"
+                alt="User Avatar"
+              />
+              <div id="userAvatarFallback" class="avatar-fallback">U</div>
+            </div>
+            <div class="user-dropdown">
+              <button class="dropdown-toggle" id="userDropdown">
+                <span id="userEmail">Loading...</span>
+                <i class="fas fa-chevron-down"></i>
+              </button>
+              <div class="dropdown-menu" id="userDropdownMenu">
+                <a href="profile.html" class="dropdown-item">Profile</a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item" id="logoutBtn">Logout</a>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Upload Modal -->
+        <div id="uploadModal" class="modal">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title">Upload Seminar Data</h2>
+              <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+              <form id="uploadForm">
+                <div class="form-group">
+                  <label for="csvFile">Select CSV File:</label>
+                  <input
+                    type="file"
+                    id="csvFile"
+                    name="csvFile"
+                    accept=".csv"
+                    required
+                  />
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary modal-close-btn">
+                Cancel
+              </button>
+              <button type="button" class="btn btn-primary" id="uploadBtn">
+                Upload
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Send Invitations Modal -->
+        <div id="sendInvitationsModal" class="modal">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title">Send Seminar Invitations</h2>
+              <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+              <form id="invitationForm">
+                <div class="form-group">
+                  <label for="emailSubject">Subject:</label>
+                  <input
+                    type="text"
+                    id="emailSubject"
+                    name="subject"
+                    value="Invitation to Environmental Seminar - CENRO San Juan City"
+                    required
+                  />
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="seminarDate">Seminar Date:</label>
+                    <input
+                      type="date"
+                      id="seminarDate"
+                      name="seminarDate"
+                      required
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="seminarTime">Seminar Time:</label>
+                    <input
+                      type="time"
+                      id="seminarTime"
+                      name="seminarTime"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="seminarVenue">Seminar Venue:</label>
+                  <input
+                    type="text"
+                    id="seminarVenue"
+                    name="seminarVenue"
+                    value="CENRO San Juan City Office"
+                    required
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="zoomLink">Zoom Meeting Link:</label>
+                  <input
+                    type="url"
+                    id="zoomLink"
+                    name="zoomLink"
+                    placeholder="https://zoom.us/j/123456789"
+                  />
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="zoomMeetingId">Zoom Meeting ID:</label>
+                    <input
+                      type="text"
+                      id="zoomMeetingId"
+                      name="zoomMeetingId"
+                      placeholder="123 456 789"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="zoomPassword">Zoom Password:</label>
+                    <input
+                      type="text"
+                      id="zoomPassword"
+                      name="zoomPassword"
+                      placeholder="password"
+                    />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="contactInfo">Contact Information:</label>
+                  <input
+                    type="text"
+                    id="contactInfo"
+                    name="contactInfo"
+                    value="Email: cenro@sanjuancity.gov.ph | Phone: (02) 123-4567"
+                    required
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="emailBody">Email Body Preview:</label>
+                  <div
+                    id="emailBodyPreview"
+                    style="
+                      border: 1px solid #ddd;
+                      padding: 15px;
+                      height: 300px;
+                      overflow-y: auto;
+                      background-color: #f9f9f9;
+                      border-radius: 4px;
+                    "
+                  ></div>
+                  <small style="color: #6c757d"
+                    >The email body is automatically generated. This is a
+                    preview.</small
+                  >
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary modal-close-btn">
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="sendInvitationsBtn"
+              >
+                Send Invitations
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resend Invitation Modal -->
+        <div id="resendInvitationModal" class="modal">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title">Resend Seminar Invitation</h2>
+              <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+              <form id="resendInvitationForm">
+                <div class="form-group">
+                  <label for="resendEmail">Email:</label>
+                  <input type="email" id="resendEmail" name="email" readonly />
+                </div>
+                <div class="form-group">
+                  <label for="resendBusinessName">Business Name:</label>
+                  <input
+                    type="text"
+                    id="resendBusinessName"
+                    name="businessName"
+                    readonly
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="resendSubject">Subject:</label>
+                  <input
+                    type="text"
+                    id="resendSubject"
+                    name="subject"
+                    value="Invitation to Environmental Seminar - CENRO San Juan City"
+                    required
+                  />
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="resendSeminarDate">Seminar Date:</label>
+                    <input
+                      type="date"
+                      id="resendSeminarDate"
+                      name="seminarDate"
+                      required
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="resendSeminarTime">Seminar Time:</label>
+                    <input
+                      type="time"
+                      id="resendSeminarTime"
+                      name="seminarTime"
+                      required
+                    />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="resendSeminarVenue">Seminar Venue:</label>
+                  <input
+                    type="text"
+                    id="resendSeminarVenue"
+                    name="seminarVenue"
+                    value="CENRO San Juan City Office"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="resendZoomLink">Zoom Meeting Link:</label>
+                  <input
+                    type="url"
+                    id="resendZoomLink"
+                    name="zoomLink"
+                    placeholder="https://zoom.us/j/123456789"
+                  />
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="resendZoomMeetingId">Zoom Meeting ID:</label>
+                    <input
+                      type="text"
+                      id="resendZoomMeetingId"
+                      name="zoomMeetingId"
+                      placeholder="123 456 789"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="resendZoomPassword">Zoom Password:</label>
+                    <input
+                      type="text"
+                      id="resendZoomPassword"
+                      name="zoomPassword"
+                      placeholder="password"
+                    />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="resendContactInfo">Contact Information:</label>
+                  <input
+                    type="text"
+                    id="resendContactInfo"
+                    name="contactInfo"
+                    value="Email: cenro@sanjuancity.gov.ph | Phone: (02) 123-4567"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="resendEmailBody">Email Body Preview:</label>
+                  <div
+                    id="resendEmailBodyPreview"
+                    style="
+                      border: 1px solid #ddd;
+                      padding: 15px;
+                      height: 300px;
+                      overflow-y: auto;
+                      background-color: #f9f9f9;
+                      border-radius: 4px;
+                    "
+                  ></div>
+                  <small style="color: #6c757d"
+                    >The email body is automatically generated. This is a
+                    preview.</small
+                  >
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary modal-close-btn">
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="resendInvitationBtn"
+              >
+                Resend Invitation
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table Section -->
+        <div class="table-section">
+          <div class="table-header">
+            <h2 class="table-title">Seminar Invitation System</h2>
+            <div class="table-actions">
+              <div class="year-selector-container">
+                <label for="yearSelect" class="year-selector-label"
+                  >Year:</label
+                >
+                <select id="yearSelect" class="year-selector">
+                  <option value="2025">2025</option>
+                  <option value="2026">2026</option>
+                </select>
+              </div>
+              <div class="search-container">
+                <input
+                  type="text"
+                  id="searchInput"
+                  class="search-input"
+                  placeholder="Search by email or business name..."
+                />
+                <button id="searchBtn" class="search-button">
+                  <i class="fas fa-search"></i>
+                </button>
+              </div>
+              <button class="btn btn-primary" id="refreshBtn">
+                <i class="fas fa-sync-alt"></i>
+                Refresh
+              </button>
+              <button class="btn btn-primary" id="uploadDataBtn">
+                <i class="fas fa-upload"></i>
+                Upload Data
+              </button>
+              <button class="btn btn-primary" id="sendInvitationsDataBtn">
+                <i class="fas fa-paper-plane"></i>
+                Send Invitations
+              </button>
+            </div>
+          </div>
+          <div class="table-container">
+            <div id="seminarTable">
+              <!-- Loading message -->
+              <div style="padding: 20px; text-align: center; color: #6c757d">
+                <i
+                  class="fas fa-spinner fa-spin"
+                  style="font-size: 24px; margin-bottom: 10px"
+                ></i>
+                <p>Loading seminar data...</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pagination Controls -->
+          <div class="pagination-container">
+            <div class="pagination-info">
+              <span id="paginationInfo">Showing 0 of 0 records</span>
+            </div>
+            <div class="pagination-controls">
+              <button id="firstPageBtn" class="pagination-btn" disabled>
+                <i class="fas fa-angle-double-left"></i>
+              </button>
+              <button id="prevPageBtn" class="pagination-btn" disabled>
+                <i class="fas fa-angle-left"></i>
+              </button>
+              <select id="pageSizeSelect" class="page-size-select">
+                <option value="10">10 per page</option>
+                <option value="25">25 per page</option>
+                <option value="50">50 per page</option>
+                <option value="100">100 per page</option>
+              </select>
+              <button id="nextPageBtn" class="pagination-btn" disabled>
+                <i class="fas fa-angle-right"></i>
+              </button>
+              <button id="lastPageBtn" class="pagination-btn" disabled>
+                <i class="fas fa-angle-double-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Scripts -->
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.production.min.js"
+    ></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
+    ></script>
+    <script src="/js/imageUtils.js"></script>
+    <script src="/js/authUtils.js"></script>
+    <script src="seminars.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="/js/chatbox.js"></script>
+  </body>
+</html>
