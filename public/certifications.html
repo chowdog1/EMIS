@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Certifications | CENRO San Juan City EMIS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="dashboard.css" />
+    <link rel="stylesheet" href="certifications.css" />
+  </head>
+  <body>
+    <div class="dashboard-container">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-title">
+            <i class="fas fa-leaf"></i>
+            <span>CENRO EMIS</span>
+          </div>
+        </div>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="/dashboard">
+              <i class="fas fa-tachometer-alt"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="/businesses">
+              <i class="fas fa-building"></i>
+              <span>Businesses</span>
+            </a>
+          </li>
+          <li>
+            <a href="/seminars">
+              <i class="fas fa-envelope"></i>
+              <span>Seminars</span>
+            </a>
+          </li>
+          <li>
+            <a href="/certifications" class="active">
+              <i class="fas fa-certificate"></i>
+              <span>Certifications</span>
+            </a>
+          </li>
+          <li>
+            <a href="/reports">
+              <i class="fas fa-file-alt"></i>
+              <span>Reports</span>
+            </a>
+          </li>
+          <li>
+            <a href="/users">
+              <i class="fas fa-users"></i>
+              <span>Users</span>
+            </a>
+          </li>
+          <li>
+            <a href="/audit">
+              <i class="fas fa-history"></i>
+              <span>Audit Trail</span>
+            </a>
+          </li>
+          <div class="sidebar-datetime" id="datetime"></div>
+        </ul>
+      </aside>
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Header -->
+        <header class="header">
+          <h1 class="header-title">Certificate Management</h1>
+          <div class="user-info">
+            <div class="user-avatar" id="userAvatar">
+              <img
+                id="userAvatarImage"
+                src="https://via.placeholder.com/40"
+                alt="User Avatar"
+              />
+              <div id="userAvatarFallback" class="avatar-fallback">U</div>
+            </div>
+            <div class="user-dropdown">
+              <button class="dropdown-toggle" id="userDropdown">
+                <span id="userEmail">Loading...</span>
+                <i class="fas fa-chevron-down"></i>
+              </button>
+              <div class="dropdown-menu" id="userDropdownMenu">
+                <a href="profile.html" class="dropdown-item">Profile</a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item" id="logoutBtn">Logout</a>
+              </div>
+            </div>
+          </div>
+        </header>
+        <!-- Tabs Section -->
+        <div class="tabs-section">
+          <div class="tabs-header">
+            <div class="tab active" data-tab="participation">
+              <i class="fas fa-certificate"></i>
+              <span>Certificate of Participation</span>
+            </div>
+            <div class="tab" data-tab="compliance">
+              <i class="fas fa-leaf"></i>
+              <span>Certificate of Environmental Compliance</span>
+            </div>
+          </div>
+          <!-- Tab Content -->
+          <div class="tab-content">
+            <!-- Certificate of Participation Tab -->
+            <div id="participation-tab" class="tab-pane active">
+              <div class="table-section">
+                <div class="table-header">
+                  <h2 class="table-title">Certificate of Participation</h2>
+                  <div class="table-actions">
+                    <div class="search-container">
+                      <input
+                        type="text"
+                        id="searchInput"
+                        class="search-input"
+                        placeholder="Search by email or business name..."
+                      />
+                      <button id="searchBtn" class="search-button">
+                        <i class="fas fa-search"></i>
+                      </button>
+                    </div>
+                    <button class="btn btn-primary" id="refreshBtn">
+                      <i class="fas fa-sync-alt"></i>
+                      Refresh
+                    </button>
+                    <button class="btn btn-primary" id="uploadDataBtn">
+                      <i class="fas fa-upload"></i>
+                      Upload Data
+                    </button>
+                    <button class="btn btn-primary" id="sendCertificatesBtn">
+                      <i class="fas fa-paper-plane"></i>
+                      Send Certificates
+                    </button>
+                  </div>
+                </div>
+                <div class="table-container">
+                  <div id="certificateTable">
+                    <!-- Loading message -->
+                    <div
+                      style="padding: 20px; text-align: center; color: #6c757d"
+                    >
+                      <i
+                        class="fas fa-spinner fa-spin"
+                        style="font-size: 24px; margin-bottom: 10px"
+                      ></i>
+                      <p>Loading certificate data...</p>
+                    </div>
+                  </div>
+                </div>
+                <!-- Pagination Controls -->
+                <div class="pagination-container">
+                  <div class="pagination-info">
+                    <span id="paginationInfo">Showing 0 of 0 records</span>
+                  </div>
+                  <div class="pagination-controls">
+                    <button id="firstPageBtn" class="pagination-btn" disabled>
+                      <i class="fas fa-angle-double-left"></i>
+                    </button>
+                    <button id="prevPageBtn" class="pagination-btn" disabled>
+                      <i class="fas fa-angle-left"></i>
+                    </button>
+                    <select id="pageSizeSelect" class="page-size-select">
+                      <option value="10">10 per page</option>
+                      <option value="25">25 per page</option>
+                      <option value="50">50 per page</option>
+                      <option value="100">100 per page</option>
+                    </select>
+                    <button id="nextPageBtn" class="pagination-btn" disabled>
+                      <i class="fas fa-angle-right"></i>
+                    </button>
+                    <button id="lastPageBtn" class="pagination-btn" disabled>
+                      <i class="fas fa-angle-double-right"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Certificate of Environmental Compliance Tab -->
+            <div id="compliance-tab" class="tab-pane">
+              <div class="maintenance-container">
+                <div class="maintenance-icon">
+                  <i class="fas fa-tools"></i>
+                </div>
+                <h2>Under Maintenance</h2>
+                <p>
+                  The Certificate of Environmental Compliance module is
+                  currently under development and will be available soon.
+                </p>
+                <div class="maintenance-progress">
+                  <div class="progress-bar">
+                    <div class="progress" style="width: 45%"></div>
+                  </div>
+                  <span>45% Complete</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Upload Modal -->
+        <div id="uploadModal" class="modal">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title">Upload Certificate Data</h2>
+              <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+              <form id="uploadForm">
+                <div class="form-group">
+                  <label for="csvFile">Select CSV File:</label>
+                  <input
+                    type="file"
+                    id="csvFile"
+                    name="csvFile"
+                    accept=".csv"
+                    required
+                  />
+                  <small class="form-text text-muted"
+                    >CSV should contain columns: Email, Account No., Business
+                    Name, Address</small
+                  >
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary modal-close-btn">
+                Cancel
+              </button>
+              <button type="button" class="btn btn-primary" id="uploadBtn">
+                Upload
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Send Certificates Modal -->
+        <div id="sendCertificatesModal" class="modal">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title">Send Certificates</h2>
+              <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+              <form id="certificateForm">
+                <div class="form-group">
+                  <label for="emailSubject">Subject:</label>
+                  <input
+                    type="text"
+                    id="emailSubject"
+                    name="subject"
+                    value="Certificate of Participation - CENRO San Juan City"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="emailBody">Email Body:</label>
+                  <textarea id="emailBody" name="body" rows="10" required>
+Dear {{businessName}},
+Thank you for participating in our Environmental Awareness Seminar. Please find attached your Certificate of Participation.
+Should you have any questions, feel free to contact our office.
+Best regards,
+CENRO San Juan City</textarea
+                  >
+                </div>
+                <div class="form-group">
+                  <label for="certificateTemplate">Certificate Template:</label>
+                  <select id="certificateTemplate" name="template" required>
+                    <option value="default">
+                      Default Certificate Template
+                    </option>
+                    <!-- Additional templates can be added here -->
+                  </select>
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary modal-close-btn">
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="previewEmailBtn"
+              >
+                Preview Email
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Signature Upload Modal -->
+        <div id="signatureModal" class="modal">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title">Upload Signature</h2>
+              <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+              <form id="signatureForm">
+                <div class="form-group">
+                  <label for="signatureImage">Select Signature Image:</label>
+                  <input
+                    type="file"
+                    id="signatureImage"
+                    name="signatureImage"
+                    accept="image/png,image/jpeg,image/jpg"
+                    required
+                  />
+                  <small class="form-text text-muted">
+                    Upload your electronic signature (PNG or JPG format)
+                  </small>
+                </div>
+                <div class="signature-preview">
+                  <h4>Preview:</h4>
+                  <div
+                    id="signaturePreview"
+                    class="signature-preview-container"
+                  >
+                    <span>No image selected</span>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary modal-close-btn">
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="uploadSignatureBtn"
+              >
+                Upload Signature
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Email Preview Modal -->
+        <div id="emailPreviewModal" class="modal">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title">Email Preview</h2>
+              <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+              <div class="email-preview-container">
+                <div class="preview-header">
+                  <div class="preview-field">
+                    <strong>To:</strong> <span id="previewToEmail"></span>
+                  </div>
+                  <div class="preview-field">
+                    <strong>Subject:</strong> <span id="previewSubject"></span>
+                  </div>
+                  <div class="preview-field">
+                    <strong>Status:</strong>
+                    <span id="previewStatus" class="preview-status"></span>
+                  </div>
+                </div>
+                <div class="preview-body">
+                  <h3>Email Body:</h3>
+                  <div id="previewEmailBody"></div>
+                </div>
+                <div class="preview-attachment">
+                  <h3>Attachment:</h3>
+                  <div class="attachment-item">
+                    <i class="fas fa-file-pdf"></i>
+                    <span id="previewAttachmentName"></span>
+                  </div>
+                </div>
+                <!-- Signature preview section -->
+                <div
+                  class="preview-signature"
+                  id="previewSignatureSection"
+                  style="display: none"
+                >
+                  <h3>Signature:</h3>
+                  <div class="signature-preview-container">
+                    <img id="previewSignatureImage" src="" alt="Signature" />
+                  </div>
+                </div>
+                <!-- PDF Preview Section -->
+                <div class="pdf-preview-section mt-4">
+                  <h3>Certificate Preview:</h3>
+                  <div id="pdfPreviewContainer" class="pdf-preview-container">
+                    <!-- PDF will be loaded here -->
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary modal-close-btn">
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="sendCertificateBtn"
+              >
+                Send Certificate
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+    <!-- Scripts -->
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.production.min.js"
+    ></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
+    ></script>
+    <script src="/js/imageUtils.js"></script>
+    <script src="/js/authUtils.js"></script>
+    <script src="certifications.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="/js/chatbox.js"></script>
+  </body>
+</html>

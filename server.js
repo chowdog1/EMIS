@@ -7,6 +7,7 @@ const authRoutes = require("./routes/authRoutes");
 const { establishmentsDB } = require("./db.js");
 const reportRoutes = require("./routes/reportRoutes");
 const auditRoutes = require("./routes/auditRoutes.js");
+const certificateRoutes = require("./routes/certificateRoutes.js");
 const http = require("http");
 const socketIo = require("socket.io");
 const messageRoutes = require("./routes/messageRoutes"); // Make sure this is imported
@@ -38,6 +39,8 @@ app.use(express.json());
 
 // Serve static files from /public
 app.use(express.static(path.join(__dirname, "public")));
+app.use("/certificates", express.static(path.join(__dirname, "certificates")));
+app.use("/signatures", express.static(path.join(__dirname, "signatures")));
 
 // Connect to MongoDB for auth
 mongoose
@@ -65,6 +68,7 @@ app.use("/api/seminar2025", seminar2025Routes);
 app.use("/api/seminar2026", seminar2026Routes);
 app.use("/api/messages", messageRoutes); // Add this line - this is crucial!
 app.use("/api/audit", auditRoutes);
+app.use("/api/certificates", certificateRoutes);
 
 // Initialize reportRoutes with the establishmentsDB connection
 app.use("/api/reports", reportRoutes(establishmentsDB));
@@ -93,6 +97,11 @@ app.get("/businesses", (req, res) => {
 
 app.get("/seminars", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "seminars.html"));
+});
+
+// Certificate route
+app.get("/certifications", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "certifications.html"));
 });
 
 // Reports route

@@ -1,0 +1,1844 @@
+// certifications.js
+let allCertificates = [];
+let filteredCertificates = [];
+let currentPage = 1;
+let pageSize = 10;
+let totalRecords = 0;
+let currentCertificate = null;
+
+// Function to get user role from localStorage
+function getUserRole() {
+  const userData = localStorage.getItem("user_data");
+  if (userData) {
+    const user = JSON.parse(userData);
+    return user.role;
+  }
+  return null;
+}
+
+// Function to update current page for user tracking
+function updateCurrentPage(page) {
+  const token = localStorage.getItem("auth_token");
+  if (!token) return;
+  fetch("/api/auth/current-page", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ page }),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        console.error("Failed to update current page");
+      }
+    })
+    .catch((error) => {
+      console.error("Error updating current page:", error);
+    });
+}
+
+// Function to get the authentication token
+function getAuthToken() {
+  const token = localStorage.getItem("auth_token");
+  if (!token) {
+    throw new Error("Authentication token not found. Please login again.");
+  }
+  return token;
+}
+
+// Function to handle 401 errors
+function handleUnauthorizedError() {
+  localStorage.removeItem("auth_token");
+  localStorage.removeItem("user_data");
+  window.location.href = "/";
+}
+
+// Function to load certificate data
+async function loadCertificateData() {
+  try {
+    console.log("Loading certificate data...");
+    const tableRoot = document.getElementById("certificateTable");
+    if (tableRoot) {
+      tableRoot.innerHTML = `
+                <div style="padding: 20px; text-align: center; color: #6c757d">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 10px"></i>
+                    <p>Loading certificate data...</p>
+                </div>
+            `;
+    }
+    const token = getAuthToken();
+    const response = await fetch("/api/certificates", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorizedError();
+        return;
+      }
+      throw new Error(
+        `Failed to load certificate data: ${response.status} ${response.statusText}`
+      );
+    }
+    const certificates = await response.json();
+    console.log("Certificate data loaded:", certificates);
+    // Debug: Log status values
+    certificates.forEach((cert) => {
+      console.log(`Certificate ${cert._id}: status="${cert.status}"`);
+    });
+    allCertificates = certificates;
+    filteredCertificates = [...certificates];
+    totalRecords = filteredCertificates.length;
+    currentPage = 1;
+    updateCertificateTable(getPaginatedData());
+    updatePaginationControls();
+  } catch (error) {
+    console.error("Error loading certificate data:", error);
+    showErrorMessage(`Failed to load certificate data: ${error.message}`);
+  }
+}
+
+// Function to get paginated data
+function getPaginatedData() {
+  if (!filteredCertificates || filteredCertificates.length === 0) {
+    return [];
+  }
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  return filteredCertificates.slice(startIndex, endIndex);
+}
+
+// Function to update pagination controls
+function updatePaginationControls() {
+  if (totalRecords === 0) {
+    const paginationInfo = document.getElementById("paginationInfo");
+    if (paginationInfo) {
+      paginationInfo.textContent = "Showing 0 of 0 records";
+    }
+    const buttons = [
+      "firstPageBtn",
+      "prevPageBtn",
+      "nextPageBtn",
+      "lastPageBtn",
+    ];
+    buttons.forEach((id) => {
+      const btn = document.getElementById(id);
+      if (btn) btn.disabled = true;
+    });
+    return;
+  }
+  const totalPages = Math.ceil(totalRecords / pageSize);
+  const paginationInfo = document.getElementById("paginationInfo");
+  if (paginationInfo) {
+    const startRecord = totalRecords > 0 ? (currentPage - 1) * pageSize + 1 : 0;
+    const endRecord = Math.min(currentPage * pageSize, totalRecords);
+    paginationInfo.textContent = `Showing ${startRecord}-${endRecord} of ${totalRecords} records`;
+  }
+  const firstPageBtn = document.getElementById("firstPageBtn");
+  const prevPageBtn = document.getElementById("prevPageBtn");
+  const nextPageBtn = document.getElementById("nextPageBtn");
+  const lastPageBtn = document.getElementById("lastPageBtn");
+  if (firstPageBtn) firstPageBtn.disabled = currentPage === 1;
+  if (prevPageBtn) prevPageBtn.disabled = currentPage === 1;
+  if (nextPageBtn)
+    nextPageBtn.disabled = currentPage === totalPages || totalPages === 0;
+  if (lastPageBtn)
+    lastPageBtn.disabled = currentPage === totalPages || totalPages === 0;
+}
+
+// Function to setup pagination controls
+function setupPaginationControls() {
+  const pageSizeSelect = document.getElementById("pageSizeSelect");
+  if (pageSizeSelect) {
+    pageSize = parseInt(pageSizeSelect.value);
+  }
+  const firstPageBtn = document.getElementById("firstPageBtn");
+  if (firstPageBtn) {
+    firstPageBtn.addEventListener("click", function () {
+      if (currentPage > 1) {
+        currentPage = 1;
+        updateCertificateTable(getPaginatedData());
+        updatePaginationControls();
+      }
+    });
+  }
+  const prevPageBtn = document.getElementById("prevPageBtn");
+  if (prevPageBtn) {
+    prevPageBtn.addEventListener("click", function () {
+      if (currentPage > 1) {
+        currentPage--;
+        updateCertificateTable(getPaginatedData());
+        updatePaginationControls();
+      }
+    });
+  }
+  const nextPageBtn = document.getElementById("nextPageBtn");
+  if (nextPageBtn) {
+    nextPageBtn.addEventListener("click", function () {
+      const totalPages = Math.ceil(totalRecords / pageSize);
+      if (currentPage < totalPages) {
+        currentPage++;
+        updateCertificateTable(getPaginatedData());
+        updatePaginationControls();
+      }
+    });
+  }
+  const lastPageBtn = document.getElementById("lastPageBtn");
+  if (lastPageBtn) {
+    lastPageBtn.addEventListener("click", function () {
+      const totalPages = Math.ceil(totalRecords / pageSize);
+      if (currentPage < totalPages) {
+        currentPage = totalPages;
+        updateCertificateTable(getPaginatedData());
+        updatePaginationControls();
+      }
+    });
+  }
+  if (pageSizeSelect) {
+    pageSizeSelect.addEventListener("change", function () {
+      pageSize = parseInt(this.value);
+      currentPage = 1;
+      updateCertificateTable(getPaginatedData());
+      updatePaginationControls();
+    });
+  }
+}
+
+// Function to setup search functionality
+function setupSearch() {
+  const searchInput = document.getElementById("searchInput");
+  const searchBtn = document.getElementById("searchBtn");
+  if (!searchInput || !searchBtn) {
+    console.error("Search elements not found");
+    return;
+  }
+  searchBtn.addEventListener("click", performSearch);
+  searchInput.addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
+      performSearch();
+    }
+  });
+}
+
+// Function to perform search
+function performSearch() {
+  const searchInput = document.getElementById("searchInput");
+  const query = searchInput.value.trim().toLowerCase();
+  if (!query) {
+    filteredCertificates = [...allCertificates];
+  } else {
+    filteredCertificates = allCertificates.filter((certificate) => {
+      return (
+        certificate.email.toLowerCase().includes(query) ||
+        certificate.businessName.toLowerCase().includes(query)
+      );
+    });
+  }
+  totalRecords = filteredCertificates.length;
+  currentPage = 1;
+  updateCertificateTable(getPaginatedData());
+  updatePaginationControls();
+}
+
+// Function to update certificate table
+function updateCertificateTable(certificates) {
+  const tableRoot = document.getElementById("certificateTable");
+  if (!tableRoot) {
+    console.error("Certificate table root element not found");
+    return;
+  }
+  if (typeof React === "undefined" || typeof ReactDOM === "undefined") {
+    console.error("React or ReactDOM not loaded");
+    renderSimpleTable(certificates);
+    return;
+  }
+  try {
+    const StatusBadge = ({ status }) => {
+      let color = "";
+      let text = status;
+      const normalizedStatus = status ? status.toLowerCase().trim() : "";
+
+      if (normalizedStatus === "signed") {
+        color = "#17a2b8"; // Blue for signed
+      } else if (normalizedStatus === "for signatory") {
+        color = "#fd7e14"; // Orange for pending signature
+      } else if (normalizedStatus === "approved") {
+        color = "#28a745"; // Green for approved
+      } else if (normalizedStatus === "for approval") {
+        color = "#ffc107"; // Yellow for pending approval
+      } else if (normalizedStatus === "sent") {
+        color = "#6f42c1"; // Purple for sent
+      } else if (normalizedStatus === "resent") {
+        color = "#e83e8c"; // Pink for resent
+      } else {
+        color = "#6c757d"; // Gray for default
+      }
+
+      return React.createElement(
+        "span",
+        {
+          className: "status-badge",
+          style: {
+            display: "inline-block",
+            padding: "0.25rem 0.5rem",
+            borderRadius: "0.25rem",
+            backgroundColor: color,
+            color: "white",
+            fontSize: "0.75rem",
+            fontWeight: "500",
+          },
+        },
+        text
+      );
+    };
+
+    const ActionButton = ({
+      certificate,
+      onApprove,
+      onSign,
+      onSend,
+      onPreview,
+      onResend,
+    }) => {
+      const normalizedStatus = certificate.status
+        ? certificate.status.toLowerCase().trim()
+        : "";
+      const userRole = getUserRole();
+
+      // Always show preview button
+      const previewButton = React.createElement(
+        "button",
+        {
+          className: "btn btn-sm btn-outline-primary me-1",
+          onClick: () => onPreview(certificate),
+          style: {
+            padding: "0.25rem 0.5rem",
+            fontSize: "0.75rem",
+          },
+          title: "Preview certificate details",
+        },
+        "Preview"
+      );
+
+      // Show approve button only for admin users when status is "for approval"
+      let approveButton = null;
+      if (userRole === "admin" && normalizedStatus === "for approval") {
+        approveButton = React.createElement(
+          "button",
+          {
+            className: "btn btn-sm btn-success me-1",
+            onClick: () => onApprove(certificate),
+            style: {
+              padding: "0.25rem 0.5rem",
+              fontSize: "0.75rem",
+            },
+            title: "Approve this certificate",
+          },
+          "Approve"
+        );
+      }
+
+      // Show sign button only for admin users when status is "for signatory"
+      let signButton = null;
+      if (userRole === "admin" && normalizedStatus === "for signatory") {
+        signButton = React.createElement(
+          "button",
+          {
+            className: "btn btn-sm btn-warning me-1",
+            onClick: () => onSign(certificate),
+            style: {
+              padding: "0.25rem 0.5rem",
+              fontSize: "0.75rem",
+            },
+            title: "Upload signature for this certificate",
+          },
+          "Sign"
+        );
+      }
+
+      // Show send button only for signed certificates
+      let sendButton = null;
+      if (normalizedStatus === "signed") {
+        sendButton = React.createElement(
+          "button",
+          {
+            className: "btn btn-sm btn-primary me-1",
+            onClick: () => onSend(certificate),
+            style: {
+              padding: "0.25rem 0.5rem",
+              fontSize: "0.75rem",
+            },
+            title: "Send this signed certificate",
+          },
+          "Send"
+        );
+      }
+
+      // Show resend button for sent certificates
+      let resendButton = null;
+      if (normalizedStatus === "sent" || normalizedStatus === "resent") {
+        resendButton = React.createElement(
+          "button",
+          {
+            className: "btn btn-sm btn-outline-primary",
+            onClick: () => onResend(certificate),
+            style: {
+              padding: "0.25rem 0.5rem",
+              fontSize: "0.75rem",
+            },
+            title: "Resend this certificate",
+          },
+          "Resend"
+        );
+      }
+
+      return React.createElement(
+        "div",
+        { style: { display: "flex", gap: "5px" } },
+        previewButton,
+        approveButton,
+        signButton,
+        sendButton,
+        resendButton
+      );
+    };
+
+    const App = () => {
+      return React.createElement(
+        "div",
+        { style: { overflowX: "auto" } },
+        React.createElement(
+          "table",
+          {
+            className: "certificate-table",
+            style: {
+              width: "100%",
+              borderCollapse: "collapse",
+              border: "1px solid #e9ecef",
+            },
+          },
+          React.createElement(
+            "thead",
+            null,
+            React.createElement(
+              "tr",
+              { style: { backgroundColor: "#f8f9fa" } },
+              React.createElement(
+                "th",
+                {
+                  style: {
+                    padding: "12px 15px",
+                    textAlign: "left",
+                    fontWeight: "600",
+                    borderBottom: "1px solid #e9ecef",
+                  },
+                },
+                "Email"
+              ),
+              React.createElement(
+                "th",
+                {
+                  style: {
+                    padding: "12px 15px",
+                    textAlign: "left",
+                    fontWeight: "600",
+                    borderBottom: "1px solid #e9ecef",
+                  },
+                },
+                "Account No."
+              ),
+              React.createElement(
+                "th",
+                {
+                  style: {
+                    padding: "12px 15px",
+                    textAlign: "left",
+                    fontWeight: "600",
+                    borderBottom: "1px solid #e9ecef",
+                  },
+                },
+                "Business Name"
+              ),
+              React.createElement(
+                "th",
+                {
+                  style: {
+                    padding: "12px 15px",
+                    textAlign: "left",
+                    fontWeight: "600",
+                    borderBottom: "1px solid #e9ecef",
+                  },
+                },
+                "Address"
+              ),
+              React.createElement(
+                "th",
+                {
+                  style: {
+                    padding: "12px 15px",
+                    textAlign: "left",
+                    fontWeight: "600",
+                    borderBottom: "1px solid #e9ecef",
+                  },
+                },
+                "Status"
+              ),
+              React.createElement(
+                "th",
+                {
+                  style: {
+                    padding: "12px 15px",
+                    textAlign: "left",
+                    fontWeight: "600",
+                    borderBottom: "1px solid #e9ecef",
+                  },
+                },
+                "Actions"
+              )
+            )
+          ),
+          React.createElement(
+            "tbody",
+            null,
+            certificates.map((certificate, index) => {
+              return React.createElement(
+                "tr",
+                {
+                  key: index,
+                  style: { borderBottom: "1px solid #e9ecef" },
+                },
+                React.createElement(
+                  "td",
+                  { style: { padding: "12px 15px" } },
+                  certificate.email
+                ),
+                React.createElement(
+                  "td",
+                  { style: { padding: "12px 15px" } },
+                  certificate.accountNo
+                ),
+                React.createElement(
+                  "td",
+                  { style: { padding: "12px 15px" } },
+                  certificate.businessName
+                ),
+                React.createElement(
+                  "td",
+                  { style: { padding: "12px 15px" } },
+                  certificate.address
+                ),
+                React.createElement(
+                  "td",
+                  { style: { padding: "12px 15px" } },
+                  React.createElement(StatusBadge, {
+                    status: certificate.status,
+                  })
+                ),
+                React.createElement(
+                  "td",
+                  { style: { padding: "12px 15px" } },
+                  React.createElement(ActionButton, {
+                    certificate: certificate,
+                    onApprove: handleApproveCertificate,
+                    onSign: handleSignCertificate,
+                    onSend: handleSendCertificate,
+                    onPreview: handlePreviewCertificate,
+                    onResend: handleResendCertificate,
+                  })
+                )
+              );
+            })
+          )
+        )
+      );
+    };
+    tableRoot.innerHTML = "";
+    const root = ReactDOM.createRoot(tableRoot);
+    root.render(React.createElement(App));
+    console.log("Certificate table rendered successfully");
+  } catch (error) {
+    console.error("Error rendering certificate table:", error);
+    renderSimpleTable(certificates);
+  }
+}
+
+// Fallback function to render a simple table
+function renderSimpleTable(certificates) {
+  const tableRoot = document.getElementById("certificateTable");
+  if (!tableRoot) {
+    console.error("Certificate table root element not found");
+    return;
+  }
+  const table = document.createElement("table");
+  table.className = "certificate-table";
+  table.style.width = "100%";
+  table.style.borderCollapse = "collapse";
+  const thead = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  const headers = [
+    "Email",
+    "Account No.",
+    "Business Name",
+    "Address",
+    "Status",
+    "Actions",
+  ];
+  headers.forEach((headerText) => {
+    const th = document.createElement("th");
+    th.textContent = headerText;
+    th.style.padding = "12px 15px";
+    th.style.textAlign = "left";
+    th.style.backgroundColor = "#f8f9fa";
+    th.style.fontWeight = "600";
+    th.style.borderBottom = "1px solid #e9ecef";
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+  const tbody = document.createElement("tbody");
+  const userRole = getUserRole();
+  certificates.forEach((certificate) => {
+    const row = document.createElement("tr");
+    row.style.borderBottom = "1px solid #e9ecef";
+    const emailCell = document.createElement("td");
+    emailCell.textContent = certificate.email;
+    emailCell.style.padding = "12px 15px";
+    row.appendChild(emailCell);
+    const accountNoCell = document.createElement("td");
+    accountNoCell.textContent = certificate.accountNo;
+    accountNoCell.style.padding = "12px 15px";
+    row.appendChild(accountNoCell);
+    const nameCell = document.createElement("td");
+    nameCell.textContent = certificate.businessName;
+    nameCell.style.padding = "12px 15px";
+    row.appendChild(nameCell);
+    const addressCell = document.createElement("td");
+    addressCell.textContent = certificate.address;
+    addressCell.style.padding = "12px 15px";
+    row.appendChild(addressCell);
+    const statusCell = document.createElement("td");
+    statusCell.style.padding = "12px 15px";
+    const statusBadge = document.createElement("span");
+    statusBadge.textContent = certificate.status;
+    statusBadge.className = "status-badge";
+    statusBadge.style.display = "inline-block";
+    statusBadge.style.padding = "0.25rem 0.5rem";
+    statusBadge.style.borderRadius = "0.25rem";
+    statusBadge.style.color = "white";
+    statusBadge.style.fontSize = "0.75rem";
+    statusBadge.style.fontWeight = "500";
+
+    const normalizedStatus = certificate.status
+      ? certificate.status.toLowerCase().trim()
+      : "";
+
+    if (normalizedStatus === "signed") {
+      statusBadge.style.backgroundColor = "#17a2b8";
+    } else if (normalizedStatus === "for signatory") {
+      statusBadge.style.backgroundColor = "#fd7e14";
+    } else if (normalizedStatus === "approved") {
+      statusBadge.style.backgroundColor = "#28a745";
+    } else if (normalizedStatus === "for approval") {
+      statusBadge.style.backgroundColor = "#ffc107";
+    } else if (normalizedStatus === "sent") {
+      statusBadge.style.backgroundColor = "#6f42c1";
+    } else if (normalizedStatus === "resent") {
+      statusBadge.style.backgroundColor = "#e83e8c";
+    } else {
+      statusBadge.style.backgroundColor = "#6c757d";
+    }
+
+    statusCell.appendChild(statusBadge);
+    row.appendChild(statusCell);
+    const actionCell = document.createElement("td");
+    actionCell.style.padding = "12px 15px";
+    actionCell.style.display = "flex";
+    actionCell.style.gap = "5px";
+
+    // Preview button
+    const previewBtn = document.createElement("button");
+    previewBtn.textContent = "Preview";
+    previewBtn.className = "btn btn-sm btn-outline-primary";
+    previewBtn.style.padding = "0.25rem 0.5rem";
+    previewBtn.style.fontSize = "0.75rem";
+    previewBtn.title = "Preview certificate details";
+    previewBtn.addEventListener("click", () =>
+      handlePreviewCertificate(certificate)
+    );
+    actionCell.appendChild(previewBtn);
+
+    // Approve button (admin only, for approval status)
+    if (userRole === "admin" && normalizedStatus === "for approval") {
+      const approveBtn = document.createElement("button");
+      approveBtn.textContent = "Approve";
+      approveBtn.className = "btn btn-sm btn-success me-1";
+      approveBtn.style.padding = "0.25rem 0.5rem";
+      approveBtn.style.fontSize = "0.75rem";
+      approveBtn.title = "Approve this certificate";
+      approveBtn.addEventListener("click", () =>
+        handleApproveCertificate(certificate)
+      );
+      actionCell.appendChild(approveBtn);
+    }
+
+    // Sign button (admin only, for signatory status)
+    if (userRole === "admin" && normalizedStatus === "for signatory") {
+      const signBtn = document.createElement("button");
+      signBtn.textContent = "Sign";
+      signBtn.className = "btn btn-sm btn-warning me-1";
+      signBtn.style.padding = "0.25rem 0.5rem";
+      signBtn.style.fontSize = "0.75rem";
+      signBtn.title = "Upload signature for this certificate";
+      signBtn.addEventListener("click", () =>
+        handleSignCertificate(certificate)
+      );
+      actionCell.appendChild(signBtn);
+    }
+
+    // Send button (signed certificates only)
+    if (normalizedStatus === "signed") {
+      const sendBtn = document.createElement("button");
+      sendBtn.textContent = "Send";
+      sendBtn.className = "btn btn-sm btn-primary me-1";
+      sendBtn.style.padding = "0.25rem 0.5rem";
+      sendBtn.style.fontSize = "0.75rem";
+      sendBtn.title = "Send this signed certificate";
+      sendBtn.addEventListener("click", () =>
+        handleSendCertificate(certificate)
+      );
+      actionCell.appendChild(sendBtn);
+    }
+
+    // Resend button (sent certificates only)
+    if (normalizedStatus === "sent" || normalizedStatus === "resent") {
+      const resendBtn = document.createElement("button");
+      resendBtn.textContent = "Resend";
+      resendBtn.className = "btn btn-sm btn-outline-primary";
+      resendBtn.style.padding = "0.25rem 0.5rem";
+      resendBtn.style.fontSize = "0.75rem";
+      resendBtn.title = "Resend this certificate";
+      resendBtn.addEventListener("click", () =>
+        handleResendCertificate(certificate)
+      );
+      actionCell.appendChild(resendBtn);
+    }
+
+    row.appendChild(actionCell);
+    tbody.appendChild(row);
+  });
+  table.appendChild(tbody);
+  tableRoot.innerHTML = "";
+  tableRoot.appendChild(table);
+  console.log("Simple table rendered successfully");
+}
+
+// Function to handle approve certificate with confirmation
+async function handleApproveCertificate(certificate) {
+  try {
+    console.log("Approving certificate:", certificate);
+
+    // Validate certificate exists and has required properties
+    if (!certificate || !certificate._id) {
+      showErrorMessage("Invalid certificate selected");
+      return;
+    }
+
+    // Show confirmation dialog
+    const isConfirmed = confirm(
+      `Are you sure you want to approve this certificate for ${certificate.businessName}?\n\n` +
+        `This action will move the certificate to the signatory step.`
+    );
+
+    if (!isConfirmed) {
+      return; // User cancelled the approval
+    }
+
+    const token = getAuthToken();
+    const response = await fetch("/api/certificates/approve", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        certificateId: certificate._id,
+      }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorizedError();
+        return;
+      }
+      const errorData = await response.json();
+      throw new Error(
+        errorData.message ||
+          `Failed to approve certificate: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const result = await response.json();
+    console.log("Approval response:", result);
+    showSuccessMessage(result.message);
+    loadCertificateData(); // Refresh table
+  } catch (error) {
+    console.error("Error approving certificate:", error);
+    showErrorMessage(`Failed to approve certificate: ${error.message}`);
+  }
+}
+
+// Function to handle sign certificate
+async function handleSignCertificate(certificate) {
+  console.log("Opening signature upload for:", certificate);
+
+  if (!certificate || !certificate._id) {
+    showErrorMessage("Invalid certificate selected");
+    return;
+  }
+
+  currentCertificate = certificate;
+  const signatureModal = document.getElementById("signatureModal");
+  signatureModal.style.display = "block";
+
+  // Reset form
+  const signatureForm = document.getElementById("signatureForm");
+  signatureForm.reset();
+  document.getElementById("signaturePreview").innerHTML =
+    "<span>No image selected</span>";
+}
+
+// Function to handle send certificate
+async function handleSendCertificate(certificate) {
+  console.log("Sending certificate for:", certificate);
+
+  // Validate certificate exists and has required properties
+  if (!certificate || !certificate._id) {
+    showErrorMessage("Invalid certificate selected");
+    return;
+  }
+
+  // Check if certificate is signed before allowing send
+  const normalizedStatus = certificate.status
+    ? certificate.status.toLowerCase().trim()
+    : "";
+  if (normalizedStatus !== "signed") {
+    showErrorMessage(
+      `Certificate must be signed before sending. Current status: ${certificate.status}`
+    );
+    return;
+  }
+
+  currentCertificate = certificate;
+  const sendCertificatesModal = document.getElementById(
+    "sendCertificatesModal"
+  );
+  sendCertificatesModal.style.display = "block";
+}
+
+// Function to handle preview certificate with PDF
+async function handlePreviewCertificate(certificate) {
+  console.log("Previewing certificate with PDF for:", certificate);
+  currentCertificate = certificate;
+
+  // Show loading state
+  const emailPreviewModal = document.getElementById("emailPreviewModal");
+  emailPreviewModal.style.display = "block";
+
+  // Clear previous preview
+  document.getElementById("previewToEmail").textContent = certificate.email;
+  document.getElementById("previewSubject").textContent =
+    document.getElementById("emailSubject").value;
+  document.getElementById("previewEmailBody").innerHTML = "";
+  document.getElementById("previewAttachmentName").textContent = "";
+  document.getElementById("previewSignatureSection").style.display = "none";
+
+  // Set status badge in preview
+  const previewStatus = document.getElementById("previewStatus");
+  previewStatus.textContent = certificate.status;
+  previewStatus.className = "preview-status";
+
+  const normalizedStatus = certificate.status
+    ? certificate.status.toLowerCase().trim()
+    : "";
+
+  if (normalizedStatus === "signed") {
+    previewStatus.classList.add("signed");
+  } else if (normalizedStatus === "for signatory") {
+    previewStatus.classList.add("for-signatory");
+  } else if (normalizedStatus === "approved") {
+    previewStatus.classList.add("approved");
+  } else if (normalizedStatus === "for approval") {
+    previewStatus.classList.add("for-approval");
+  } else if (normalizedStatus === "sent") {
+    previewStatus.classList.add("sent");
+  } else if (normalizedStatus === "resent") {
+    previewStatus.classList.add("resent");
+  }
+
+  // Show loading indicator
+  const pdfPreviewContainer = document.getElementById("pdfPreviewContainer");
+  if (pdfPreviewContainer) {
+    pdfPreviewContainer.innerHTML = `
+      <div class="d-flex justify-content-center align-items-center" style="height: 400px;">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <span class="ms-3">Generating PDF preview...</span>
+      </div>
+    `;
+  }
+
+  try {
+    const token = getAuthToken();
+    const response = await fetch("/api/certificates/preview", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        certificateId: certificate._id,
+      }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorizedError();
+        return;
+      }
+      const errorData = await response.json();
+      throw new Error(
+        errorData.message ||
+          `Failed to generate preview: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const result = await response.json();
+    console.log("Preview response:", result);
+
+    // Update email preview with personalization
+    const emailBody = document.getElementById("emailBody").value;
+    const personalizedBody = emailBody
+      .replace(/{{businessName}}/g, certificate.businessName)
+      .replace(/{{accountNo}}/g, certificate.accountNo)
+      .replace(/{{address}}/g, certificate.address);
+    document.getElementById("previewEmailBody").innerHTML =
+      personalizedBody.replace(/\n/g, "<br>");
+    document.getElementById("previewAttachmentName").textContent =
+      result.fileName;
+
+    // Show signature if available
+    const signatureSection = document.getElementById("previewSignatureSection");
+    const signatureImage = document.getElementById("previewSignatureImage");
+
+    if (certificate.signatureImage) {
+      signatureSection.style.display = "block";
+      signatureImage.src = certificate.signatureImage;
+    } else {
+      signatureSection.style.display = "none";
+    }
+
+    // Display PDF preview
+    if (pdfPreviewContainer) {
+      pdfPreviewContainer.innerHTML = `
+        <div class="pdf-preview">
+          <iframe 
+            src="data:application/pdf;base64,${result.pdfBase64}" 
+            width="100%" 
+            height="500px"
+            title="Certificate Preview"
+          ></iframe>
+          <div class="pdf-preview-actions mt-3">
+            <a href="data:application/pdf;base64,${result.pdfBase64}" 
+               download="${result.fileName}" 
+               class="btn btn-outline-primary">
+              <i class="fas fa-download me-2"></i>Download PDF
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
+    // Update send button state based on signature status
+    updateSendButtonState(certificate);
+  } catch (error) {
+    console.error("Error generating certificate preview:", error);
+
+    if (pdfPreviewContainer) {
+      pdfPreviewContainer.innerHTML = `
+        <div class="alert alert-danger d-flex align-items-center" role="alert">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <div>
+            Failed to generate PDF preview: ${error.message}
+          </div>
+        </div>
+      `;
+    }
+
+    showErrorMessage(`Failed to generate preview: ${error.message}`);
+  }
+}
+
+// Function to update send button state
+function updateSendButtonState(certificate) {
+  const sendCertificateBtn = document.getElementById("sendCertificateBtn");
+  const normalizedStatus = certificate.status
+    ? certificate.status.toLowerCase().trim()
+    : "";
+
+  if (normalizedStatus !== "signed") {
+    sendCertificateBtn.disabled = true;
+    sendCertificateBtn.className = "btn btn-secondary";
+
+    if (normalizedStatus === "for signatory") {
+      sendCertificateBtn.innerHTML = `
+        <i class="fas fa-pen-fancy"></i>
+        Signature Required
+      `;
+      sendCertificateBtn.title =
+        "This certificate requires a signature before it can be sent";
+    } else {
+      sendCertificateBtn.innerHTML = `
+        <i class="fas fa-lock"></i>
+        Certificate Not Ready
+      `;
+      sendCertificateBtn.title =
+        "This certificate must be signed before it can be sent";
+    }
+
+    // Add warning message
+    let warningMsg = document.getElementById("approvalWarning");
+    if (!warningMsg) {
+      warningMsg = document.createElement("div");
+      warningMsg.id = "approvalWarning";
+      warningMsg.className = "alert alert-warning mt-3";
+
+      if (normalizedStatus === "for signatory") {
+        warningMsg.innerHTML = `
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <strong>Signature Required:</strong> This certificate needs to be signed by an administrator before it can be sent.
+        `;
+      } else {
+        warningMsg.innerHTML = `
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <strong>Warning:</strong> This certificate is not ready for sending. Please complete all required steps.
+        `;
+      }
+
+      const modalBody = document.querySelector(
+        "#emailPreviewModal .modal-body"
+      );
+      modalBody.appendChild(warningMsg);
+    }
+  } else {
+    sendCertificateBtn.disabled = false;
+    sendCertificateBtn.className = "btn btn-primary";
+    sendCertificateBtn.innerHTML = "Send Certificate";
+    sendCertificateBtn.title = "";
+
+    // Remove warning message if exists
+    const warningMsg = document.getElementById("approvalWarning");
+    if (warningMsg) {
+      warningMsg.remove();
+    }
+  }
+}
+
+// Function to handle resend certificate
+function handleResendCertificate(certificate) {
+  console.log("Resending certificate to:", certificate);
+  currentCertificate = certificate;
+  const sendCertificatesModal = document.getElementById(
+    "sendCertificatesModal"
+  );
+  sendCertificatesModal.style.display = "block";
+}
+
+// Function to setup tabs
+function setupTabs() {
+  const tabs = document.querySelectorAll(".tab");
+  const tabPanes = document.querySelectorAll(".tab-pane");
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", function () {
+      tabs.forEach((t) => t.classList.remove("active"));
+      tabPanes.forEach((p) => p.classList.remove("active"));
+      this.classList.add("active");
+      const tabId = this.getAttribute("data-tab");
+      document.getElementById(`${tabId}-tab`).classList.add("active");
+    });
+  });
+}
+
+// Function to setup upload button
+function setupUploadButton() {
+  const uploadDataBtn = document.getElementById("uploadDataBtn");
+  const uploadModal = document.getElementById("uploadModal");
+  const uploadForm = document.getElementById("uploadForm");
+  const uploadBtn = document.getElementById("uploadBtn");
+  const closeBtns = uploadModal.querySelectorAll(
+    ".modal-close, .modal-close-btn"
+  );
+  if (uploadDataBtn) {
+    uploadDataBtn.addEventListener("click", function () {
+      uploadModal.style.display = "block";
+    });
+  }
+  closeBtns.forEach((btn) => {
+    btn.addEventListener("click", function () {
+      uploadModal.style.display = "none";
+    });
+  });
+  window.addEventListener("click", function (event) {
+    if (event.target === uploadModal) {
+      uploadModal.style.display = "none";
+    }
+  });
+  if (uploadBtn) {
+    uploadBtn.addEventListener("click", async function () {
+      const fileInput = document.getElementById("csvFile");
+      if (!fileInput.files.length) {
+        showErrorMessage("Please select a CSV file to upload");
+        return;
+      }
+      const formData = new FormData();
+      formData.append("csvFile", fileInput.files[0]);
+      try {
+        const token = getAuthToken();
+        const response = await fetch("/api/certificates/upload", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        });
+        if (!response.ok) {
+          if (response.status === 401) {
+            handleUnauthorizedError();
+            return;
+          }
+          throw new Error(
+            `Upload failed: ${response.status} ${response.statusText}`
+          );
+        }
+        const result = await response.json();
+        showSuccessMessage(result.message);
+        uploadModal.style.display = "none";
+        uploadForm.reset();
+        loadCertificateData();
+      } catch (error) {
+        console.error("Error uploading file:", error);
+        showErrorMessage(`Upload failed: ${error.message}`);
+      }
+    });
+  }
+}
+
+// Function to setup send certificates button
+function setupSendCertificatesButton() {
+  const sendCertificatesDataBtn = document.getElementById(
+    "sendCertificatesBtn"
+  );
+  const sendCertificatesModal = document.getElementById(
+    "sendCertificatesModal"
+  );
+  const certificateForm = document.getElementById("certificateForm");
+  const previewEmailBtn = document.getElementById("previewEmailBtn");
+  const closeBtns = sendCertificatesModal.querySelectorAll(
+    ".modal-close, .modal-close-btn"
+  );
+  if (sendCertificatesDataBtn) {
+    sendCertificatesDataBtn.addEventListener("click", function () {
+      sendCertificatesModal.style.display = "block";
+    });
+  }
+  closeBtns.forEach((btn) => {
+    btn.addEventListener("click", function () {
+      sendCertificatesModal.style.display = "none";
+    });
+  });
+  window.addEventListener("click", function (event) {
+    if (event.target === sendCertificatesModal) {
+      sendCertificatesModal.style.display = "none";
+    }
+  });
+  if (previewEmailBtn) {
+    previewEmailBtn.addEventListener("click", function () {
+      const signedCertificates = allCertificates.filter(
+        (cert) => cert.status.toLowerCase() === "signed"
+      );
+      if (signedCertificates.length === 0) {
+        showErrorMessage(
+          "No signed certificates to send. Please sign certificates first."
+        );
+        return;
+      }
+      const previewCertificate = signedCertificates[0];
+      currentCertificate = previewCertificate;
+      sendCertificatesModal.style.display = "none";
+      handlePreviewCertificate(previewCertificate);
+    });
+  }
+}
+
+// Function to setup signature modal
+function setupSignatureModal() {
+  const signatureModal = document.getElementById("signatureModal");
+  const signatureImageInput = document.getElementById("signatureImage");
+  const signaturePreview = document.getElementById("signaturePreview");
+  const uploadSignatureBtn = document.getElementById("uploadSignatureBtn");
+  const closeBtns = signatureModal.querySelectorAll(
+    ".modal-close, .modal-close-btn"
+  );
+
+  // Handle image preview
+  signatureImageInput.addEventListener("change", function (e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        signaturePreview.innerHTML = `<img src="${e.target.result}" alt="Signature preview" />`;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      signaturePreview.innerHTML = "<span>No image selected</span>";
+    }
+  });
+
+  // Handle modal close
+  closeBtns.forEach((btn) => {
+    btn.addEventListener("click", function () {
+      signatureModal.style.display = "none";
+    });
+  });
+
+  window.addEventListener("click", function (event) {
+    if (event.target === signatureModal) {
+      signatureModal.style.display = "none";
+    }
+  });
+
+  // Handle signature upload
+  uploadSignatureBtn.addEventListener("click", async function () {
+    const fileInput = document.getElementById("signatureImage");
+    if (!fileInput.files.length) {
+      showErrorMessage("Please select a signature image to upload");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("signatureImage", fileInput.files[0]);
+    formData.append("certificateId", currentCertificate._id);
+
+    try {
+      const token = getAuthToken();
+      const response = await fetch("/api/certificates/upload-signature", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          handleUnauthorizedError();
+          return;
+        }
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message ||
+            `Failed to upload signature: ${response.status} ${response.statusText}`
+        );
+      }
+
+      const result = await response.json();
+      showSuccessMessage(result.message);
+      signatureModal.style.display = "none";
+      loadCertificateData(); // Refresh table
+    } catch (error) {
+      console.error("Error uploading signature:", error);
+      showErrorMessage(`Failed to upload signature: ${error.message}`);
+    }
+  });
+}
+
+// Function to setup email preview modal
+function setupEmailPreviewModal() {
+  const emailPreviewModal = document.getElementById("emailPreviewModal");
+  const sendCertificateBtn = document.getElementById("sendCertificateBtn");
+  const closeBtns = emailPreviewModal.querySelectorAll(
+    ".modal-close, .modal-close-btn"
+  );
+
+  closeBtns.forEach((btn) => {
+    btn.addEventListener("click", function () {
+      emailPreviewModal.style.display = "none";
+    });
+  });
+
+  window.addEventListener("click", function (event) {
+    if (event.target === emailPreviewModal) {
+      emailPreviewModal.style.display = "none";
+    }
+  });
+
+  if (sendCertificateBtn) {
+    sendCertificateBtn.addEventListener("click", async function () {
+      if (!currentCertificate) {
+        showErrorMessage("No certificate selected");
+        return;
+      }
+
+      // Check if certificate is signed
+      const normalizedStatus = currentCertificate.status
+        ? currentCertificate.status.toLowerCase().trim()
+        : "";
+      if (normalizedStatus !== "signed") {
+        showErrorMessage("Certificate must be signed before sending");
+        return;
+      }
+
+      const subject = document.getElementById("emailSubject").value.trim();
+      const body = document.getElementById("emailBody").value;
+      const template = document.getElementById("certificateTemplate").value;
+
+      if (!subject || !body) {
+        showErrorMessage("Please fill in all required fields");
+        return;
+      }
+
+      const originalBtnText = sendCertificateBtn.innerHTML;
+      const originalBtnClass = sendCertificateBtn.className;
+      sendCertificateBtn.disabled = true;
+      sendCertificateBtn.className = "btn btn-success";
+      sendCertificateBtn.style.cursor = "not-allowed";
+      sendCertificateBtn.innerHTML = `
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                Sending...
+            `;
+
+      const existingProgressContainers = emailPreviewModal.querySelectorAll(
+        ".progress-container"
+      );
+      existingProgressContainers.forEach((container) => {
+        container.remove();
+      });
+
+      const progressContainer = document.createElement("div");
+      progressContainer.className = "progress-container mt-3";
+      progressContainer.innerHTML = `
+                <div class="d-flex justify-content-between mb-1">
+                    <span>Sending certificate</span>
+                    <span class="progress-percentage">0%</span>
+                </div>
+                <div class="progress" style="height: 10px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                         role="progressbar" 
+                         style="width: 0%"
+                         aria-valuenow="0" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100"></div>
+                </div>
+                <div class="progress-steps mt-2 d-flex justify-content-between">
+                    <small class="step step-active">Preparing</small>
+                    <small class="step">Filling Template</small>
+                    <small class="step">Sending</small>
+                </div>
+            `;
+
+      sendCertificateBtn.parentNode.insertBefore(
+        progressContainer,
+        sendCertificateBtn.nextSibling
+      );
+
+      const progressBar = progressContainer.querySelector(".progress-bar");
+      const progressPercentage = progressContainer.querySelector(
+        ".progress-percentage"
+      );
+      const progressSteps = progressContainer.querySelectorAll(".step");
+      let progress = 0;
+      let currentStep = 0;
+
+      const progressInterval = setInterval(() => {
+        progress += 2;
+        if (progress > 95) progress = 95;
+        if (progressBar) {
+          progressBar.style.width = `${progress}%`;
+          progressBar.setAttribute("aria-valuenow", progress);
+        }
+        if (progressPercentage) {
+          progressPercentage.textContent = `${progress}%`;
+        }
+        if (progress > 30 && currentStep === 0) {
+          progressSteps[0].classList.remove("step-active");
+          progressSteps[0].classList.add("step-completed");
+          progressSteps[1].classList.add("step-active");
+          currentStep = 1;
+        } else if (progress > 70 && currentStep === 1) {
+          progressSteps[1].classList.remove("step-active");
+          progressSteps[1].classList.add("step-completed");
+          progressSteps[2].classList.add("step-active");
+          currentStep = 2;
+        }
+      }, 100);
+
+      try {
+        const token = getAuthToken();
+        const personalizedBody = body
+          .replace(/{{businessName}}/g, currentCertificate.businessName)
+          .replace(/{{accountNo}}/g, currentCertificate.accountNo)
+          .replace(/{{address}}/g, currentCertificate.address);
+
+        const response = await fetch("/api/certificates/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            certificateId: currentCertificate._id,
+            subject,
+            body: personalizedBody,
+            template,
+          }),
+        });
+
+        clearInterval(progressInterval);
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            handleUnauthorizedError();
+            return;
+          }
+          const errorData = await response.json();
+          throw new Error(
+            errorData.message ||
+              `Failed to send certificate: ${response.status} ${response.statusText}`
+          );
+        }
+
+        progressBar.style.width = "100%";
+        progressBar.setAttribute("aria-valuenow", 100);
+        progressPercentage.textContent = "100%";
+        progressSteps.forEach((step) => {
+          step.classList.remove("step-active");
+          step.classList.add("step-completed");
+        });
+
+        setTimeout(() => {
+          const result = response.json();
+          result.then((data) => {
+            sendCertificateBtn.innerHTML = `
+                            <i class="fas fa-check-circle"></i>
+                            Sent Successfully
+                        `;
+            progressContainer.innerHTML = `
+                            <div class="alert alert-success d-flex align-items-center" role="alert">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <div>
+                                    Certificate sent successfully!
+                                </div>
+                            </div>
+                        `;
+            showSuccessMessage(
+              data.message || "Certificate sent successfully!"
+            );
+            setTimeout(() => {
+              loadCertificateData().then(() => {
+                emailPreviewModal.style.display = "none";
+                setTimeout(() => {
+                  sendCertificateBtn.innerHTML = originalBtnText;
+                  sendCertificateBtn.className = originalBtnClass;
+                  sendCertificateBtn.disabled = false;
+                  sendCertificateBtn.style.cursor = "";
+                }, 300);
+              });
+            }, 1000);
+          });
+        }, 500);
+      } catch (error) {
+        clearInterval(progressInterval);
+        sendCertificateBtn.innerHTML = `
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Failed to Send
+                `;
+        sendCertificateBtn.className = "btn btn-danger";
+        progressContainer.innerHTML = `
+                    <div class="alert alert-danger d-flex align-items-center" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <div>
+                            Failed to send certificate. Please try again.
+                        </div>
+                    </div>
+                `;
+        setTimeout(() => {
+          sendCertificateBtn.innerHTML = originalBtnText;
+          sendCertificateBtn.className = originalBtnClass;
+          sendCertificateBtn.disabled = false;
+          sendCertificateBtn.style.cursor = "";
+          console.error("Error sending certificate:", error);
+          showErrorMessage(`Failed to send certificate: ${error.message}`);
+        }, 3000);
+      }
+    });
+  }
+
+  // Update the modal when it's opened to check certificate status
+  const observer = new MutationObserver(function (mutations) {
+    mutations.forEach(function (mutation) {
+      if (
+        mutation.attributeName === "style" &&
+        emailPreviewModal.style.display === "block"
+      ) {
+        if (currentCertificate) {
+          updateSendButtonState(currentCertificate);
+        }
+      }
+    });
+  });
+
+  observer.observe(emailPreviewModal, { attributes: true });
+}
+
+// Function to setup refresh button
+function setupRefreshButton() {
+  const refreshBtn = document.getElementById("refreshBtn");
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", function () {
+      const icon = refreshBtn.querySelector("i");
+      if (icon) {
+        icon.classList.add("refreshing");
+      }
+      const searchInput = document.getElementById("searchInput");
+      if (searchInput) {
+        searchInput.value = "";
+      }
+      loadCertificateData().finally(() => {
+        if (icon) {
+          icon.classList.remove("refreshing");
+        }
+      });
+    });
+  }
+}
+
+// Function to show success message
+function showSuccessMessage(message) {
+  const alertDiv = document.createElement("div");
+  alertDiv.className = "alert alert-success";
+  alertDiv.style.position = "fixed";
+  alertDiv.style.top = "20px";
+  alertDiv.style.right = "20px";
+  alertDiv.style.padding = "15px 20px";
+  alertDiv.style.backgroundColor = "var(--success)";
+  alertDiv.style.color = "white";
+  alertDiv.style.borderRadius = "var(--border-radius-md)";
+  alertDiv.style.boxShadow = "var(--shadow-lg)";
+  alertDiv.style.zIndex = "10001";
+  alertDiv.style.display = "flex";
+  alertDiv.style.alignItems = "center";
+  alertDiv.style.gap = "10px";
+  alertDiv.innerHTML = `
+        <i class="fas fa-check-circle"></i>
+        <span>${message}</span>
+    `;
+  document.body.appendChild(alertDiv);
+  setTimeout(() => {
+    alertDiv.style.opacity = "0";
+    alertDiv.style.transition = "opacity 0.5s";
+    setTimeout(() => {
+      document.body.removeChild(alertDiv);
+    }, 500);
+  }, 3000);
+}
+
+// Function to show error message
+function showErrorMessage(message) {
+  const alertDiv = document.createElement("div");
+  alertDiv.className = "alert alert-danger";
+  alertDiv.style.position = "fixed";
+  alertDiv.style.top = "20px";
+  alertDiv.style.right = "20px";
+  alertDiv.style.padding = "15px 20px";
+  alertDiv.style.backgroundColor = "var(--danger)";
+  alertDiv.style.color = "white";
+  alertDiv.style.borderRadius = "var(--border-radius-md)";
+  alertDiv.style.boxShadow = "var(--shadow-lg)";
+  alertDiv.style.zIndex = "10001";
+  alertDiv.style.display = "flex";
+  alertDiv.style.alignItems = "center";
+  alertDiv.style.gap = "10px";
+  alertDiv.innerHTML = `
+        <i class="fas fa-exclamation-circle"></i>
+        <span>${message}</span>
+    `;
+  document.body.appendChild(alertDiv);
+  setTimeout(() => {
+    alertDiv.style.opacity = "0";
+    alertDiv.style.transition = "opacity 0.5s";
+    setTimeout(() => {
+      document.body.removeChild(alertDiv);
+    }, 500);
+  }, 5000);
+}
+
+// Function to setup dropdown functionality
+function setupDropdown() {
+  const userDropdown = document.getElementById("userDropdown");
+  const userDropdownMenu = document.getElementById("userDropdownMenu");
+  if (!userDropdown || !userDropdownMenu) {
+    console.error("Dropdown elements not found");
+    return;
+  }
+  userDropdown.addEventListener("click", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    userDropdownMenu.classList.toggle("show");
+    document.addEventListener("click", function closeDropdown(e) {
+      if (!e.target.closest(".user-dropdown")) {
+        userDropdownMenu.classList.remove("show");
+        document.removeEventListener("click", closeDropdown);
+      }
+    });
+  });
+}
+
+// Function to setup logout functionality
+function setupLogout() {
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (!logoutBtn) {
+    console.error("Logout button not found");
+    return;
+  }
+  logoutBtn.addEventListener("click", async function (e) {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (token) {
+        const response = await fetch("/api/auth/logout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!response.ok) {
+          console.error(
+            "Logout API call failed:",
+            response.status,
+            response.statusText
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error during logout:", error);
+    } finally {
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("user_data");
+      window.location.href = "/";
+    }
+  });
+}
+
+// Function to check if token is expired
+function isTokenExpired(token) {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      return true;
+    }
+    const payload = JSON.parse(atob(parts[1]));
+    if (!payload.exp) {
+      return true;
+    }
+    const now = Math.floor(Date.now() / 1000);
+    return payload.exp < now;
+  } catch (e) {
+    console.error("Error checking token expiration:", e);
+    return true;
+  }
+}
+
+// Function to verify token with server
+function verifyTokenWithServer(token) {
+  return fetch("/api/auth/verify-token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  })
+    .then((response) => {
+      if (response.ok) {
+        console.log("Token verification successful");
+      } else {
+        console.log("Token verification failed, status:", response.status);
+        if (response.status === 401) {
+          localStorage.removeItem("auth_token");
+          localStorage.removeItem("user_data");
+          window.location.href = "/";
+        }
+      }
+    })
+    .catch((error) => {
+      console.error("Error verifying token:", error);
+    });
+}
+
+// Function to update the date and time display
+function updateDateTime() {
+  const now = new Date();
+  const options = {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  };
+  const dateTimeString = now.toLocaleDateString("en-US", options);
+  const datetimeElement = document.getElementById("datetime");
+  if (datetimeElement) {
+    datetimeElement.textContent = dateTimeString;
+  }
+}
+
+// Function to check authentication
+function checkAuthentication() {
+  const token = localStorage.getItem("auth_token");
+  const userData = localStorage.getItem("user_data");
+  if (!token || !userData) {
+    window.location.href = "/";
+    return;
+  }
+  try {
+    if (isTokenExpired(token)) {
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("user_data");
+      window.location.href = "/";
+      return;
+    }
+    const user = JSON.parse(userData);
+    updateUserInterface(user);
+    verifyTokenWithServer(token).catch((error) => {
+      console.error("Token verification failed:", error);
+    });
+  } catch (e) {
+    console.error("Error parsing user data:", e);
+    window.location.href = "/";
+  }
+}
+
+// Function to update user interface
+async function updateUserInterface(user) {
+  const userEmailElement = document.getElementById("userEmail");
+  const userAvatarImage = document.getElementById("userAvatarImage");
+  const userAvatarFallback = document.getElementById("userAvatarFallback");
+  const greeting = getTimeBasedGreeting();
+  const displayName = user.firstname || user.email;
+  if (userEmailElement) {
+    userEmailElement.textContent = `${greeting}, ${displayName}!`;
+  }
+  updateUserAvatar(user, userAvatarImage, userAvatarFallback);
+}
+
+// Function to get time-based greeting
+function getTimeBasedGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) {
+    return "Good morning";
+  } else if (hour < 18) {
+    return "Good afternoon";
+  } else {
+    return "Good evening";
+  }
+}
+
+// Helper function to get user initials
+function getUserInitials(user) {
+  if (user.firstname && user.lastname) {
+    return `${user.firstname.charAt(0)}${user.lastname.charAt(
+      0
+    )}`.toUpperCase();
+  } else if (user.firstname) {
+    return user.firstname.charAt(0).toUpperCase();
+  } else if (user.lastname) {
+    return user.lastname.charAt(0).toUpperCase();
+  } else {
+    return user.email.charAt(0).toUpperCase();
+  }
+}
+
+// Helper function to update user avatar
+async function updateUserAvatar(user, imageElement, fallbackElement) {
+  if (!imageElement || !fallbackElement) {
+    console.error("Avatar elements not found");
+    return;
+  }
+  if (user.hasProfilePicture) {
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        showFallbackAvatar(user, fallbackElement);
+        return;
+      }
+      const response = await fetch(`/api/auth/profile-picture/${user.id}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        const imageUrl = URL.createObjectURL(blob);
+        imageElement.src = imageUrl;
+        imageElement.style.display = "block";
+        fallbackElement.style.display = "none";
+      } else {
+        showFallbackAvatar(user, fallbackElement);
+      }
+    } catch (error) {
+      console.error("Error loading profile picture:", error);
+      showFallbackAvatar(user, fallbackElement);
+    }
+  } else {
+    showFallbackAvatar(user, fallbackElement);
+  }
+}
+
+// Show fallback avatar with initials
+function showFallbackAvatar(user, fallbackElement) {
+  const initials = getUserInitials(user);
+  fallbackElement.textContent = initials;
+  fallbackElement.style.display = "flex";
+  fallbackElement.style.alignItems = "center";
+  fallbackElement.style.justifyContent = "center";
+  const imageElement = document.getElementById("userAvatarImage");
+  if (imageElement) {
+    imageElement.style.display = "none";
+  }
+}
+
+// Wait for DOM to be fully loaded
+window.addEventListener("load", function () {
+  console.log("Certifications page loaded, initializing");
+  updateCurrentPage("Certificate Management");
+  checkAuthentication();
+  setupDropdown();
+  setupLogout();
+  loadCertificateData();
+  setupTabs();
+  setupRefreshButton();
+  setupUploadButton();
+  setupSendCertificatesButton();
+  setupSignatureModal();
+  setupEmailPreviewModal();
+  setupSearch();
+  setupPaginationControls();
+  updateDateTime();
+  setInterval(updateDateTime, 1000);
+});
