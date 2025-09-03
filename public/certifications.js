@@ -6,7 +6,7 @@ let pageSize = 10;
 let totalRecords = 0;
 let currentCertificate = null;
 
-// Function to get user role from localStorage
+// Helper functions
 function getUserRole() {
   const userData = localStorage.getItem("user_data");
   if (userData) {
@@ -16,29 +16,6 @@ function getUserRole() {
   return null;
 }
 
-// Function to update current page for user tracking
-function updateCurrentPage(page) {
-  const token = localStorage.getItem("auth_token");
-  if (!token) return;
-  fetch("/api/auth/current-page", {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ page }),
-  })
-    .then((response) => {
-      if (!response.ok) {
-        console.error("Failed to update current page");
-      }
-    })
-    .catch((error) => {
-      console.error("Error updating current page:", error);
-    });
-}
-
-// Function to get the authentication token
 function getAuthToken() {
   const token = localStorage.getItem("auth_token");
   if (!token) {
@@ -47,12 +24,416 @@ function getAuthToken() {
   return token;
 }
 
-// Function to handle 401 errors
 function handleUnauthorizedError() {
   localStorage.removeItem("auth_token");
   localStorage.removeItem("user_data");
   window.location.href = "/";
 }
+
+function showErrorMessage(message) {
+  const alertDiv = document.createElement("div");
+  alertDiv.className = "alert alert-danger";
+  alertDiv.style.position = "fixed";
+  alertDiv.style.top = "20px";
+  alertDiv.style.right = "20px";
+  alertDiv.style.padding = "15px 20px";
+  alertDiv.style.backgroundColor = "var(--danger)";
+  alertDiv.style.color = "white";
+  alertDiv.style.borderRadius = "var(--border-radius-md)";
+  alertDiv.style.boxShadow = "var(--shadow-lg)";
+  alertDiv.style.zIndex = "10001";
+  alertDiv.style.display = "flex";
+  alertDiv.style.alignItems = "center";
+  alertDiv.style.gap = "10px";
+  alertDiv.innerHTML = `
+        <i class="fas fa-exclamation-circle"></i>
+        <span>${message}</span>
+    `;
+  document.body.appendChild(alertDiv);
+  setTimeout(() => {
+    alertDiv.style.opacity = "0";
+    alertDiv.style.transition = "opacity 0.5s";
+    setTimeout(() => {
+      document.body.removeChild(alertDiv);
+    }, 500);
+  }, 5000);
+}
+
+function showSuccessMessage(message) {
+  const alertDiv = document.createElement("div");
+  alertDiv.className = "alert alert-success";
+  alertDiv.style.position = "fixed";
+  alertDiv.style.top = "20px";
+  alertDiv.style.right = "20px";
+  alertDiv.style.padding = "15px 20px";
+  alertDiv.style.backgroundColor = "var(--success)";
+  alertDiv.style.color = "white";
+  alertDiv.style.borderRadius = "var(--border-radius-md)";
+  alertDiv.style.boxShadow = "var(--shadow-lg)";
+  alertDiv.style.zIndex = "10001";
+  alertDiv.style.display = "flex";
+  alertDiv.style.alignItems = "center";
+  alertDiv.style.gap = "10px";
+  alertDiv.innerHTML = `
+        <i class="fas fa-check-circle"></i>
+        <span>${message}</span>
+    `;
+  document.body.appendChild(alertDiv);
+  setTimeout(() => {
+    alertDiv.style.opacity = "0";
+    alertDiv.style.transition = "opacity 0.5s";
+    setTimeout(() => {
+      document.body.removeChild(alertDiv);
+    }, 500);
+  }, 3000);
+}
+
+// Handler functions (defined before they're used)
+function onEditCertificate(certificate) {
+  console.log("Editing certificate:", certificate);
+  if (!certificate || !certificate._id) {
+    showErrorMessage("Invalid certificate selected");
+    return;
+  }
+  currentCertificate = certificate;
+  const editModal = document.getElementById("editCertificateModal");
+  // Populate form with current certificate data
+  document.getElementById("editAccountNo").value = certificate.accountNo;
+  document.getElementById("editBusinessName").value = certificate.businessName;
+  document.getElementById("editAddress").value = certificate.address;
+  document.getElementById("editEmail").value = certificate.email;
+
+  // Format the certificate date for the date input
+  let formattedDate = "";
+  if (certificate.certificateDate) {
+    try {
+      const certDate =
+        typeof certificate.certificateDate === "string"
+          ? new Date(certificate.certificateDate)
+          : certificate.certificateDate;
+      if (!isNaN(certDate.getTime())) {
+        // Format as YYYY-MM-DD for input[type="date"]
+        formattedDate = certDate.toISOString().split("T")[0];
+      }
+    } catch (error) {
+      console.error("Error formatting certificate date:", error);
+    }
+  }
+  document.getElementById("editCertificateDate").value = formattedDate;
+  editModal.style.display = "block";
+}
+
+async function handleApproveCertificate(certificate) {
+  try {
+    console.log("Approving certificate:", certificate);
+    // Validate certificate exists and has required properties
+    if (!certificate || !certificate._id) {
+      showErrorMessage("Invalid certificate selected");
+      return;
+    }
+    // Show confirmation dialog
+    const isConfirmed = confirm(
+      `Are you sure you want to approve this certificate for ${certificate.businessName}?\n\n` +
+        `This action will move the certificate to the signatory step.`
+    );
+    if (!isConfirmed) {
+      return; // User cancelled the approval
+    }
+    const token = getAuthToken();
+    const response = await fetch("/api/certificates/approve", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        certificateId: certificate._id,
+      }),
+    });
+    if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorizedError();
+        return;
+      }
+      const errorData = await response.json();
+      throw new Error(
+        errorData.message ||
+          `Failed to approve certificate: ${response.status} ${response.statusText}`
+      );
+    }
+    const result = await response.json();
+    console.log("Approval response:", result);
+    showSuccessMessage(result.message);
+    loadCertificateData(); // Refresh table
+  } catch (error) {
+    console.error("Error approving certificate:", error);
+    showErrorMessage(`Failed to approve certificate: ${error.message}`);
+  }
+}
+
+async function handleSignCertificate(certificate) {
+  console.log("Opening signature upload for:", certificate);
+  if (!certificate || !certificate._id) {
+    showErrorMessage("Invalid certificate selected");
+    return;
+  }
+  currentCertificate = certificate;
+  const signatureModal = document.getElementById("signatureModal");
+  signatureModal.style.display = "block";
+  // Reset form
+  const signatureForm = document.getElementById("signatureForm");
+  signatureForm.reset();
+  document.getElementById("signaturePreview").innerHTML =
+    "<span>No image selected</span>";
+}
+
+async function handleSendCertificate(certificate) {
+  console.log("Sending certificate for:", certificate);
+  // Validate certificate exists and has required properties
+  if (!certificate || !certificate._id) {
+    showErrorMessage("Invalid certificate selected");
+    return;
+  }
+  // Check if certificate is signed before allowing send
+  const normalizedStatus = certificate.status
+    ? certificate.status.toLowerCase().trim()
+    : "";
+  if (normalizedStatus !== "signed") {
+    showErrorMessage(
+      `Certificate must be signed before sending. Current status: ${certificate.status}`
+    );
+    return;
+  }
+  currentCertificate = certificate;
+  const sendCertificatesModal = document.getElementById(
+    "sendCertificatesModal"
+  );
+  // Set the email subject and body with current certificate details
+  const subject = document.getElementById("emailSubject");
+  const body = document.getElementById("emailBody");
+  // Generate HTML email body with all placeholders replaced
+  body.value = generateCertificateEmailBody(certificate);
+  sendCertificatesModal.style.display = "block";
+}
+
+async function handlePreviewCertificate(certificate) {
+  console.log("Previewing certificate with PDF for:", certificate);
+  currentCertificate = certificate;
+  // Show loading state
+  const emailPreviewModal = document.getElementById("emailPreviewModal");
+  emailPreviewModal.style.display = "block";
+  // Clear previous preview
+  document.getElementById("previewToEmail").textContent = certificate.email;
+  document.getElementById("previewSubject").textContent =
+    document.getElementById("emailSubject").value;
+  document.getElementById("previewEmailBody").innerHTML = "";
+  document.getElementById("previewAttachmentName").textContent = "";
+  document.getElementById("previewSignatureSection").style.display = "none";
+  // Set status badge in preview
+  const previewStatus = document.getElementById("previewStatus");
+  previewStatus.textContent = certificate.status;
+  previewStatus.className = "preview-status";
+  const normalizedStatus = certificate.status
+    ? certificate.status.toLowerCase().trim()
+    : "";
+  if (normalizedStatus === "signed") {
+    previewStatus.classList.add("signed");
+  } else if (normalizedStatus === "for signatory") {
+    previewStatus.classList.add("for-signatory");
+  } else if (normalizedStatus === "approved") {
+    previewStatus.classList.add("approved");
+  } else if (normalizedStatus === "for approval") {
+    previewStatus.classList.add("for-approval");
+  } else if (normalizedStatus === "sent") {
+    previewStatus.classList.add("sent");
+  } else if (normalizedStatus === "resent") {
+    previewStatus.classList.add("resent");
+  }
+  // Show loading indicator
+  const pdfPreviewContainer = document.getElementById("pdfPreviewContainer");
+  if (pdfPreviewContainer) {
+    pdfPreviewContainer.innerHTML = `
+      <div class="d-flex justify-content-center align-items-center" style="height: 400px;">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <span class="ms-3">Generating PDF preview...</span>
+      </div>
+    `;
+  }
+  try {
+    const token = getAuthToken();
+    const response = await fetch("/api/certificates/preview", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        certificateId: certificate._id,
+      }),
+    });
+    if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorizedError();
+        return;
+      }
+      const errorData = await response.json();
+      throw new Error(
+        errorData.message ||
+          `Failed to generate preview: ${response.status} ${response.statusText}`
+      );
+    }
+    const result = await response.json();
+    console.log("Preview response:", result);
+    // Generate HTML email body for preview
+    const emailBodyHtml = generateCertificateEmailBody(certificate);
+    document.getElementById("previewEmailBody").innerHTML = emailBodyHtml;
+    document.getElementById("previewAttachmentName").textContent =
+      result.fileName;
+    // Show signature if available
+    const signatureSection = document.getElementById("previewSignatureSection");
+    const signatureImage = document.getElementById("previewSignatureImage");
+    if (certificate.signatureImage) {
+      signatureSection.style.display = "block";
+      signatureImage.src = certificate.signatureImage;
+    } else {
+      signatureSection.style.display = "none";
+    }
+    // Display PDF preview
+    if (pdfPreviewContainer) {
+      pdfPreviewContainer.innerHTML = `
+        <div class="pdf-preview">
+          <iframe 
+            src="data:application/pdf;base64,${result.pdfBase64}" 
+            width="100%" 
+            height="500px"
+            title="Certificate Preview"
+          ></iframe>
+          <div class="pdf-preview-actions mt-3">
+            <a href="data:application/pdf;base64,${result.pdfBase64}" 
+               download="${result.fileName}" 
+               class="btn btn-outline-primary">
+              <i class="fas fa-download me-2"></i>Download PDF
+            </a>
+          </div>
+        </div>
+      `;
+    }
+    // Update send button state based on certificate status
+    updateSendButtonState(certificate);
+  } catch (error) {
+    console.error("Error generating certificate preview:", error);
+    if (pdfPreviewContainer) {
+      pdfPreviewContainer.innerHTML = `
+        <div class="alert alert-danger d-flex align-items-center" role="alert">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <div>
+            Failed to generate PDF preview: ${error.message}
+          </div>
+        </div>
+      `;
+    }
+    showErrorMessage(`Failed to generate preview: ${error.message}`);
+  }
+}
+
+function handleResendCertificate(certificate) {
+  console.log("Resending certificate to:", certificate);
+  currentCertificate = certificate;
+  // For sent/resent certificates, bypass preview and resend directly
+  const normalizedStatus = certificate.status
+    ? certificate.status.toLowerCase().trim()
+    : "";
+  if (normalizedStatus === "sent" || normalizedStatus === "resent") {
+    // Show confirmation dialog
+    if (
+      confirm(
+        `Are you sure you want to resend this certificate to ${certificate.email}?`
+      )
+    ) {
+      resendCertificate(certificate);
+    }
+    return;
+  }
+  // For other statuses, open the send modal
+  const sendCertificatesModal = document.getElementById(
+    "sendCertificatesModal"
+  );
+  const body = document.getElementById("emailBody");
+  body.value = generateCertificateEmailBody(certificate);
+  sendCertificatesModal.style.display = "block";
+}
+
+async function saveEditedCertificate() {
+  try {
+    if (!currentCertificate || !currentCertificate._id) {
+      showErrorMessage("No certificate selected for editing");
+      return;
+    }
+    // Get form values
+    const accountNo = document.getElementById("editAccountNo").value.trim();
+    const businessName = document
+      .getElementById("editBusinessName")
+      .value.trim();
+    const address = document.getElementById("editAddress").value.trim();
+    const email = document.getElementById("editEmail").value.trim();
+    const certificateDate = document.getElementById(
+      "editCertificateDate"
+    ).value;
+    // Validate required fields
+    if (!accountNo || !businessName || !address || !email || !certificateDate) {
+      showErrorMessage("All fields are required");
+      return;
+    }
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      showErrorMessage("Please enter a valid email address");
+      return;
+    }
+    const token = getAuthToken();
+    const response = await fetch(
+      `/api/certificates/${currentCertificate._id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          accountNo,
+          businessName,
+          address,
+          email,
+          certificateDate: new Date(certificateDate),
+        }),
+      }
+    );
+    if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorizedError();
+        return;
+      }
+      const errorData = await response.json();
+      throw new Error(
+        errorData.message ||
+          `Failed to update certificate: ${response.status} ${response.statusText}`
+      );
+    }
+    const result = await response.json();
+    console.log("Certificate update response:", result);
+    showSuccessMessage("Certificate updated successfully");
+    // Close modal and refresh data
+    document.getElementById("editCertificateModal").style.display = "none";
+    loadCertificateData();
+  } catch (error) {
+    console.error("Error updating certificate:", error);
+    showErrorMessage(`Failed to update certificate: ${error.message}`);
+  }
+}
+
+// Rest of the functions remain the same...
 
 // Function to load certificate data
 async function loadCertificateData() {
@@ -84,10 +465,6 @@ async function loadCertificateData() {
     }
     const certificates = await response.json();
     console.log("Certificate data loaded:", certificates);
-    // Debug: Log status values
-    certificates.forEach((cert) => {
-      console.log(`Certificate ${cert._id}: status="${cert.status}"`);
-    });
     allCertificates = certificates;
     filteredCertificates = [...certificates];
     totalRecords = filteredCertificates.length;
@@ -232,7 +609,8 @@ function performSearch() {
     filteredCertificates = allCertificates.filter((certificate) => {
       return (
         certificate.email.toLowerCase().includes(query) ||
-        certificate.businessName.toLowerCase().includes(query)
+        certificate.businessName.toLowerCase().includes(query) ||
+        certificate.accountNo.toLowerCase().includes(query)
       );
     });
   }
@@ -259,7 +637,6 @@ function updateCertificateTable(certificates) {
       let color = "";
       let text = status;
       const normalizedStatus = status ? status.toLowerCase().trim() : "";
-
       if (normalizedStatus === "signed") {
         color = "#17a2b8"; // Blue for signed
       } else if (normalizedStatus === "for signatory") {
@@ -275,7 +652,6 @@ function updateCertificateTable(certificates) {
       } else {
         color = "#6c757d"; // Gray for default
       }
-
       return React.createElement(
         "span",
         {
@@ -293,7 +669,6 @@ function updateCertificateTable(certificates) {
         text
       );
     };
-
     const ActionButton = ({
       certificate,
       onApprove,
@@ -306,22 +681,23 @@ function updateCertificateTable(certificates) {
         ? certificate.status.toLowerCase().trim()
         : "";
       const userRole = getUserRole();
-
-      // Always show preview button
-      const previewButton = React.createElement(
-        "button",
-        {
-          className: "btn btn-sm btn-outline-primary me-1",
-          onClick: () => onPreview(certificate),
-          style: {
-            padding: "0.25rem 0.5rem",
-            fontSize: "0.75rem",
+      // Show preview button for all statuses except "sent" and "resent"
+      let previewButton = null;
+      if (normalizedStatus !== "sent" && normalizedStatus !== "resent") {
+        previewButton = React.createElement(
+          "button",
+          {
+            className: "btn btn-sm btn-outline-primary me-1",
+            onClick: () => onPreview(certificate),
+            style: {
+              padding: "0.25rem 0.5rem",
+              fontSize: "0.75rem",
+            },
+            title: "Preview certificate details",
           },
-          title: "Preview certificate details",
-        },
-        "Preview"
-      );
-
+          "Preview"
+        );
+      }
       // Show approve button only for admin users when status is "for approval"
       let approveButton = null;
       if (userRole === "admin" && normalizedStatus === "for approval") {
@@ -339,7 +715,6 @@ function updateCertificateTable(certificates) {
           "Approve"
         );
       }
-
       // Show sign button only for admin users when status is "for signatory"
       let signButton = null;
       if (userRole === "admin" && normalizedStatus === "for signatory") {
@@ -357,7 +732,6 @@ function updateCertificateTable(certificates) {
           "Sign"
         );
       }
-
       // Show send button only for signed certificates
       let sendButton = null;
       if (normalizedStatus === "signed") {
@@ -375,8 +749,7 @@ function updateCertificateTable(certificates) {
           "Send"
         );
       }
-
-      // Show resend button for sent certificates
+      // Show resend button only for sent or resent certificates
       let resendButton = null;
       if (normalizedStatus === "sent" || normalizedStatus === "resent") {
         resendButton = React.createElement(
@@ -393,7 +766,6 @@ function updateCertificateTable(certificates) {
           "Resend"
         );
       }
-
       return React.createElement(
         "div",
         { style: { display: "flex", gap: "5px" } },
@@ -404,7 +776,6 @@ function updateCertificateTable(certificates) {
         resendButton
       );
     };
-
     const App = () => {
       return React.createElement(
         "div",
@@ -425,18 +796,6 @@ function updateCertificateTable(certificates) {
             React.createElement(
               "tr",
               { style: { backgroundColor: "#f8f9fa" } },
-              React.createElement(
-                "th",
-                {
-                  style: {
-                    padding: "12px 15px",
-                    textAlign: "left",
-                    fontWeight: "600",
-                    borderBottom: "1px solid #e9ecef",
-                  },
-                },
-                "Email"
-              ),
               React.createElement(
                 "th",
                 {
@@ -483,6 +842,18 @@ function updateCertificateTable(certificates) {
                     borderBottom: "1px solid #e9ecef",
                   },
                 },
+                "Email"
+              ),
+              React.createElement(
+                "th",
+                {
+                  style: {
+                    padding: "12px 15px",
+                    textAlign: "left",
+                    fontWeight: "600",
+                    borderBottom: "1px solid #e9ecef",
+                  },
+                },
                 "Status"
               ),
               React.createElement(
@@ -512,12 +883,22 @@ function updateCertificateTable(certificates) {
                 React.createElement(
                   "td",
                   { style: { padding: "12px 15px" } },
-                  certificate.email
-                ),
-                React.createElement(
-                  "td",
-                  { style: { padding: "12px 15px" } },
-                  certificate.accountNo
+                  React.createElement(
+                    "a",
+                    {
+                      href: "#",
+                      onClick: (e) => {
+                        e.preventDefault();
+                        onEditCertificate(certificate);
+                      },
+                      style: {
+                        color: "#2c5282",
+                        textDecoration: "none",
+                        fontWeight: "500",
+                      },
+                    },
+                    certificate.accountNo
+                  )
                 ),
                 React.createElement(
                   "td",
@@ -528,6 +909,11 @@ function updateCertificateTable(certificates) {
                   "td",
                   { style: { padding: "12px 15px" } },
                   certificate.address
+                ),
+                React.createElement(
+                  "td",
+                  { style: { padding: "12px 15px" } },
+                  certificate.email
                 ),
                 React.createElement(
                   "td",
@@ -578,10 +964,10 @@ function renderSimpleTable(certificates) {
   const thead = document.createElement("thead");
   const headerRow = document.createElement("tr");
   const headers = [
-    "Email",
     "Account No.",
     "Business Name",
     "Address",
+    "Email",
     "Status",
     "Actions",
   ];
@@ -602,22 +988,37 @@ function renderSimpleTable(certificates) {
   certificates.forEach((certificate) => {
     const row = document.createElement("tr");
     row.style.borderBottom = "1px solid #e9ecef";
-    const emailCell = document.createElement("td");
-    emailCell.textContent = certificate.email;
-    emailCell.style.padding = "12px 15px";
-    row.appendChild(emailCell);
+    // Account No. (clickable)
     const accountNoCell = document.createElement("td");
-    accountNoCell.textContent = certificate.accountNo;
     accountNoCell.style.padding = "12px 15px";
+    const accountNoLink = document.createElement("a");
+    accountNoLink.href = "#";
+    accountNoLink.textContent = certificate.accountNo;
+    accountNoLink.style.color = "#2c5282";
+    accountNoLink.style.textDecoration = "none";
+    accountNoLink.style.fontWeight = "500";
+    accountNoLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      onEditCertificate(certificate);
+    });
+    accountNoCell.appendChild(accountNoLink);
     row.appendChild(accountNoCell);
+    // Business Name
     const nameCell = document.createElement("td");
     nameCell.textContent = certificate.businessName;
     nameCell.style.padding = "12px 15px";
     row.appendChild(nameCell);
+    // Address
     const addressCell = document.createElement("td");
     addressCell.textContent = certificate.address;
     addressCell.style.padding = "12px 15px";
     row.appendChild(addressCell);
+    // Email
+    const emailCell = document.createElement("td");
+    emailCell.textContent = certificate.email;
+    emailCell.style.padding = "12px 15px";
+    row.appendChild(emailCell);
+    // Status
     const statusCell = document.createElement("td");
     statusCell.style.padding = "12px 15px";
     const statusBadge = document.createElement("span");
@@ -629,11 +1030,9 @@ function renderSimpleTable(certificates) {
     statusBadge.style.color = "white";
     statusBadge.style.fontSize = "0.75rem";
     statusBadge.style.fontWeight = "500";
-
     const normalizedStatus = certificate.status
       ? certificate.status.toLowerCase().trim()
       : "";
-
     if (normalizedStatus === "signed") {
       statusBadge.style.backgroundColor = "#17a2b8";
     } else if (normalizedStatus === "for signatory") {
@@ -649,26 +1048,26 @@ function renderSimpleTable(certificates) {
     } else {
       statusBadge.style.backgroundColor = "#6c757d";
     }
-
     statusCell.appendChild(statusBadge);
     row.appendChild(statusCell);
+    // Actions
     const actionCell = document.createElement("td");
     actionCell.style.padding = "12px 15px";
     actionCell.style.display = "flex";
     actionCell.style.gap = "5px";
-
-    // Preview button
-    const previewBtn = document.createElement("button");
-    previewBtn.textContent = "Preview";
-    previewBtn.className = "btn btn-sm btn-outline-primary";
-    previewBtn.style.padding = "0.25rem 0.5rem";
-    previewBtn.style.fontSize = "0.75rem";
-    previewBtn.title = "Preview certificate details";
-    previewBtn.addEventListener("click", () =>
-      handlePreviewCertificate(certificate)
-    );
-    actionCell.appendChild(previewBtn);
-
+    // Preview button (not for sent or resent status)
+    if (normalizedStatus !== "sent" && normalizedStatus !== "resent") {
+      const previewBtn = document.createElement("button");
+      previewBtn.textContent = "Preview";
+      previewBtn.className = "btn btn-sm btn-outline-primary";
+      previewBtn.style.padding = "0.25rem 0.5rem";
+      previewBtn.style.fontSize = "0.75rem";
+      previewBtn.title = "Preview certificate details";
+      previewBtn.addEventListener("click", () =>
+        handlePreviewCertificate(certificate)
+      );
+      actionCell.appendChild(previewBtn);
+    }
     // Approve button (admin only, for approval status)
     if (userRole === "admin" && normalizedStatus === "for approval") {
       const approveBtn = document.createElement("button");
@@ -682,7 +1081,6 @@ function renderSimpleTable(certificates) {
       );
       actionCell.appendChild(approveBtn);
     }
-
     // Sign button (admin only, for signatory status)
     if (userRole === "admin" && normalizedStatus === "for signatory") {
       const signBtn = document.createElement("button");
@@ -696,7 +1094,6 @@ function renderSimpleTable(certificates) {
       );
       actionCell.appendChild(signBtn);
     }
-
     // Send button (signed certificates only)
     if (normalizedStatus === "signed") {
       const sendBtn = document.createElement("button");
@@ -710,12 +1107,11 @@ function renderSimpleTable(certificates) {
       );
       actionCell.appendChild(sendBtn);
     }
-
-    // Resend button (sent certificates only)
+    // Resend button (sent or resent certificates only)
     if (normalizedStatus === "sent" || normalizedStatus === "resent") {
       const resendBtn = document.createElement("button");
       resendBtn.textContent = "Resend";
-      resendBtn.className = "btn btn-sm btn-outline-primary";
+      resendBtn.className = "btn btn-sm btn-outline-primary me-1";
       resendBtn.style.padding = "0.25rem 0.5rem";
       resendBtn.style.fontSize = "0.75rem";
       resendBtn.title = "Resend this certificate";
@@ -724,7 +1120,6 @@ function renderSimpleTable(certificates) {
       );
       actionCell.appendChild(resendBtn);
     }
-
     row.appendChild(actionCell);
     tbody.appendChild(row);
   });
@@ -734,251 +1129,137 @@ function renderSimpleTable(certificates) {
   console.log("Simple table rendered successfully");
 }
 
-// Function to handle approve certificate with confirmation
-async function handleApproveCertificate(certificate) {
-  try {
-    console.log("Approving certificate:", certificate);
-
-    // Validate certificate exists and has required properties
-    if (!certificate || !certificate._id) {
-      showErrorMessage("Invalid certificate selected");
-      return;
-    }
-
-    // Show confirmation dialog
-    const isConfirmed = confirm(
-      `Are you sure you want to approve this certificate for ${certificate.businessName}?\n\n` +
-        `This action will move the certificate to the signatory step.`
-    );
-
-    if (!isConfirmed) {
-      return; // User cancelled the approval
-    }
-
-    const token = getAuthToken();
-    const response = await fetch("/api/certificates/approve", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        certificateId: certificate._id,
-      }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        handleUnauthorizedError();
-        return;
+// Function to generate certificate email body
+function generateCertificateEmailBody(certificate) {
+  // Format the certificate date
+  let formattedDate = "Date not available";
+  if (certificate.certificateDate) {
+    try {
+      const certDate =
+        typeof certificate.certificateDate === "string"
+          ? new Date(certificate.certificateDate)
+          : certificate.certificateDate;
+      if (!isNaN(certDate.getTime())) {
+        formattedDate = certDate.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
       }
-      const errorData = await response.json();
-      throw new Error(
-        errorData.message ||
-          `Failed to approve certificate: ${response.status} ${response.statusText}`
-      );
+    } catch (error) {
+      console.error("Error formatting certificate date:", error);
     }
-
-    const result = await response.json();
-    console.log("Approval response:", result);
-    showSuccessMessage(result.message);
-    loadCertificateData(); // Refresh table
-  } catch (error) {
-    console.error("Error approving certificate:", error);
-    showErrorMessage(`Failed to approve certificate: ${error.message}`);
   }
-}
-
-// Function to handle sign certificate
-async function handleSignCertificate(certificate) {
-  console.log("Opening signature upload for:", certificate);
-
-  if (!certificate || !certificate._id) {
-    showErrorMessage("Invalid certificate selected");
-    return;
-  }
-
-  currentCertificate = certificate;
-  const signatureModal = document.getElementById("signatureModal");
-  signatureModal.style.display = "block";
-
-  // Reset form
-  const signatureForm = document.getElementById("signatureForm");
-  signatureForm.reset();
-  document.getElementById("signaturePreview").innerHTML =
-    "<span>No image selected</span>";
-}
-
-// Function to handle send certificate
-async function handleSendCertificate(certificate) {
-  console.log("Sending certificate for:", certificate);
-
-  // Validate certificate exists and has required properties
-  if (!certificate || !certificate._id) {
-    showErrorMessage("Invalid certificate selected");
-    return;
-  }
-
-  // Check if certificate is signed before allowing send
-  const normalizedStatus = certificate.status
-    ? certificate.status.toLowerCase().trim()
-    : "";
-  if (normalizedStatus !== "signed") {
-    showErrorMessage(
-      `Certificate must be signed before sending. Current status: ${certificate.status}`
-    );
-    return;
-  }
-
-  currentCertificate = certificate;
-  const sendCertificatesModal = document.getElementById(
-    "sendCertificatesModal"
-  );
-  sendCertificatesModal.style.display = "block";
-}
-
-// Function to handle preview certificate with PDF
-async function handlePreviewCertificate(certificate) {
-  console.log("Previewing certificate with PDF for:", certificate);
-  currentCertificate = certificate;
-
-  // Show loading state
-  const emailPreviewModal = document.getElementById("emailPreviewModal");
-  emailPreviewModal.style.display = "block";
-
-  // Clear previous preview
-  document.getElementById("previewToEmail").textContent = certificate.email;
-  document.getElementById("previewSubject").textContent =
-    document.getElementById("emailSubject").value;
-  document.getElementById("previewEmailBody").innerHTML = "";
-  document.getElementById("previewAttachmentName").textContent = "";
-  document.getElementById("previewSignatureSection").style.display = "none";
-
-  // Set status badge in preview
-  const previewStatus = document.getElementById("previewStatus");
-  previewStatus.textContent = certificate.status;
-  previewStatus.className = "preview-status";
-
-  const normalizedStatus = certificate.status
-    ? certificate.status.toLowerCase().trim()
-    : "";
-
-  if (normalizedStatus === "signed") {
-    previewStatus.classList.add("signed");
-  } else if (normalizedStatus === "for signatory") {
-    previewStatus.classList.add("for-signatory");
-  } else if (normalizedStatus === "approved") {
-    previewStatus.classList.add("approved");
-  } else if (normalizedStatus === "for approval") {
-    previewStatus.classList.add("for-approval");
-  } else if (normalizedStatus === "sent") {
-    previewStatus.classList.add("sent");
-  } else if (normalizedStatus === "resent") {
-    previewStatus.classList.add("resent");
-  }
-
-  // Show loading indicator
-  const pdfPreviewContainer = document.getElementById("pdfPreviewContainer");
-  if (pdfPreviewContainer) {
-    pdfPreviewContainer.innerHTML = `
-      <div class="d-flex justify-content-center align-items-center" style="height: 400px;">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
+  // Get current year
+  const currentYear = new Date().getFullYear();
+  return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate of Participation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .header h1 {
+            color: #2c5282;
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            padding: 20px 0;
+        }
+        .content p {
+            margin-bottom: 15px;
+        }
+        .details {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .details h3 {
+            margin-top: 0;
+            color: #2c5282;
+        }
+        .details ul {
+            padding-left: 20px;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px 0;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #666;
+        }
+        .button {
+            display: inline-block;
+            background-color: #2c5282;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Certificate of Participation</h1>
         </div>
-        <span class="ms-3">Generating PDF preview...</span>
-      </div>
-    `;
-  }
-
-  try {
-    const token = getAuthToken();
-    const response = await fetch("/api/certificates/preview", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        certificateId: certificate._id,
-      }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        handleUnauthorizedError();
-        return;
-      }
-      const errorData = await response.json();
-      throw new Error(
-        errorData.message ||
-          `Failed to generate preview: ${response.status} ${response.statusText}`
-      );
-    }
-
-    const result = await response.json();
-    console.log("Preview response:", result);
-
-    // Update email preview with personalization
-    const emailBody = document.getElementById("emailBody").value;
-    const personalizedBody = emailBody
-      .replace(/{{businessName}}/g, certificate.businessName)
-      .replace(/{{accountNo}}/g, certificate.accountNo)
-      .replace(/{{address}}/g, certificate.address);
-    document.getElementById("previewEmailBody").innerHTML =
-      personalizedBody.replace(/\n/g, "<br>");
-    document.getElementById("previewAttachmentName").textContent =
-      result.fileName;
-
-    // Show signature if available
-    const signatureSection = document.getElementById("previewSignatureSection");
-    const signatureImage = document.getElementById("previewSignatureImage");
-
-    if (certificate.signatureImage) {
-      signatureSection.style.display = "block";
-      signatureImage.src = certificate.signatureImage;
-    } else {
-      signatureSection.style.display = "none";
-    }
-
-    // Display PDF preview
-    if (pdfPreviewContainer) {
-      pdfPreviewContainer.innerHTML = `
-        <div class="pdf-preview">
-          <iframe 
-            src="data:application/pdf;base64,${result.pdfBase64}" 
-            width="100%" 
-            height="500px"
-            title="Certificate Preview"
-          ></iframe>
-          <div class="pdf-preview-actions mt-3">
-            <a href="data:application/pdf;base64,${result.pdfBase64}" 
-               download="${result.fileName}" 
-               class="btn btn-outline-primary">
-              <i class="fas fa-download me-2"></i>Download PDF
-            </a>
-          </div>
+        <div class="content">
+            <p>Isang Makakalikasang Araw, <strong>${certificate.businessName}</strong>,</p>
+            <p>Thank you for waiting. We are pleased to provide you with a copy of your E-Certificates given your participation in our Environmental Awareness Seminar for Commercial Establishments held on <strong>${formattedDate}</strong>.</p>
+            <p>This is a computer-generated certificate.</p>
+            
+            <div class="details">
+                <h3>Certificate Details</h3>
+                <ul>
+                    <li><strong>Business Name:</strong> ${certificate.businessName}</li>
+                    <li><strong>Account No.:</strong> ${certificate.accountNo}</li>
+                    <li><strong>Address:</strong> ${certificate.address}</li>
+                    <li><strong>Date of Seminar:</strong> ${formattedDate}</li>
+                </ul>
+            </div>
+            
+            <p>Also attached is a copy of the City Ordinance No. 57, s. 2024 or the Revised Environmental Code of San Juan City for future reference.</p>
+            
+            <p>Best Regards,</p>
+            <p><strong>CITY ENVIRONMENT AND NATURAL RESOURCES OFFICE</strong><br>
+            Pollution Control Unit<br>
+            San Juan, Metro Manila<br>
+            Mobile No: SMART (0939) 717-2394</p>
+            
+            <p><img src="https://i.ibb.co/PzW6YYTN/243202270-164184122563361-4894751073863392126-n.png" alt="CENRO Logo" style="width: 100px; height: auto;"></p>
         </div>
-      `;
-    }
-
-    // Update send button state based on signature status
-    updateSendButtonState(certificate);
-  } catch (error) {
-    console.error("Error generating certificate preview:", error);
-
-    if (pdfPreviewContainer) {
-      pdfPreviewContainer.innerHTML = `
-        <div class="alert alert-danger d-flex align-items-center" role="alert">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          <div>
-            Failed to generate PDF preview: ${error.message}
-          </div>
+        <div class="footer">
+            <p>This is an automated message.</p>
+            <p>For inquiries, contact us at cenrosanjuanpcu@gmail.com | Phone: (0939)717-2394.</p>
+            <p>© ${currentYear} City Government of San Juan. All rights reserved.</p>
         </div>
-      `;
-    }
-
-    showErrorMessage(`Failed to generate preview: ${error.message}`);
-  }
+    </div>
+</body>
+</html>`;
 }
 
 // Function to update send button state
@@ -987,11 +1268,34 @@ function updateSendButtonState(certificate) {
   const normalizedStatus = certificate.status
     ? certificate.status.toLowerCase().trim()
     : "";
-
-  if (normalizedStatus !== "signed") {
+  // For sent or resent status, show the resend button
+  if (normalizedStatus === "sent" || normalizedStatus === "resent") {
+    sendCertificateBtn.disabled = false;
+    sendCertificateBtn.className = "btn btn-primary";
+    sendCertificateBtn.innerHTML = "Resend Certificate";
+    sendCertificateBtn.title = "";
+    // Remove any warning message if exists
+    const warningMsg = document.getElementById("approvalWarning");
+    if (warningMsg) {
+      warningMsg.remove();
+    }
+  }
+  // For signed status, show the send button
+  else if (normalizedStatus === "signed") {
+    sendCertificateBtn.disabled = false;
+    sendCertificateBtn.className = "btn btn-primary";
+    sendCertificateBtn.innerHTML = "Send Certificate";
+    sendCertificateBtn.title = "";
+    // Remove any warning message if exists
+    const warningMsg = document.getElementById("approvalWarning");
+    if (warningMsg) {
+      warningMsg.remove();
+    }
+  }
+  // For other statuses, disable the send button
+  else {
     sendCertificateBtn.disabled = true;
     sendCertificateBtn.className = "btn btn-secondary";
-
     if (normalizedStatus === "for signatory") {
       sendCertificateBtn.innerHTML = `
         <i class="fas fa-pen-fancy"></i>
@@ -1007,14 +1311,12 @@ function updateSendButtonState(certificate) {
       sendCertificateBtn.title =
         "This certificate must be signed before it can be sent";
     }
-
     // Add warning message
     let warningMsg = document.getElementById("approvalWarning");
     if (!warningMsg) {
       warningMsg = document.createElement("div");
       warningMsg.id = "approvalWarning";
       warningMsg.className = "alert alert-warning mt-3";
-
       if (normalizedStatus === "for signatory") {
         warningMsg.innerHTML = `
           <i class="fas fa-exclamation-triangle me-2"></i>
@@ -1026,34 +1328,163 @@ function updateSendButtonState(certificate) {
           <strong>Warning:</strong> This certificate is not ready for sending. Please complete all required steps.
         `;
       }
-
       const modalBody = document.querySelector(
         "#emailPreviewModal .modal-body"
       );
       modalBody.appendChild(warningMsg);
     }
-  } else {
-    sendCertificateBtn.disabled = false;
-    sendCertificateBtn.className = "btn btn-primary";
-    sendCertificateBtn.innerHTML = "Send Certificate";
-    sendCertificateBtn.title = "";
-
-    // Remove warning message if exists
-    const warningMsg = document.getElementById("approvalWarning");
-    if (warningMsg) {
-      warningMsg.remove();
-    }
   }
 }
 
-// Function to handle resend certificate
-function handleResendCertificate(certificate) {
-  console.log("Resending certificate to:", certificate);
-  currentCertificate = certificate;
-  const sendCertificatesModal = document.getElementById(
-    "sendCertificatesModal"
-  );
-  sendCertificatesModal.style.display = "block";
+// Function to resend certificate
+async function resendCertificate(certificate) {
+  try {
+    const subject = document.getElementById("emailSubject").value.trim();
+    const body = document.getElementById("emailBody").value;
+    const template = document.getElementById("certificateTemplate").value;
+    if (!subject || !body) {
+      showErrorMessage("Please fill in all required fields");
+      return;
+    }
+    // Create and show resend progress modal
+    const resendProgressModal = createResendProgressModal();
+    document.body.appendChild(resendProgressModal);
+    resendProgressModal.style.display = "block";
+    // Start progress animation
+    const progressBar = resendProgressModal.querySelector(".progress-bar");
+    const progressPercentage = resendProgressModal.querySelector(
+      ".progress-percentage"
+    );
+    const progressSteps = resendProgressModal.querySelectorAll(".step");
+    let progress = 0;
+    let currentStep = 0;
+    const progressInterval = setInterval(() => {
+      progress += 3;
+      if (progress > 95) progress = 95;
+      if (progressBar) {
+        progressBar.style.width = `${progress}%`;
+        progressBar.setAttribute("aria-valuenow", progress);
+      }
+      if (progressPercentage) {
+        progressPercentage.textContent = `${progress}%`;
+      }
+      if (progress > 40 && currentStep === 0) {
+        progressSteps[0].classList.remove("step-active");
+        progressSteps[0].classList.add("step-completed");
+        progressSteps[1].classList.add("step-active");
+        currentStep = 1;
+      } else if (progress > 80 && currentStep === 1) {
+        progressSteps[1].classList.remove("step-active");
+        progressSteps[1].classList.add("step-completed");
+        progressSteps[2].classList.add("step-active");
+        currentStep = 2;
+      }
+    }, 100);
+    const token = getAuthToken();
+    const response = await fetch("/api/certificates/resend", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        certificateId: certificate._id,
+        subject,
+        body,
+        template,
+      }),
+    });
+    clearInterval(progressInterval);
+    if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorizedError();
+        return;
+      }
+      const errorData = await response.json();
+      throw new Error(
+        errorData.message ||
+          `Failed to resend certificate: ${response.status} ${response.statusText}`
+      );
+    }
+    // Complete progress animation
+    progressBar.style.width = "100%";
+    progressBar.setAttribute("aria-valuenow", 100);
+    progressPercentage.textContent = "100%";
+    progressSteps.forEach((step) => {
+      step.classList.remove("step-active");
+      step.classList.add("step-completed");
+    });
+    // Show success message
+    setTimeout(() => {
+      resendProgressModal.innerHTML = `
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Resend Complete</h5>
+          </div>
+          <div class="modal-body text-center">
+            <i class="fas fa-check-circle text-success" style="font-size: 3rem;"></i>
+            <h4 class="mt-3">Certificate Resent Successfully!</h4>
+            <p>The certificate has been resent to ${certificate.email}.</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" onclick="this.closest('.modal').style.display='none'">OK</button>
+          </div>
+        </div>
+      `;
+    }, 500);
+    // Refresh data after delay
+    setTimeout(() => {
+      loadCertificateData();
+    }, 1000);
+  } catch (error) {
+    console.error("Error resending certificate:", error);
+    showErrorMessage(`Failed to resend certificate: ${error.message}`);
+  }
+}
+
+// Helper function to create resend progress modal
+function createResendProgressModal() {
+  const modal = document.createElement("div");
+  modal.className = "modal";
+  modal.style.display = "block";
+  modal.style.backgroundColor = "rgba(0,0,0,0.5)";
+  modal.innerHTML = `
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Resending Certificate</h5>
+        </div>
+        <div class="modal-body">
+          <div class="progress-container">
+            <div class="d-flex justify-content-between mb-1">
+              <span>Resending certificate</span>
+              <span class="progress-percentage">0%</span>
+            </div>
+            <div class="progress" style="height: 10px;">
+              <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                   role="progressbar" 
+                   style="width: 0%"
+                   aria-valuenow="0" 
+                   aria-valuemin="0" 
+                   aria-valuemax="100"></div>
+            </div>
+            <div class="progress-steps mt-2 d-flex justify-content-between">
+              <small class="step step-active">Preparing</small>
+              <small class="step">Sending</small>
+              <small class="step">Completed</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  // Close modal when clicking outside
+  modal.addEventListener("click", function (e) {
+    if (e.target === modal) {
+      modal.style.display = "none";
+    }
+  });
+  return modal;
 }
 
 // Function to setup tabs
@@ -1135,49 +1566,44 @@ function setupUploadButton() {
   }
 }
 
-// Function to setup send certificates button
-function setupSendCertificatesButton() {
-  const sendCertificatesDataBtn = document.getElementById(
-    "sendCertificatesBtn"
-  );
+// Function to setup send certificates modal
+function setupSendCertificatesModal() {
   const sendCertificatesModal = document.getElementById(
     "sendCertificatesModal"
   );
-  const certificateForm = document.getElementById("certificateForm");
   const previewEmailBtn = document.getElementById("previewEmailBtn");
   const closeBtns = sendCertificatesModal.querySelectorAll(
     ".modal-close, .modal-close-btn"
   );
-  if (sendCertificatesDataBtn) {
-    sendCertificatesDataBtn.addEventListener("click", function () {
-      sendCertificatesModal.style.display = "block";
-    });
-  }
+  // Setup close buttons
   closeBtns.forEach((btn) => {
     btn.addEventListener("click", function () {
       sendCertificatesModal.style.display = "none";
     });
   });
+  // Close modal when clicking outside
   window.addEventListener("click", function (event) {
     if (event.target === sendCertificatesModal) {
       sendCertificatesModal.style.display = "none";
     }
   });
+  // Setup preview email button
   if (previewEmailBtn) {
     previewEmailBtn.addEventListener("click", function () {
-      const signedCertificates = allCertificates.filter(
-        (cert) => cert.status.toLowerCase() === "signed"
-      );
-      if (signedCertificates.length === 0) {
-        showErrorMessage(
-          "No signed certificates to send. Please sign certificates first."
-        );
+      const subject = document.getElementById("emailSubject").value.trim();
+      const body = document.getElementById("emailBody").value;
+      const template = document.getElementById("certificateTemplate").value;
+      if (!subject || !body) {
+        showErrorMessage("Please fill in all required fields");
         return;
       }
-      const previewCertificate = signedCertificates[0];
-      currentCertificate = previewCertificate;
-      sendCertificatesModal.style.display = "none";
-      handlePreviewCertificate(previewCertificate);
+      // Use the current certificate for preview, regardless of status
+      if (currentCertificate) {
+        sendCertificatesModal.style.display = "none";
+        handlePreviewCertificate(currentCertificate);
+      } else {
+        showErrorMessage("No certificate selected for preview");
+      }
     });
   }
 }
@@ -1191,7 +1617,6 @@ function setupSignatureModal() {
   const closeBtns = signatureModal.querySelectorAll(
     ".modal-close, .modal-close-btn"
   );
-
   // Handle image preview
   signatureImageInput.addEventListener("change", function (e) {
     const file = e.target.files[0];
@@ -1205,20 +1630,17 @@ function setupSignatureModal() {
       signaturePreview.innerHTML = "<span>No image selected</span>";
     }
   });
-
   // Handle modal close
   closeBtns.forEach((btn) => {
     btn.addEventListener("click", function () {
       signatureModal.style.display = "none";
     });
   });
-
   window.addEventListener("click", function (event) {
     if (event.target === signatureModal) {
       signatureModal.style.display = "none";
     }
   });
-
   // Handle signature upload
   uploadSignatureBtn.addEventListener("click", async function () {
     const fileInput = document.getElementById("signatureImage");
@@ -1226,11 +1648,9 @@ function setupSignatureModal() {
       showErrorMessage("Please select a signature image to upload");
       return;
     }
-
     const formData = new FormData();
     formData.append("signatureImage", fileInput.files[0]);
     formData.append("certificateId", currentCertificate._id);
-
     try {
       const token = getAuthToken();
       const response = await fetch("/api/certificates/upload-signature", {
@@ -1240,7 +1660,6 @@ function setupSignatureModal() {
         },
         body: formData,
       });
-
       if (!response.ok) {
         if (response.status === 401) {
           handleUnauthorizedError();
@@ -1252,7 +1671,6 @@ function setupSignatureModal() {
             `Failed to upload signature: ${response.status} ${response.statusText}`
         );
       }
-
       const result = await response.json();
       showSuccessMessage(result.message);
       signatureModal.style.display = "none";
@@ -1271,44 +1689,46 @@ function setupEmailPreviewModal() {
   const closeBtns = emailPreviewModal.querySelectorAll(
     ".modal-close, .modal-close-btn"
   );
-
+  // Setup close buttons
   closeBtns.forEach((btn) => {
     btn.addEventListener("click", function () {
       emailPreviewModal.style.display = "none";
     });
   });
-
+  // Close modal when clicking outside
   window.addEventListener("click", function (event) {
     if (event.target === emailPreviewModal) {
       emailPreviewModal.style.display = "none";
     }
   });
-
   if (sendCertificateBtn) {
     sendCertificateBtn.addEventListener("click", async function () {
       if (!currentCertificate) {
         showErrorMessage("No certificate selected");
         return;
       }
-
-      // Check if certificate is signed
       const normalizedStatus = currentCertificate.status
         ? currentCertificate.status.toLowerCase().trim()
         : "";
+      // For sent or resent status, we can resend without any checks
+      if (normalizedStatus === "sent" || normalizedStatus === "resent") {
+        // Call the resend API directly
+        await resendCertificate(currentCertificate);
+        return;
+      }
+      // For signed status, proceed with the normal send flow
       if (normalizedStatus !== "signed") {
         showErrorMessage("Certificate must be signed before sending");
         return;
       }
-
       const subject = document.getElementById("emailSubject").value.trim();
       const body = document.getElementById("emailBody").value;
       const template = document.getElementById("certificateTemplate").value;
-
       if (!subject || !body) {
         showErrorMessage("Please fill in all required fields");
         return;
       }
-
+      // Normal send flow for signed certificates
       const originalBtnText = sendCertificateBtn.innerHTML;
       const originalBtnClass = sendCertificateBtn.className;
       sendCertificateBtn.disabled = true;
@@ -1318,14 +1738,12 @@ function setupEmailPreviewModal() {
                 <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                 Sending...
             `;
-
       const existingProgressContainers = emailPreviewModal.querySelectorAll(
         ".progress-container"
       );
       existingProgressContainers.forEach((container) => {
         container.remove();
       });
-
       const progressContainer = document.createElement("div");
       progressContainer.className = "progress-container mt-3";
       progressContainer.innerHTML = `
@@ -1347,12 +1765,10 @@ function setupEmailPreviewModal() {
                     <small class="step">Sending</small>
                 </div>
             `;
-
       sendCertificateBtn.parentNode.insertBefore(
         progressContainer,
         sendCertificateBtn.nextSibling
       );
-
       const progressBar = progressContainer.querySelector(".progress-bar");
       const progressPercentage = progressContainer.querySelector(
         ".progress-percentage"
@@ -1360,7 +1776,6 @@ function setupEmailPreviewModal() {
       const progressSteps = progressContainer.querySelectorAll(".step");
       let progress = 0;
       let currentStep = 0;
-
       const progressInterval = setInterval(() => {
         progress += 2;
         if (progress > 95) progress = 95;
@@ -1383,14 +1798,9 @@ function setupEmailPreviewModal() {
           currentStep = 2;
         }
       }, 100);
-
       try {
         const token = getAuthToken();
-        const personalizedBody = body
-          .replace(/{{businessName}}/g, currentCertificate.businessName)
-          .replace(/{{accountNo}}/g, currentCertificate.accountNo)
-          .replace(/{{address}}/g, currentCertificate.address);
-
+        // Use the HTML email body directly
         const response = await fetch("/api/certificates/send", {
           method: "POST",
           headers: {
@@ -1400,13 +1810,11 @@ function setupEmailPreviewModal() {
           body: JSON.stringify({
             certificateId: currentCertificate._id,
             subject,
-            body: personalizedBody,
+            body, // HTML body
             template,
           }),
         });
-
         clearInterval(progressInterval);
-
         if (!response.ok) {
           if (response.status === 401) {
             handleUnauthorizedError();
@@ -1418,7 +1826,6 @@ function setupEmailPreviewModal() {
               `Failed to send certificate: ${response.status} ${response.statusText}`
           );
         }
-
         progressBar.style.width = "100%";
         progressBar.setAttribute("aria-valuenow", 100);
         progressPercentage.textContent = "100%";
@@ -1426,7 +1833,6 @@ function setupEmailPreviewModal() {
           step.classList.remove("step-active");
           step.classList.add("step-completed");
         });
-
         setTimeout(() => {
           const result = response.json();
           result.then((data) => {
@@ -1484,7 +1890,6 @@ function setupEmailPreviewModal() {
       }
     });
   }
-
   // Update the modal when it's opened to check certificate status
   const observer = new MutationObserver(function (mutations) {
     mutations.forEach(function (mutation) {
@@ -1498,8 +1903,32 @@ function setupEmailPreviewModal() {
       }
     });
   });
-
   observer.observe(emailPreviewModal, { attributes: true });
+}
+
+// Function to setup edit certificate modal
+function setupEditCertificateModal() {
+  const editModal = document.getElementById("editCertificateModal");
+  const saveBtn = document.getElementById("saveCertificateBtn");
+  const closeBtns = editModal.querySelectorAll(
+    ".modal-close, .modal-close-btn"
+  );
+  // Setup close buttons
+  closeBtns.forEach((btn) => {
+    btn.addEventListener("click", function () {
+      editModal.style.display = "none";
+    });
+  });
+  // Close modal when clicking outside
+  window.addEventListener("click", function (event) {
+    if (event.target === editModal) {
+      editModal.style.display = "none";
+    }
+  });
+  // Setup save button
+  if (saveBtn) {
+    saveBtn.addEventListener("click", saveEditedCertificate);
+  }
 }
 
 // Function to setup refresh button
@@ -1522,66 +1951,6 @@ function setupRefreshButton() {
       });
     });
   }
-}
-
-// Function to show success message
-function showSuccessMessage(message) {
-  const alertDiv = document.createElement("div");
-  alertDiv.className = "alert alert-success";
-  alertDiv.style.position = "fixed";
-  alertDiv.style.top = "20px";
-  alertDiv.style.right = "20px";
-  alertDiv.style.padding = "15px 20px";
-  alertDiv.style.backgroundColor = "var(--success)";
-  alertDiv.style.color = "white";
-  alertDiv.style.borderRadius = "var(--border-radius-md)";
-  alertDiv.style.boxShadow = "var(--shadow-lg)";
-  alertDiv.style.zIndex = "10001";
-  alertDiv.style.display = "flex";
-  alertDiv.style.alignItems = "center";
-  alertDiv.style.gap = "10px";
-  alertDiv.innerHTML = `
-        <i class="fas fa-check-circle"></i>
-        <span>${message}</span>
-    `;
-  document.body.appendChild(alertDiv);
-  setTimeout(() => {
-    alertDiv.style.opacity = "0";
-    alertDiv.style.transition = "opacity 0.5s";
-    setTimeout(() => {
-      document.body.removeChild(alertDiv);
-    }, 500);
-  }, 3000);
-}
-
-// Function to show error message
-function showErrorMessage(message) {
-  const alertDiv = document.createElement("div");
-  alertDiv.className = "alert alert-danger";
-  alertDiv.style.position = "fixed";
-  alertDiv.style.top = "20px";
-  alertDiv.style.right = "20px";
-  alertDiv.style.padding = "15px 20px";
-  alertDiv.style.backgroundColor = "var(--danger)";
-  alertDiv.style.color = "white";
-  alertDiv.style.borderRadius = "var(--border-radius-md)";
-  alertDiv.style.boxShadow = "var(--shadow-lg)";
-  alertDiv.style.zIndex = "10001";
-  alertDiv.style.display = "flex";
-  alertDiv.style.alignItems = "center";
-  alertDiv.style.gap = "10px";
-  alertDiv.innerHTML = `
-        <i class="fas fa-exclamation-circle"></i>
-        <span>${message}</span>
-    `;
-  document.body.appendChild(alertDiv);
-  setTimeout(() => {
-    alertDiv.style.opacity = "0";
-    alertDiv.style.transition = "opacity 0.5s";
-    setTimeout(() => {
-      document.body.removeChild(alertDiv);
-    }, 500);
-  }, 5000);
 }
 
 // Function to setup dropdown functionality
@@ -1823,6 +2192,28 @@ function showFallbackAvatar(user, fallbackElement) {
   }
 }
 
+// Function to update current page for user tracking
+function updateCurrentPage(page) {
+  const token = localStorage.getItem("auth_token");
+  if (!token) return;
+  fetch("/api/auth/current-page", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ page }),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        console.error("Failed to update current page");
+      }
+    })
+    .catch((error) => {
+      console.error("Error updating current page:", error);
+    });
+}
+
 // Wait for DOM to be fully loaded
 window.addEventListener("load", function () {
   console.log("Certifications page loaded, initializing");
@@ -1834,9 +2225,10 @@ window.addEventListener("load", function () {
   setupTabs();
   setupRefreshButton();
   setupUploadButton();
-  setupSendCertificatesButton();
+  setupSendCertificatesModal();
   setupSignatureModal();
   setupEmailPreviewModal();
+  setupEditCertificateModal();
   setupSearch();
   setupPaginationControls();
   updateDateTime();

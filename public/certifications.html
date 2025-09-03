@@ -16,6 +16,11 @@
     />
     <link rel="stylesheet" href="dashboard.css" />
     <link rel="stylesheet" href="certifications.css" />
+    <link
+      rel="icon"
+      type="image/png"
+      href="https://i.ibb.co/PzW6YYTN/243202270-164184122563361-4894751073863392126-n.png"
+    />
   </head>
   <body>
     <div class="dashboard-container">
@@ -125,7 +130,7 @@
                         type="text"
                         id="searchInput"
                         class="search-input"
-                        placeholder="Search by email or business name..."
+                        placeholder="Search by email, business name or account no."
                       />
                       <button id="searchBtn" class="search-button">
                         <i class="fas fa-search"></i>
@@ -138,10 +143,6 @@
                     <button class="btn btn-primary" id="uploadDataBtn">
                       <i class="fas fa-upload"></i>
                       Upload Data
-                    </button>
-                    <button class="btn btn-primary" id="sendCertificatesBtn">
-                      <i class="fas fa-paper-plane"></i>
-                      Send Certificates
                     </button>
                   </div>
                 </div>
@@ -228,7 +229,7 @@
                   />
                   <small class="form-text text-muted"
                     >CSV should contain columns: Email, Account No., Business
-                    Name, Address</small
+                    Name, Address, and Date</small
                   >
                 </div>
               </form>
@@ -264,12 +265,116 @@
                 </div>
                 <div class="form-group">
                   <label for="emailBody">Email Body:</label>
+                  <!-- In the sendCertificatesModal textarea -->
                   <textarea id="emailBody" name="body" rows="10" required>
-Dear {{businessName}},
-Thank you for participating in our Environmental Awareness Seminar. Please find attached your Certificate of Participation.
-Should you have any questions, feel free to contact our office.
-Best regards,
-CENRO San Juan City</textarea
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate of Participation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .header h1 {
+            color: #2c5282;
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            padding: 20px 0;
+        }
+        .content p {
+            margin-bottom: 15px;
+        }
+        .details {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .details h3 {
+            margin-top: 0;
+            color: #2c5282;
+        }
+        .details ul {
+            padding-left: 20px;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px 0;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #666;
+        }
+        .button {
+            display: inline-block;
+            background-color: #2c5282;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Certificate of Participation</h1>
+        </div>
+        <div class="content">
+            <p>Isang Makakalikasang Araw, <strong>{{businessName}}</strong>,</p>
+            <p>Thank you for waiting. We are pleased to provide you with a copy of your E-Certificates given your participation in our Environmental Awareness Seminar for Commercial Establishments held on <strong>{{certificateDate}}</strong>.</p>
+            <p>This is a computer-generated certificate.</p>
+            
+            <div class="details">
+                <h3>Certificate Details</h3>
+                <ul>
+                    <li><strong>Business Name:</strong> {{businessName}}</li>
+                    <li><strong>Account No.:</strong> {{accountNo}}</li>
+                    <li><strong>Address:</strong> {{address}}</li>
+                    <li><strong>Date of Seminar:</strong> {{certificateDate}}</li>
+                </ul>
+            </div>
+            
+            <p>Also attached is a copy of the City Ordinance No. 57, s. 2024 or the Revised Environmental Code of San Juan City for future reference.</p>
+            
+            <p>Best Regards,</p>
+            <p><strong>CITY ENVIRONMENT AND NATURAL RESOURCES OFFICE</strong><br>
+            Pollution Control Unit<br>
+            San Juan, Metro Manila<br>
+            Mobile No: SMART (0939) 717-2394</p>
+            
+            <p><img src="cid:cenro_logo" alt="CENRO Logo" style="width: 100px; height: auto;"></p>
+        </div>
+        <div class="footer">
+            <p>This is an automated message.</p>
+            <p>For inquiries, contact us at cenrosanjuanpcu@gmail.com | Phone: (0939)717-2394.</p>
+            <p>© {{currentYear}} City Government of San Juan. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html></textarea
                   >
                 </div>
                 <div class="form-group">
@@ -344,6 +449,66 @@ CENRO San Juan City</textarea
             </div>
           </div>
         </div>
+        <!-- Edit Certificate Modal -->
+        <div id="editCertificateModal" class="modal">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title">Edit Certificate</h2>
+              <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+              <form id="editCertificateForm">
+                <div class="form-group">
+                  <label for="editAccountNo">Account No.:</label>
+                  <input
+                    type="text"
+                    id="editAccountNo"
+                    name="accountNo"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="editBusinessName">Business Name:</label>
+                  <input
+                    type="text"
+                    id="editBusinessName"
+                    name="businessName"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="editAddress">Address:</label>
+                  <input type="text" id="editAddress" name="address" required />
+                </div>
+                <div class="form-group">
+                  <label for="editEmail">Email:</label>
+                  <input type="email" id="editEmail" name="email" required />
+                </div>
+                <div class="form-group">
+                  <label for="editCertificateDate">Certificate Date:</label>
+                  <input
+                    type="date"
+                    id="editCertificateDate"
+                    name="certificateDate"
+                    required
+                  />
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary modal-close-btn">
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="saveCertificateBtn"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
         <!-- Email Preview Modal -->
         <div id="emailPreviewModal" class="modal">
           <div class="modal-content">
@@ -367,7 +532,10 @@ CENRO San Juan City</textarea
                 </div>
                 <div class="preview-body">
                   <h3>Email Body:</h3>
-                  <div id="previewEmailBody"></div>
+                  <div
+                    id="previewEmailBody"
+                    class="email-preview-content"
+                  ></div>
                 </div>
                 <div class="preview-attachment">
                   <h3>Attachment:</h3>

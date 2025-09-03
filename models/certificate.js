@@ -6,6 +6,7 @@ const certificateSchema = new mongoose.Schema(
     accountNo: String,
     businessName: String,
     address: String,
+    certificateDate: Date,
     status: {
       type: String,
       default: "for approval",

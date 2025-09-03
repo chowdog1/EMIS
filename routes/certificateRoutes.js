@@ -39,6 +39,44 @@ router.get("/", async (req, res) => {
   }
 });
 
+// Update certificate
+router.put("/:id", verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { accountNo, businessName, address, email, certificateDate } =
+      req.body;
+
+    if (!accountNo || !businessName || !address || !email || !certificateDate) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const certificate = await Certificate.findById(id);
+    if (!certificate) {
+      return res.status(404).json({ message: "Certificate not found" });
+    }
+
+    // Update certificate fields
+    certificate.accountNo = accountNo;
+    certificate.businessName = businessName;
+    certificate.address = address;
+    certificate.email = email;
+    certificate.certificateDate = new Date(certificateDate);
+
+    await certificate.save();
+
+    res.status(200).json({
+      message: "Certificate updated successfully",
+      certificate,
+    });
+  } catch (error) {
+    console.error("Error updating certificate:", error);
+    res.status(500).json({
+      message: "Error updating certificate",
+      error: error.message,
+    });
+  }
+});
+
 // Upload CSV file and save to database
 router.post("/upload", verifyToken, upload.single("csvFile"), (req, res) => {
   if (!req.file) {
@@ -65,6 +103,12 @@ router.post("/upload", verifyToken, upload.single("csvFile"), (req, res) => {
       "businessname",
     ],
     address: ["address", "location", "business address", "address"],
+    certificateDate: [
+      "date",
+      "certificate date",
+      "date of seminar",
+      "date of participation",
+    ],
   };
   fs.createReadStream(req.file.path)
     .pipe(csv())
@@ -148,17 +192,47 @@ router.post("/upload", verifyToken, upload.single("csvFile"), (req, res) => {
         }
         return "";
       };
+      const getCertificateDate = () => {
+        if (headerMap.certificateDate && data[headerMap.certificateDate]) {
+          return new Date(data[headerMap.certificateDate].trim());
+        }
+        const dateVariations = [
+          "date",
+          "Date",
+          "DATE",
+          "date of participation",
+          "date of seminar",
+        ];
+        for (const key of dateVariations) {
+          if (data[key]) {
+            const dateValue = data[key].trim();
+            const parsedDate = new Date(dateValue);
+            if (!isNaN(parsedDate.getTime())) {
+              return parsedDate;
+            }
+          }
+        }
+        return null; // Return null if no valid date found
+      };
       const certificateData = {
         email: getEmail(),
         accountNo: getAccountNo(),
         businessName: getBusinessName(),
         address: getAddress(),
+        certificateDate: getCertificateDate(),
         status: "for approval",
       };
-      if (certificateData.email && certificateData.businessName) {
+      if (
+        certificateData.email &&
+        certificateData.businessName &&
+        certificateData.certificateDate
+      ) {
         results.push(certificateData);
       } else {
-        console.log("Skipping row with missing email or business name:", data);
+        console.log(
+          "Skipping row with missing email, business name, or date:",
+          data
+        );
       }
     })
     .on("end", async () => {
@@ -169,9 +243,10 @@ router.post("/upload", verifyToken, upload.single("csvFile"), (req, res) => {
           "valid records"
         );
         if (results.length === 0) {
-          return res
-            .status(400)
-            .json({ message: "No valid records found in CSV file" });
+          return res.status(400).json({
+            message:
+              "No valid records found in CSV file. Make sure to include email, business name, address and date columns",
+          });
         }
         const savedCertificates = await Certificate.insertMany(results);
         console.log(
@@ -301,7 +376,7 @@ router.post(
   }
 );
 
-// Preview certificate (admin only)
+//Preview endpoint
 router.post("/preview", verifyToken, async (req, res) => {
   try {
     const { certificateId } = req.body;
@@ -314,14 +389,44 @@ router.post("/preview", verifyToken, async (req, res) => {
       return res.status(404).json({ message: "Certificate not found" });
     }
 
-    // Check if certificate is signed (not just approved)
-    if (certificate.status !== "signed") {
+    // Allow preview for signed, sent, or resent certificates
+    if (
+      certificate.status !== "signed" &&
+      certificate.status !== "sent" &&
+      certificate.status !== "resent"
+    ) {
       return res.status(400).json({
-        message: `Certificate must be signed before previewing. Current status: ${certificate.status}`,
+        message: `Certificate must be signed, sent, or resent before previewing. Current status: ${certificate.status}`,
       });
     }
 
-    // Generate the certificate PDF using the template
+    // If certificate is already sent/resent, use existing PDF
+    if (certificate.status === "sent" || certificate.status === "resent") {
+      if (
+        !certificate.certificatePath ||
+        !fs.existsSync(certificate.certificatePath)
+      ) {
+        // If PDF doesn't exist, generate a new one
+        console.log("Existing PDF not found, generating new one...");
+        const pdfInfo = await fillCertificateTemplate(certificate);
+        certificate.certificatePath = pdfInfo.filePath;
+        await certificate.save();
+      }
+
+      // Read the existing PDF file and convert to base64
+      const pdfBuffer = fs.readFileSync(certificate.certificatePath);
+      const pdfBase64 = pdfBuffer.toString("base64");
+      const fileName = path.basename(certificate.certificatePath);
+
+      return res.status(200).json({
+        message: "Existing certificate preview retrieved successfully",
+        fileName: fileName,
+        pdfBase64: pdfBase64,
+        certificate,
+      });
+    }
+
+    // For signed certificates, generate new PDF
     console.log("Generating certificate PDF preview...");
     const pdfInfo = await fillCertificateTemplate(certificate);
     console.log(`Certificate PDF preview generated: ${pdfInfo.filePath}`);
@@ -338,9 +443,10 @@ router.post("/preview", verifyToken, async (req, res) => {
     });
   } catch (error) {
     console.error("Error previewing certificate:", error);
-    res
-      .status(500)
-      .json({ message: "Error previewing certificate", error: error.message });
+    res.status(500).json({
+      message: "Error previewing certificate",
+      error: error.message,
+    });
   }
 });
 
@@ -364,17 +470,38 @@ async function fillCertificateTemplate(certificateData) {
       );
     });
     console.log("=== END FIELDS ===");
+
+    // Format the certificate date from the data - handle potential non-Date object
+    let formattedDate = "Date not available";
+    if (certificateData.certificateDate) {
+      try {
+        // If it's a string, convert to Date object
+        const certDate =
+          typeof certificateData.certificateDate === "string"
+            ? new Date(certificateData.certificateDate)
+            : certificateData.certificateDate;
+
+        // Check if it's a valid Date
+        if (!isNaN(certDate.getTime())) {
+          formattedDate = certDate.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
+        }
+      } catch (error) {
+        console.error("Error formatting certificate date:", error);
+      }
+    }
+
     // Define the field mappings using the exact field names from your PDF
     const fieldMappings = {
       accountNo: certificateData.accountNo,
-      businessName: certificateData.businessName, // Reverted to original business name
+      businessName: certificateData.businessName,
       address: certificateData.address,
-      date: new Date().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
+      date: formattedDate,
     };
+
     // Try to fill each text field
     let fieldsFilled = 0;
     for (const [fieldName, value] of Object.entries(fieldMappings)) {
@@ -391,6 +518,7 @@ async function fillCertificateTemplate(certificateData) {
         console.error(`✗ Error filling field '${fieldName}':`, error.message);
       }
     }
+
     // Handle signature field - using manual positioning
     if (certificateData.signatureImage) {
       try {
@@ -506,6 +634,7 @@ async function fillCertificateTemplate(certificateData) {
     } else {
       console.log("No signature image provided for this certificate");
     }
+
     if (fieldsFilled === 0) {
       console.warn(
         "✗ No form fields were filled. Please check your PDF template field names."
@@ -515,6 +644,7 @@ async function fillCertificateTemplate(certificateData) {
         fields.map((field) => field.getName())
       );
     }
+
     // Flatten the form to prevent further editing
     form.flatten();
     const pdfBytes = await pdfDoc.save();
@@ -587,14 +717,68 @@ router.post("/send", verifyToken, async (req, res) => {
     certificate.certificatePath = pdfInfo.filePath;
     certificate.sentBy = req.user.userId;
     certificate.sentAt = new Date();
-    certificate.status = "sent";
+    certificate.status = "sent"; // Set status to "sent"
     await certificate.save();
+
+    // Format the certificate date
+    let formattedDate = "Date not available";
+    if (certificate.certificateDate) {
+      try {
+        // If it's a string, convert to Date object
+        const certDate =
+          typeof certificate.certificateDate === "string"
+            ? new Date(certificate.certificateDate)
+            : certificate.certificateDate;
+
+        // Check if it's a valid Date
+        if (!isNaN(certDate.getTime())) {
+          formattedDate = certDate.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
+        }
+      } catch (error) {
+        console.error("Error formatting certificate date:", error);
+      }
+    }
+
+    //Get current year for footer
+    const currentYear = new Date().getFullYear();
+
     // Personalize the email body
     const personalizedBody = body
       .replace(/{{businessName}}/g, certificate.businessName)
       .replace(/{{accountNo}}/g, certificate.accountNo)
-      .replace(/{{address}}/g, certificate.address);
-    // Create email options with attachment
+      .replace(/{{address}}/g, certificate.address)
+      .replace(/{{certificateDate}}/g, formattedDate)
+      .replace(/{{currentYear}}/g, currentYear);
+
+    // Check if logo file exists
+    const logoPath = path.join(__dirname, "../public/cenro logo.png");
+    console.log("Checking logo at:", logoPath);
+    if (!fs.existsSync(logoPath)) {
+      console.error("Logo file not found at:", logoPath);
+      return res.status(500).json({
+        message: "Logo file not found. Please check the path: " + logoPath,
+      });
+    }
+
+    // Check if ordinance file exists
+    const ordinancePath = path.join(
+      __dirname,
+      "../City Ordinance No. 57 Series of 2024.pdf"
+    );
+    console.log("Checking ordinance at:", ordinancePath);
+    if (!fs.existsSync(ordinancePath)) {
+      console.error("Ordinance file not found at:", ordinancePath);
+      return res.status(500).json({
+        message:
+          "Ordinance file not found. Please check the path: " + ordinancePath,
+      });
+    }
+
+    // Create email options with attachments and embedded image
     const mailOptions = {
       from: `"CENRO San Juan City" <${process.env.EMAIL_USER}>`,
       to: certificate.email,
@@ -605,22 +789,31 @@ router.post("/send", verifyToken, async (req, res) => {
           filename: pdfInfo.fileName,
           path: pdfInfo.filePath,
         },
+        {
+          filename: "City Ordinance No. 57 Series of 2024.pdf",
+          path: ordinancePath,
+        },
       ],
     };
+
     console.log(
       `Sending certificate to ${certificate.email} (${certificate.businessName})`
     );
+
     await transporter.sendMail(mailOptions);
     console.log(`Certificate sent successfully to ${certificate.email}`);
+
     res.status(200).json({
       message: `Certificate sent successfully to ${certificate.businessName}`,
       certificatePath: pdfInfo.filePath,
     });
   } catch (error) {
     console.error("Error sending certificate:", error);
-    res
-      .status(500)
-      .json({ message: "Error sending certificate", error: error.message });
+    res.status(500).json({
+      message: "Error sending certificate",
+      error: error.message,
+      stack: error.stack,
+    });
   }
 });
 
@@ -633,10 +826,12 @@ router.post("/resend", verifyToken, async (req, res) => {
         .status(400)
         .json({ message: "Certificate ID, subject, and body are required" });
     }
+
     const certificate = await Certificate.findById(certificateId);
     if (!certificate) {
       return res.status(404).json({ message: "Certificate not found" });
     }
+
     // Check if certificate has a generated PDF
     if (
       !certificate.certificatePath ||
@@ -648,8 +843,10 @@ router.post("/resend", verifyToken, async (req, res) => {
       certificate.certificatePath = pdfInfo.filePath;
       await certificate.save();
     }
+
     // Create email transporter
     const transporter = createEmailTransporter();
+
     // Verify transporter configuration
     try {
       await transporter.verify();
@@ -660,6 +857,7 @@ router.post("/resend", verifyToken, async (req, res) => {
         .status(500)
         .json({ message: "Email configuration error", error: error.message });
     }
+
     // Check if email credentials are set
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
       console.error("Email credentials not set in environment variables");
@@ -667,12 +865,65 @@ router.post("/resend", verifyToken, async (req, res) => {
         .status(500)
         .json({ message: "Email credentials not configured" });
     }
-    // Personalize the email body
+
+    // Format the certificate date
+    let formattedDate = "Date not available";
+    if (certificate.certificateDate) {
+      try {
+        // If it's a string, convert to Date object
+        const certDate =
+          typeof certificate.certificateDate === "string"
+            ? new Date(certificate.certificateDate)
+            : certificate.certificateDate;
+        // Check if it's a valid Date
+        if (!isNaN(certDate.getTime())) {
+          formattedDate = certDate.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
+        }
+      } catch (error) {
+        console.error("Error formatting certificate date:", error);
+      }
+    }
+
+    // Get current year for footer
+    const currentYear = new Date().getFullYear();
+
+    // Personalize the email body with all placeholders
     const personalizedBody = body
       .replace(/{{businessName}}/g, certificate.businessName)
       .replace(/{{accountNo}}/g, certificate.accountNo)
-      .replace(/{{address}}/g, certificate.address);
-    // Create email options with attachment
+      .replace(/{{address}}/g, certificate.address)
+      .replace(/{{certificateDate}}/g, formattedDate)
+      .replace(/{{currentYear}}/g, currentYear); // Add this line
+
+    // Check if logo file exists
+    const logoPath = path.join(__dirname, "../public/cenro logo.png");
+    console.log("Checking logo at:", logoPath);
+    if (!fs.existsSync(logoPath)) {
+      console.error("Logo file not found at:", logoPath);
+      return res.status(500).json({
+        message: "Logo file not found. Please check the path: " + logoPath,
+      });
+    }
+
+    // Check if ordinance file exists
+    const ordinancePath = path.join(
+      __dirname,
+      "../City Ordinance No. 57 Series of 2024.pdf"
+    );
+    console.log("Checking ordinance at:", ordinancePath);
+    if (!fs.existsSync(ordinancePath)) {
+      console.error("Ordinance file not found at:", ordinancePath);
+      return res.status(500).json({
+        message:
+          "Ordinance file not found. Please check the path: " + ordinancePath,
+      });
+    }
+
+    // Create email options
     const mailOptions = {
       from: `"CENRO San Juan City" <${process.env.EMAIL_USER}>`,
       to: certificate.email,
@@ -683,28 +934,37 @@ router.post("/resend", verifyToken, async (req, res) => {
           filename: path.basename(certificate.certificatePath),
           path: certificate.certificatePath,
         },
+        {
+          filename: "City Ordinance No. 57 Series of 2024.pdf",
+          path: ordinancePath,
+        },
       ],
     };
+
     console.log(
       `Resending certificate to ${certificate.email} (${certificate.businessName})`
     );
     await transporter.sendMail(mailOptions);
     console.log(`Certificate resent successfully to ${certificate.email}`);
+
     // Update the certificate status to "resent"
     certificate.resentBy = req.user.userId;
     certificate.resentAt = new Date();
     certificate.status = "resent";
     await certificate.save();
     console.log(`Updated status for ${certificate.email} to 'resent'`);
+
     res.status(200).json({
       message: `Certificate resent successfully to ${certificate.businessName}`,
       certificatePath: certificate.certificatePath,
     });
   } catch (error) {
     console.error("Error resending certificate:", error);
-    res
-      .status(500)
-      .json({ message: "Error resending certificate", error: error.message });
+    res.status(500).json({
+      message: "Error resending certificate",
+      error: error.message,
+      stack: error.stack,
+    });
   }
 });
 
