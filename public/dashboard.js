@@ -7,6 +7,8 @@ class DashboardManager {
     this.inactivityTimeout = 180 * 1000; // 1 minute in milliseconds
     this.warningTimeout = 160 * 1000; // Show warning 20 seconds before logout
     this.currentYear = "2025"; // Default year
+    this.barangayChartInstance = null;
+    this.monthlyChartInstance = null;
     this.init();
   }
   init() {
@@ -40,8 +42,13 @@ class DashboardManager {
         console.log(`Year changed to: ${this.currentYear}`);
         // Update the year display in the header
         const selectedYearElement = document.getElementById("selectedYear");
+        const selectedYearInCardElement =
+          document.getElementById("selectedYearInCard");
         if (selectedYearElement) {
           selectedYearElement.textContent = this.currentYear;
+        }
+        if (selectedYearInCardElement) {
+          selectedYearInCardElement.textContent = this.currentYear;
         }
         // Fetch dashboard data for the selected year
         this.fetchDashboardData();
@@ -85,7 +92,6 @@ class DashboardManager {
       window.location.href = "/";
     }
   }
-
   // Function to get time-based greeting
   getTimeBasedGreeting() {
     const hour = new Date().getHours();
@@ -97,7 +103,6 @@ class DashboardManager {
       return "Good evening";
     }
   }
-
   // Function to update user interface
   async updateUserInterface(user) {
     console.log("Updating user interface with user:", user);
@@ -118,7 +123,6 @@ class DashboardManager {
     // Update avatar using the shared utility function
     this.updateUserAvatar(user, userAvatarImage, userAvatarFallback);
   }
-
   // Helper function to get user initials
   getUserInitials(user) {
     if (user.firstname && user.lastname) {
@@ -133,7 +137,6 @@ class DashboardManager {
       return user.email.charAt(0).toUpperCase();
     }
   }
-
   // Function to verify token with server
   async verifyTokenWithServer(token) {
     try {
@@ -166,7 +169,6 @@ class DashboardManager {
       return true; // Changed to true to allow offline access
     }
   }
-
   // Function to fetch dashboard data
   async fetchDashboardData() {
     try {
@@ -195,13 +197,14 @@ class DashboardManager {
       this.updateDashboardCards(data);
       // Create barangay chart
       this.createBarangayChart(data.barangayStats);
+      // Create monthly chart
+      this.createMonthlyChart(data.monthlyTotals || []);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
       // Try to load businesses directly if stats fail
       this.loadBusinessData();
     }
   }
-
   // Function to update dashboard cards
   updateDashboardCards(data) {
     console.log("Updating dashboard cards with data:", data);
@@ -250,8 +253,22 @@ class DashboardManager {
     } else {
       console.error("Renewal element not found");
     }
+    // Update total amount paid
+    const totalAmountPaidElement = document.getElementById("totalAmountPaid");
+    if (totalAmountPaidElement) {
+      // Format as Philippine Peso
+      totalAmountPaidElement.textContent = `₱${data.totalAmountPaid.toLocaleString(
+        "en-PH",
+        {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }
+      )}`;
+      console.log("Set total amount paid to:", data.totalAmountPaid);
+    } else {
+      console.error("Total amount paid element not found");
+    }
   }
-
   // Function to create barangay chart (MODIFIED TO USE BAR CHART)
   createBarangayChart(barangayStats) {
     console.log("Creating barangay chart with data:", barangayStats);
@@ -329,6 +346,122 @@ class DashboardManager {
     }
   }
 
+  // Function to create monthly payment chart
+  createMonthlyChart(monthlyData) {
+    console.log("Creating monthly chart with data:", monthlyData);
+    const ctx = document.getElementById("monthlyChart");
+    if (!ctx) {
+      console.error("Monthly chart canvas not found");
+      return;
+    }
+
+    // Check if Chart.js is loaded
+    if (typeof Chart === "undefined") {
+      console.error("Chart.js is not loaded");
+      return;
+    }
+
+    // Prepare data for the chart
+    const monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    const labels = [];
+    const data = [];
+
+    // Initialize all months with 0
+    for (let i = 1; i <= 12; i++) {
+      labels.push(monthNames[i - 1]);
+      data.push(0);
+    }
+
+    // Fill in the data we have
+    monthlyData.forEach((item) => {
+      const monthIndex = item._id - 1; // Convert to 0-based index
+      if (monthIndex >= 0 && monthIndex < 12) {
+        data[monthIndex] = item.totalAmount;
+      }
+    });
+
+    console.log("Chart labels:", labels);
+    console.log("Chart data:", data);
+
+    try {
+      // Destroy existing chart instance if it exists
+      if (this.monthlyChartInstance) {
+        this.monthlyChartInstance.destroy();
+      }
+
+      this.monthlyChartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "Amount Paid (₱)",
+              data: data,
+              backgroundColor: "rgba(45, 90, 39, 0.7)",
+              borderColor: "rgba(45, 90, 39, 1)",
+              borderWidth: 1,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: "Amount (₱)",
+              },
+              ticks: {
+                callback: function (value) {
+                  return "₱" + value.toLocaleString("en-PH");
+                },
+              },
+            },
+            x: {
+              title: {
+                display: true,
+                text: "Month",
+              },
+            },
+          },
+          plugins: {
+            legend: {
+              display: false,
+            },
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  return `₱${context.raw.toLocaleString("en-PH", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}`;
+                },
+              },
+            },
+          },
+        },
+      });
+      console.log("Monthly chart created successfully");
+    } catch (error) {
+      console.error("Error creating monthly chart:", error);
+    }
+  }
+
   // Function to setup dropdown functionality
   setupDropdown() {
     console.log("Setting up dropdown functionality");
@@ -378,7 +511,6 @@ class DashboardManager {
     });
     console.log("Logout functionality setup complete");
   }
-
   // Logout function
   async logout() {
     try {
@@ -418,7 +550,6 @@ class DashboardManager {
       window.location.href = "/";
     }
   }
-
   // Clear session data
   clearSessionData() {
     console.log("Clearing session data");
@@ -433,7 +564,6 @@ class DashboardManager {
     // Clear sessionStorage
     sessionStorage.clear();
   }
-
   // Check if token is expired (simplified version for browser)
   isTokenExpired(token) {
     try {
@@ -456,7 +586,6 @@ class DashboardManager {
       return true; // Assume expired if there's an error
     }
   }
-
   // Get user from token (simplified version for browser)
   getUserFromToken(token) {
     try {
@@ -472,7 +601,6 @@ class DashboardManager {
       return null;
     }
   }
-
   // Check session validity
   async checkSessionValidity() {
     try {
@@ -492,7 +620,6 @@ class DashboardManager {
       return true;
     }
   }
-
   // Start periodic session check
   startSessionCheck() {
     // Clear any existing interval
@@ -510,7 +637,6 @@ class DashboardManager {
     }, 1 * 60 * 1000); // 1 minute
     console.log("Session check started (1 minute interval)");
   }
-
   // Stop session check
   stopSessionCheck() {
     if (this.sessionCheckInterval) {
@@ -519,7 +645,6 @@ class DashboardManager {
       console.log("Session check stopped");
     }
   }
-
   // Setup inactivity detection
   setupInactivityDetection() {
     console.log("Setting up inactivity detection");
@@ -546,7 +671,6 @@ class DashboardManager {
     this.resetInactivityTimer();
     console.log("Inactivity detection setup complete");
   }
-
   // Reset inactivity timer
   resetInactivityTimer() {
     // Clear existing timers
@@ -574,14 +698,12 @@ class DashboardManager {
       } seconds of inactivity)`
     );
   }
-
   // Create inactivity warning popup
   createInactivityWarning() {
     // Check if popup already exists
     if (document.getElementById("inactivityWarning")) {
       return;
     }
-
     // Create popup container
     const popup = document.createElement("div");
     popup.id = "inactivityWarning";
@@ -716,7 +838,6 @@ class DashboardManager {
     document.body.appendChild(popup);
     console.log("Inactivity warning popup created");
   }
-
   // Show inactivity warning popup
   showInactivityWarning() {
     const popup = document.getElementById("inactivityWarning");
@@ -739,7 +860,6 @@ class DashboardManager {
       popup.countdownInterval = countdownInterval;
     }
   }
-
   // Hide inactivity warning popup
   hideInactivityWarning() {
     const popup = document.getElementById("inactivityWarning");
@@ -753,13 +873,11 @@ class DashboardManager {
       }
     }
   }
-
   // Load business data (fallback method)
   loadBusinessData() {
     console.log("Loading business data as fallback");
     // This is a placeholder - implement as needed
   }
-
   // Update user avatar - FIXED VERSION
   async updateUserAvatar(user, imageElement, fallbackElement) {
     if (!imageElement || !fallbackElement) {
@@ -806,7 +924,6 @@ class DashboardManager {
       this.showFallbackAvatar(user, fallbackElement);
     }
   }
-
   // Show fallback avatar with initials
   showFallbackAvatar(user, fallbackElement) {
     const initials = this.getUserInitials(user);
@@ -820,7 +937,6 @@ class DashboardManager {
       imageElement.style.display = "none";
     }
   }
-
   // Add updateCurrentPage method to DashboardManager class
   updateCurrentPage(page) {
     const token = localStorage.getItem("auth_token");
@@ -846,7 +962,6 @@ class DashboardManager {
       });
   }
 }
-
 // Function to update the date and time display
 function updateDateTime() {
   const now = new Date();
@@ -866,7 +981,6 @@ function updateDateTime() {
     datetimeElement.textContent = dateTimeString;
   }
 }
-
 // Wait for DOM to be fully loaded
 window.addEventListener("DOMContentLoaded", function () {
   console.log("DOM fully loaded, initializing dashboard");
@@ -878,7 +992,6 @@ window.addEventListener("DOMContentLoaded", function () {
   updateDateTime();
   setInterval(updateDateTime, 1000);
 });
-
 // Handle page visibility change
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {

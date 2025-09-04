@@ -116,6 +116,22 @@ router.get("/stats", async (req, res) => {
     ]);
     const totalAmountPaid =
       totalAmountResult.length > 0 ? totalAmountResult[0].totalAmount : 0;
+    // Calculate monthly payment totals
+    const monthlyTotals = await Business2026.aggregate([
+      {
+        $match: {
+          "DATE OF PAYMENT": { $exists: true, $ne: null },
+          $expr: { $eq: [{ $year: "$DATE OF PAYMENT" }, 2026] },
+        },
+      },
+      {
+        $group: {
+          _id: { $month: "$DATE OF PAYMENT" },
+          totalAmount: { $sum: "$AMOUNT PAID" },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
     res.json({
       totalBusinesses,
       activeBusinessesCount,
@@ -130,6 +146,7 @@ router.get("/stats", async (req, res) => {
       },
       barangayStats,
       totalAmountPaid,
+      monthlyTotals,
     });
   } catch (error) {
     console.error("Error fetching 2026 business stats:", error);

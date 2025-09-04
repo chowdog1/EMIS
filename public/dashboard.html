@@ -156,6 +156,16 @@
                     <div class="card-description">With low to no impact on environment</div>
                 </div>
             </div>
+            <div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Total Amount Paid</h3>
+        <div class="card-icon" style="background-color: var(--primary-green);">
+            <i class="fas fa-money-bill-wave"></i>
+        </div>
+    </div>
+    <div class="card-value" id="totalAmountPaid">₱0.00</div>
+    <div class="card-description">For the year <span id="selectedYearInCard">2025</span></div>
+</div>
             <!-- Charts Section -->
             <div class="charts-section">
                 <div class="chart-container">
@@ -165,6 +175,14 @@
                     </div>
                 </div>
             </div>
+<div class="charts-section">
+    <div class="chart-container">
+        <h2 class="chart-title">Monthly Amount Paid</h2>
+        <div class="chart-wrapper">
+            <canvas id="monthlyChart"></canvas>
+        </div>
+    </div>
+</div>
     <!-- React and ReactDOM -->
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>

@@ -8,6 +8,7 @@ const nodemailer = require("nodemailer");
 const Certificate = require("../models/certificate");
 const User = require("../models/user");
 const { PDFDocument } = require("pdf-lib");
+const fontkit = require("@pdf-lib/fontkit");
 const path = require("path");
 require("dotenv").config();
 
@@ -450,6 +451,7 @@ router.post("/preview", verifyToken, async (req, res) => {
   }
 });
 
+//Filling certificate
 async function fillCertificateTemplate(certificateData) {
   try {
     const templatePath = path.join(__dirname, "../certificate_template.pdf");
@@ -460,6 +462,17 @@ async function fillCertificateTemplate(certificateData) {
     }
     const existingPdfBytes = fs.readFileSync(templatePath);
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
+    // Register fontkit with the PDFDocument
+    pdfDoc.registerFontkit(fontkit);
+    // Load and embed the Rubik Bold font from the fonts folder
+    const fontPath = path.join(__dirname, "../fonts/Rubik-Bold.ttf");
+    if (!fs.existsSync(fontPath)) {
+      throw new Error(
+        "Rubik Bold font not found. Please ensure 'Rubik-Bold.ttf' is in the fonts directory."
+      );
+    }
+    const fontBytes = fs.readFileSync(fontPath);
+    const rubikBoldFont = await pdfDoc.embedFont(fontBytes);
     const form = pdfDoc.getForm();
     // Get all fields in the form and log them for debugging
     const fields = form.getFields();
@@ -470,7 +483,6 @@ async function fillCertificateTemplate(certificateData) {
       );
     });
     console.log("=== END FIELDS ===");
-
     // Format the certificate date from the data - handle potential non-Date object
     let formattedDate = "Date not available";
     if (certificateData.certificateDate) {
@@ -480,7 +492,6 @@ async function fillCertificateTemplate(certificateData) {
           typeof certificateData.certificateDate === "string"
             ? new Date(certificateData.certificateDate)
             : certificateData.certificateDate;
-
         // Check if it's a valid Date
         if (!isNaN(certDate.getTime())) {
           formattedDate = certDate.toLocaleDateString("en-US", {
@@ -493,24 +504,25 @@ async function fillCertificateTemplate(certificateData) {
         console.error("Error formatting certificate date:", error);
       }
     }
-
     // Define the field mappings using the exact field names from your PDF
     const fieldMappings = {
       accountNo: certificateData.accountNo,
       businessName: certificateData.businessName,
-      address: certificateData.address,
       date: formattedDate,
     };
-
-    // Try to fill each text field
+    // Try to fill each text field with custom font
     let fieldsFilled = 0;
     for (const [fieldName, value] of Object.entries(fieldMappings)) {
       try {
         const field = form.getTextField(fieldName);
         if (field) {
           field.setText(value);
+          // Set the font for this field
+          field.updateAppearances(rubikBoldFont);
           fieldsFilled++;
-          console.log(`✓ Filled field '${fieldName}' with value: ${value}`);
+          console.log(
+            `✓ Filled field '${fieldName}' with value: ${value} using Rubik Bold font`
+          );
         } else {
           console.warn(`✗ Field '${fieldName}' not found in template`);
         }
@@ -518,7 +530,100 @@ async function fillCertificateTemplate(certificateData) {
         console.error(`✗ Error filling field '${fieldName}':`, error.message);
       }
     }
+    // Handle address field with word boundary breaks and upward adjustment
+    try {
+      const addressField = form.getTextField("address");
+      if (addressField) {
+        const address = certificateData.address;
+        const maxLineLength = 70;
 
+        // Split address into lines with word boundary breaks
+        const words = address.split(" ");
+        const lines = [];
+        let currentLine = "";
+
+        for (const word of words) {
+          // Check if adding this word would exceed the line length
+          if (currentLine.length + word.length + 1 > maxLineLength) {
+            // If current line is not empty, add it to lines
+            if (currentLine) {
+              lines.push(currentLine);
+              currentLine = "";
+            }
+
+            // Handle words that are longer than maxLineLength
+            if (word.length > maxLineLength) {
+              // Break the word into chunks of maxLineLength
+              for (let i = 0; i < word.length; i += maxLineLength) {
+                lines.push(word.substring(i, i + maxLineLength));
+              }
+            } else {
+              // Start a new line with this word
+              currentLine = word;
+            }
+          } else {
+            // Add the word to the current line
+            if (currentLine) {
+              currentLine += " " + word;
+            } else {
+              currentLine = word;
+            }
+          }
+        }
+
+        // Add the last line if it's not empty
+        if (currentLine) {
+          lines.push(currentLine);
+        }
+
+        // Format with:
+        // 1. Initial line break (empty line at the top)
+        // 2. Each line followed by a line break
+        const formattedAddress = "\n" + lines.join("\n");
+
+        // Set the address text
+        addressField.setText(formattedAddress);
+
+        // Get the field's widget to adjust its position
+        const widgets = addressField.acroField.getWidgets();
+        if (widgets.length > 0) {
+          const widget = widgets[0];
+          const rect = widget.getRectangle();
+
+          // Calculate how much to move the field upward based on the number of lines
+          // Each additional line beyond the first should move the field up by the line height
+          const fontSize = 12; // Assuming 12pt font
+          const lineHeight = fontSize * 1.2; // Line height is typically 1.2 times the font size
+          const upwardAdjustment = (lines.length - 1) * lineHeight;
+
+          // Adjust the rectangle to move the field upward
+          const adjustedRect = {
+            x: rect.x,
+            y: rect.y + upwardAdjustment, // Increase y to move upward
+            width: rect.width,
+            height: rect.height,
+          };
+
+          // Set the adjusted rectangle
+          widget.setRectangle(adjustedRect);
+
+          console.log(
+            `Address field moved upward by ${upwardAdjustment} points to accommodate ${lines.length} lines`
+          );
+        }
+
+        // Apply the custom font to the address field
+        addressField.updateAppearances(rubikBoldFont);
+        fieldsFilled++;
+        console.log(
+          `✓ Filled address field with word boundary breaks and upward adjustment`
+        );
+      } else {
+        console.warn("✗ Address field not found in template");
+      }
+    } catch (error) {
+      console.error("✗ Error handling address field:", error);
+    }
     // Handle signature field - using manual positioning
     if (certificateData.signatureImage) {
       try {
@@ -634,7 +739,6 @@ async function fillCertificateTemplate(certificateData) {
     } else {
       console.log("No signature image provided for this certificate");
     }
-
     if (fieldsFilled === 0) {
       console.warn(
         "✗ No form fields were filled. Please check your PDF template field names."
@@ -644,7 +748,6 @@ async function fillCertificateTemplate(certificateData) {
         fields.map((field) => field.getName())
       );
     }
-
     // Flatten the form to prevent further editing
     form.flatten();
     const pdfBytes = await pdfDoc.save();
