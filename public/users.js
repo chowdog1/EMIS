@@ -5,38 +5,72 @@ console.log("Current URL:", window.location.href);
 console.log("Auth token exists:", !!localStorage.getItem("auth_token"));
 console.log("User data exists:", !!localStorage.getItem("user_data"));
 
+// Initialize chat sidebar first to ensure it's available
 document.addEventListener("DOMContentLoaded", () => {
+  console.log("DOM loaded, initializing chat sidebar first");
+
+  // Initialize chat sidebar if it exists
+  if (typeof ChatSidebar !== "undefined") {
+    try {
+      window.chatSidebar = new ChatSidebar();
+      console.log("Chat sidebar initialized successfully");
+    } catch (error) {
+      console.error("Error initializing chat sidebar:", error);
+    }
+  } else {
+    console.warn(
+      "ChatSidebar class not found, chat functionality may not work"
+    );
+  }
+
+  // Then initialize page functionality
+  initializePage();
+});
+
+// Separate function for page initialization
+function initializePage() {
   console.log("Users page loaded, initializing");
+
   // Update current page for user tracking
   updateCurrentPage("Users");
-  // Check if user is logged in
-  checkAuthentication();
+
+  // Check if user is logged in (non-blocking)
+  checkAuthentication().catch((error) => {
+    console.error("Authentication check failed:", error);
+  });
+
   // Setup dropdown functionality
   setupDropdown();
+
   // Setup logout functionality
   setupLogout();
+
   // Load users
   loadUsers();
+
   // Set up refresh button
   const refreshBtn = document.getElementById("refreshBtn");
   if (refreshBtn) {
     refreshBtn.addEventListener("click", loadUsers);
   }
+
   // Start updating the datetime
   updateDateTime();
   setInterval(updateDateTime, 1000);
-});
+}
 
-// Function to check authentication
-function checkAuthentication() {
+// Function to check authentication (made async)
+async function checkAuthentication() {
   console.log("=== Checking Authentication ===");
   const token = localStorage.getItem("auth_token");
   const userData = localStorage.getItem("user_data");
+
   if (!token || !userData) {
     console.log("No token or user data found, redirecting to login");
     window.location.href = "/";
     return;
   }
+
   try {
     // Check if token is expired locally first
     if (isTokenExpired(token)) {
@@ -46,10 +80,13 @@ function checkAuthentication() {
       window.location.href = "/";
       return;
     }
+
     const user = JSON.parse(userData);
     console.log("User data parsed successfully:", user);
+
     // Update user info in the UI
     updateUserInterface(user);
+
     // Verify token with server in the background
     verifyTokenWithServer(token).catch((error) => {
       console.error("Token verification failed:", error);
@@ -66,10 +103,13 @@ async function updateUserInterface(user) {
   const userEmailElement = document.getElementById("userEmail");
   const userAvatarImage = document.getElementById("userAvatarImage");
   const userAvatarFallback = document.getElementById("userAvatarFallback");
+
   // Get the greeting based on current time
   const greeting = getTimeBasedGreeting();
+
   // Get the user's first name if available, otherwise fall back to email
   const displayName = user.firstname || user.email;
+
   if (userEmailElement) {
     // Update with greeting and first name
     userEmailElement.textContent = `${greeting}, ${displayName}!`;
@@ -77,6 +117,7 @@ async function updateUserInterface(user) {
   } else {
     console.error("User email element not found");
   }
+
   // Update avatar using the shared utility function
   updateUserAvatar(user, userAvatarImage, userAvatarFallback);
 }
@@ -99,6 +140,7 @@ function updateCurrentPage(page) {
     console.error("No authentication token found");
     return;
   }
+
   fetch("/api/auth/current-page", {
     method: "PUT",
     headers: {
@@ -120,17 +162,20 @@ function updateCurrentPage(page) {
 function loadUsers() {
   const token = localStorage.getItem("auth_token");
   const refreshBtn = document.getElementById("refreshBtn");
+
   // Check if token exists
   if (!token) {
     console.error("No authentication token found");
     window.location.href = "/";
     return;
   }
+
   // Show loading state
   if (refreshBtn) {
     refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
     refreshBtn.disabled = true;
   }
+
   fetch("/api/auth/users", {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -186,8 +231,10 @@ function displayUsers(users) {
     console.error("Users table body not found");
     return;
   }
+
   // Clear existing content
   tbody.innerHTML = "";
+
   // Check if users array is empty
   if (!users || users.length === 0) {
     tbody.innerHTML = `
@@ -199,34 +246,42 @@ function displayUsers(users) {
     `;
     return;
   }
+
   // Add each user to the table
   users.forEach((user) => {
     const row = document.createElement("tr");
+
     // Name cell
     const nameCell = document.createElement("td");
     nameCell.textContent =
       `${user.firstname || ""} ${user.lastname || ""}`.trim() || "N/A";
+
     // Email cell
     const emailCell = document.createElement("td");
     emailCell.textContent = user.email || "N/A";
+
     // Role cell
     const roleCell = document.createElement("td");
     roleCell.textContent = user.role || "N/A";
+
     // Status cell
     const statusCell = document.createElement("td");
     const statusContainer = document.createElement("div");
     statusContainer.style.display = "flex";
     statusContainer.style.alignItems = "center";
+
     const statusIndicator = document.createElement("span");
     statusIndicator.className = `status-indicator ${
       user.isOnline ? "status-online" : "status-offline"
     }`;
+
     const statusText = document.createElement("span");
     // Calculate relative time since last activity
     const getRelativeTime = (date) => {
       if (!date) return "Never active";
       const now = new Date();
       const diffInSeconds = Math.floor((now - new Date(date)) / 1000);
+
       if (diffInSeconds < 30) {
         return "Active now";
       } else if (diffInSeconds < 60) {
@@ -257,13 +312,16 @@ function displayUsers(users) {
         return `Active ${years} year${years > 1 ? "s" : ""} ago`;
       }
     };
+
     statusText.textContent = getRelativeTime(user.lastActivity);
     statusContainer.appendChild(statusIndicator);
     statusContainer.appendChild(statusText);
     statusCell.appendChild(statusContainer);
+
     // Current page cell
     const pageCell = document.createElement("td");
     pageCell.textContent = user.currentPage || "N/A";
+
     // Last activity cell
     const activityCell = document.createElement("td");
     if (user.lastActivity) {
@@ -272,6 +330,7 @@ function displayUsers(users) {
     } else {
       activityCell.textContent = "Never";
     }
+
     // Append all cells to the row
     row.appendChild(nameCell);
     row.appendChild(emailCell);
@@ -279,9 +338,11 @@ function displayUsers(users) {
     row.appendChild(statusCell);
     row.appendChild(pageCell);
     row.appendChild(activityCell);
+
     // Append the row to the table body
     tbody.appendChild(row);
   });
+
   console.log("Users table populated with", users.length, "users");
 }
 
@@ -290,20 +351,25 @@ function setupDropdown() {
   console.log("Setting up dropdown functionality");
   const userDropdown = document.getElementById("userDropdown");
   const userDropdownMenu = document.getElementById("userDropdownMenu");
+
   if (!userDropdown || !userDropdownMenu) {
     console.error("Dropdown elements not found");
     return;
   }
+
   // Remove any existing event listeners
   const newUserDropdown = userDropdown.cloneNode(true);
   userDropdown.parentNode.replaceChild(newUserDropdown, userDropdown);
+
   // Add click event listener
   newUserDropdown.addEventListener("click", function (e) {
     e.preventDefault();
     e.stopPropagation();
     console.log("Dropdown clicked");
+
     // Toggle dropdown menu
     userDropdownMenu.classList.toggle("show");
+
     // Close dropdown when clicking outside
     document.addEventListener("click", function closeDropdown(e) {
       if (!e.target.closest(".user-dropdown")) {
@@ -312,6 +378,7 @@ function setupDropdown() {
       }
     });
   });
+
   console.log("Dropdown functionality setup complete");
 }
 
@@ -319,25 +386,30 @@ function setupDropdown() {
 function setupLogout() {
   console.log("Setting up logout functionality");
   const logoutBtn = document.getElementById("logoutBtn");
+
   if (!logoutBtn) {
     console.error("Logout button not found");
     return;
   }
+
   // Remove any existing event listeners
   const newLogoutBtn = logoutBtn.cloneNode(true);
   logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
+
   // Add click event listener
   newLogoutBtn.addEventListener("click", function (e) {
     e.preventDefault();
     console.log("Logout button clicked");
     logout();
   });
+
   console.log("Logout functionality setup complete");
 }
 
 function logout() {
   console.log("Logging out...");
   const token = localStorage.getItem("auth_token");
+
   if (token) {
     fetch("/api/auth/logout", {
       method: "POST",
@@ -377,12 +449,15 @@ function isTokenExpired(token) {
     if (parts.length !== 3) {
       return true; // Invalid token format
     }
+
     // Decode the payload
     const payload = JSON.parse(atob(parts[1]));
+
     // Check if it has an expiration time
     if (!payload.exp) {
       return true; // No expiration time
     }
+
     // Check if it's expired
     const now = Math.floor(Date.now() / 1000);
     return payload.exp < now;
@@ -403,6 +478,7 @@ async function verifyTokenWithServer(token) {
       },
       body: JSON.stringify({ token }),
     });
+
     if (response.ok) {
       console.log("Token verification successful");
       return true;
@@ -447,6 +523,7 @@ async function updateUserAvatar(user, imageElement, fallbackElement) {
     console.error("Avatar elements not found");
     return;
   }
+
   // Check if user has a profile picture
   if (user.hasProfilePicture) {
     try {
@@ -457,6 +534,7 @@ async function updateUserAvatar(user, imageElement, fallbackElement) {
         showFallbackAvatar(user, fallbackElement);
         return;
       }
+
       // Fetch the profile picture
       const response = await fetch(`/api/auth/profile-picture/${user.id}`, {
         method: "GET",
@@ -464,10 +542,12 @@ async function updateUserAvatar(user, imageElement, fallbackElement) {
           Authorization: `Bearer ${token}`,
         },
       });
+
       if (response.ok) {
         // Convert the response to a blob URL
         const blob = await response.blob();
         const imageUrl = URL.createObjectURL(blob);
+
         // Set the image source and show it
         imageElement.src = imageUrl;
         imageElement.style.display = "block";
@@ -495,6 +575,7 @@ function showFallbackAvatar(user, fallbackElement) {
   fallbackElement.style.display = "flex";
   fallbackElement.style.alignItems = "center";
   fallbackElement.style.justifyContent = "center";
+
   // Hide the image element
   const imageElement = document.getElementById("userAvatarImage");
   if (imageElement) {
@@ -502,29 +583,28 @@ function showFallbackAvatar(user, fallbackElement) {
   }
 }
 
+// Fixed chat function with correct global variable reference
 function startChat(userId, userName) {
-  if (window.chatbox) {
-    window.chatbox.openChatWithUser(userId, userName);
-  }
-}
+  // Split the name into first and last name
+  const nameParts = userName.split(" ");
+  const firstName = nameParts[0] || "";
+  const lastName = nameParts.slice(1).join(" ") || "";
 
-// Example of how to add a chat button to each user in your user list
-function renderUserList(users) {
-  const userListContainer = document.getElementById("user-list");
-  userListContainer.innerHTML = "";
-  users.forEach((user) => {
-    const userEl = document.createElement("div");
-    userEl.className = "user-item";
-    // Add user details...
-    const chatBtn = document.createElement("button");
-    chatBtn.textContent = "Chat";
-    chatBtn.className = "btn btn-primary";
-    chatBtn.addEventListener("click", () =>
-      startChat(user.id, `${user.firstname} ${user.lastname}`)
-    );
-    userEl.appendChild(chatBtn);
-    userListContainer.appendChild(userEl);
-  });
+  // Create user object
+  const user = {
+    id: userId,
+    firstname: firstName,
+    lastname: lastName,
+    email: `${firstName.toLowerCase()}@example.com`, // Placeholder email
+  };
+
+  // Check if chatSidebar exists and open chat
+  if (window.chatSidebar) {
+    console.log("Opening chat with user:", user);
+    window.chatSidebar.openChatWithUser(user);
+  } else {
+    console.error("Chat sidebar not initialized");
+  }
 }
 
 // Function to update the date and time display
@@ -540,8 +620,10 @@ function updateDateTime() {
     second: "2-digit",
     hour12: false,
   };
+
   const dateTimeString = now.toLocaleDateString("en-US", options);
   const datetimeElement = document.getElementById("datetime");
+
   if (datetimeElement) {
     datetimeElement.textContent = dateTimeString;
   }
