@@ -3,3 +3,4 @@ certificates/
 signatures/
 certificate_template.pdf
 node_modules/
+.env

@@ -577,6 +577,24 @@ function handleResendInvitation(seminar) {
   // Populate the resend modal with seminar details
   document.getElementById("resendEmail").value = seminar.email;
   document.getElementById("resendBusinessName").value = seminar.businessName;
+
+  // Reset modal state before opening
+  const resendBtn = document.getElementById("resendInvitationBtn");
+  if (resendBtn) {
+    resendBtn.innerHTML = "Resend Invitation";
+    resendBtn.className = "btn btn-primary";
+    resendBtn.disabled = false;
+  }
+
+  // Remove any existing success messages
+  const resendModal = document.getElementById("resendInvitationModal");
+  const existingProgressContainers = resendModal.querySelectorAll(
+    ".progress-container, .alert-success, .alert-danger"
+  );
+  existingProgressContainers.forEach((container) => {
+    container.remove();
+  });
+
   // Set default values for the form
   const today = new Date();
   const nextWeek = new Date(today);
@@ -585,13 +603,14 @@ function handleResendInvitation(seminar) {
     .toISOString()
     .split("T")[0];
   document.getElementById("resendSeminarTime").value = "09:00";
-  document.getElementById("resendSeminarVenue").value = "Via Zoom Meeting"; // Changed default venue
+  document.getElementById("resendSeminarVenue").value = "Via Zoom Meeting";
   document.getElementById("resendContactInfo").value =
     "Email: cenrosanjuanpcu@gmail.com | Phone: (0939)717-2394";
+
   // Generate initial email body
   generateResendEmailBody();
+
   // Show the modal
-  const resendModal = document.getElementById("resendInvitationModal");
   resendModal.style.display = "block";
 }
 // Function to generate resend email body
@@ -750,7 +769,7 @@ function generateResendEmailBody() {
             
             <p>Best regards,<br>
             <strong>CENRO San Juan City</strong><br>
-            <img src="https://i.ibb.co/PzW6YYTN/243202270-164184122563361-4894751073863392126-n.png" alt="cenro logo" style="width: 100px; height: auto;"></p>
+            <img src="https://iili.io/KCjsBJS.th.png" alt="cenro logo" style="width: 100px; height: auto;"></p>
         </div>
         <div class="footer">
             <p>This is an automated message.</p>
@@ -1169,20 +1188,24 @@ function resetSendInvitationsModal() {
   const sendInvitationsModal = document.getElementById("sendInvitationsModal");
   const invitationForm = document.getElementById("invitationForm");
   const sendInvitationsBtn = document.getElementById("sendInvitationsBtn");
-  // Remove any existing progress containers
-  const existingProgressContainers = sendInvitationsModal.querySelectorAll(
-    ".progress-container"
+
+  // Remove any existing progress containers or alert messages
+  const existingMessages = sendInvitationsModal.querySelectorAll(
+    ".progress-container, .alert-success, .alert-danger"
   );
-  existingProgressContainers.forEach((container) => {
+  existingMessages.forEach((container) => {
     container.remove();
   });
+
   // Reset form
   invitationForm.reset();
+
   // Reset button to original state
   sendInvitationsBtn.disabled = false;
   sendInvitationsBtn.className = "btn btn-primary";
   sendInvitationsBtn.style.cursor = "";
   sendInvitationsBtn.innerHTML = "Send Invitations";
+
   // Set default values
   const today = new Date();
   const nextWeek = new Date(today);
@@ -1191,17 +1214,18 @@ function resetSendInvitationsModal() {
   const seminarTime = document.getElementById("seminarTime");
   const seminarVenue = document.getElementById("seminarVenue");
   const contactInfo = document.getElementById("contactInfo");
+
   if (seminarDate) seminarDate.value = nextWeek.toISOString().split("T")[0];
   if (seminarTime) seminarTime.value = "09:00";
-  if (seminarVenue) seminarVenue.value = "Via Zoom Meeting"; // Changed default venue
+  if (seminarVenue) seminarVenue.value = "Via Zoom Meeting";
   if (contactInfo)
     contactInfo.value =
       "Email: cenrosanjuanpcu@gmail.com | Mobile: (0939)717-2394";
+
   // Generate initial email body
   const generateEmailBody =
     window.generateEmailBody ||
     function () {
-      // Fallback if the function isn't defined yet
       console.log("Email body generation function not available yet");
     };
   generateEmailBody();
@@ -1375,7 +1399,7 @@ function setupSendInvitationsButton() {
             
             <p>Best regards,<br>
             <strong>CENRO San Juan City</strong><br>
-            <img src="https://i.ibb.co/PzW6YYTN/243202270-164184122563361-4894751073863392126-n.png" alt="cenro logo" style="width: 100px; height: auto;">
+            <img src="https://iili.io/KCjsBJS.th.png" alt="cenro logo" style="width: 100px; height: auto;">
             </p>
         </div>
         <div class="footer">

@@ -1,4 +1,3 @@
-// dashboard.js
 class DashboardManager {
   constructor() {
     this.sessionCheckInterval = null;
@@ -29,6 +28,8 @@ class DashboardManager {
     this.setupInactivityDetection();
     // Create inactivity warning popup
     this.createInactivityWarning();
+    // FIXED: Correct method name
+    this.setupMapLink();
   }
   // Setup year selector
   setupYearSelector() {
@@ -55,6 +56,129 @@ class DashboardManager {
       });
     } else {
       console.error("Year selector element not found");
+    }
+  }
+  // NEW: Setup map link functionality
+  setupMapLink() {
+    const mapLink = document.getElementById("viewBusinessesMapLink");
+    if (mapLink) {
+      mapLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        this.openBusinessMap();
+      });
+    }
+    // Setup modal close
+    const modal = document.getElementById("mapModal");
+    if (!modal) return;
+    const closeBtn = modal.querySelector(".modal-close");
+    if (closeBtn) {
+      closeBtn.addEventListener("click", () => {
+        modal.style.display = "none";
+      });
+    }
+    window.addEventListener("click", (event) => {
+      if (event.target === modal) {
+        modal.style.display = "none";
+      }
+    });
+  }
+  // NEW: Open business map modal
+  async openBusinessMap() {
+    const modal = document.getElementById("mapModal");
+    if (!modal) return;
+    modal.style.display = "block";
+    // Initialize map if not already done
+    if (!window.businessMapInstance) {
+      // Initialize map centered on San Juan City
+      window.businessMapInstance = L.map("businessMap").setView(
+        [14.6047, 121.0299],
+        13
+      );
+      // Add tile layer (OpenStreetMap)
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      }).addTo(window.businessMapInstance);
+    }
+    // Fetch businesses by barangay and add markers
+    await this.fetchBusinessesForMap();
+  }
+  // NEW: Fetch businesses by barangay and display on map
+  async fetchBusinessesForMap() {
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        console.error("No auth token found");
+        return;
+      }
+      let apiUrl;
+      if (this.currentYear === "2026") {
+        apiUrl = "/api/business2026/map";
+      } else {
+        apiUrl = "/api/business2025/map";
+      }
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error("Failed to fetch businesses for map");
+      }
+      const barangayData = await response.json();
+      // Clear existing markers
+      if (window.barangayMarkers) {
+        window.barangayMarkers.forEach((marker) => {
+          window.businessMapInstance.removeLayer(marker);
+        });
+      }
+      window.barangayMarkers = [];
+      // Add markers for each barangay
+      barangayData.forEach((barangay) => {
+        // Create a custom icon with the count
+        const customIcon = L.divIcon({
+          html: `<div style="background-color: #2d5a27; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; font-size: 14px;">${barangay.count}</div>`,
+          iconSize: [40, 40],
+          className: "barangay-marker",
+        });
+        const marker = L.marker(
+          [barangay.coordinates.lat, barangay.coordinates.lng],
+          { icon: customIcon }
+        ).addTo(window.businessMapInstance);
+        // Create popup with barangay info and list of businesses
+        const businessList = barangay.businesses
+          .map(
+            (business) =>
+              `<li style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #eee;">
+                        <strong>${business.name}</strong><br>
+                        <small style="color: #666;">${business.address}</small>
+                    </li>`
+          )
+          .join("");
+        const popupContent = `
+                    <div style="max-height: 400px; overflow-y: auto; min-width: 300px;">
+                        <h3 style="margin: 0 0 10px 0; color: #2d5a27;">${barangay.barangay}</h3>
+                        <p style="margin: 0 0 15px 0;"><strong>${barangay.count} businesses</strong></p>
+                        <ul style="padding-left: 0; list-style: none; margin: 0;">
+                            ${businessList}
+                        </ul>
+                    </div>
+                `;
+        marker.bindPopup(popupContent);
+        window.barangayMarkers.push(marker);
+      });
+      // If there are markers, adjust the map view to fit all markers
+      if (window.barangayMarkers.length > 0) {
+        const group = new L.featureGroup(window.barangayMarkers);
+        window.businessMapInstance.fitBounds(group.getBounds().pad(0.1));
+      } else {
+        alert("No barangay data found");
+      }
+    } catch (error) {
+      console.error("Error fetching businesses for map:", error);
+      alert("Error loading businesses on the map");
     }
   }
   // Function to check authentication
@@ -345,7 +469,6 @@ class DashboardManager {
       console.error("Error creating chart:", error);
     }
   }
-
   // Function to create monthly payment chart
   createMonthlyChart(monthlyData) {
     console.log("Creating monthly chart with data:", monthlyData);
@@ -354,13 +477,11 @@ class DashboardManager {
       console.error("Monthly chart canvas not found");
       return;
     }
-
     // Check if Chart.js is loaded
     if (typeof Chart === "undefined") {
       console.error("Chart.js is not loaded");
       return;
     }
-
     // Prepare data for the chart
     const monthNames = [
       "Jan",
@@ -378,13 +499,11 @@ class DashboardManager {
     ];
     const labels = [];
     const data = [];
-
     // Initialize all months with 0
     for (let i = 1; i <= 12; i++) {
       labels.push(monthNames[i - 1]);
       data.push(0);
     }
-
     // Fill in the data we have
     monthlyData.forEach((item) => {
       const monthIndex = item._id - 1; // Convert to 0-based index
@@ -392,16 +511,13 @@ class DashboardManager {
         data[monthIndex] = item.totalAmount;
       }
     });
-
     console.log("Chart labels:", labels);
     console.log("Chart data:", data);
-
     try {
       // Destroy existing chart instance if it exists
       if (this.monthlyChartInstance) {
         this.monthlyChartInstance.destroy();
       }
-
       this.monthlyChartInstance = new Chart(ctx, {
         type: "bar",
         data: {
@@ -461,7 +577,6 @@ class DashboardManager {
       console.error("Error creating monthly chart:", error);
     }
   }
-
   // Function to setup dropdown functionality
   setupDropdown() {
     console.log("Setting up dropdown functionality");
@@ -491,7 +606,6 @@ class DashboardManager {
     });
     console.log("Dropdown functionality setup complete");
   }
-
   // Function to setup logout functionality
   setupLogout() {
     console.log("Setting up logout functionality");

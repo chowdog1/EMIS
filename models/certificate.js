@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const { establishmentsDB } = require("../db.js");
+
 const certificateSchema = new mongoose.Schema(
   {
     email: String,
@@ -19,13 +20,16 @@ const certificateSchema = new mongoose.Schema(
         "resent",
       ],
     },
-    certificatePath: String,
+    // Base64 storage fields
+    pdfBase64: String,
+    signatureBase64: String,
+    generatedAt: Date,
+    cleanedAt: Date,
     // Approval fields
     approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     approvedAt: Date,
     signatureName: String,
     // Signatory fields
-    signatureImage: String, // Path to the uploaded signature image
     signedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     signedAt: Date,
     // Send tracking
@@ -39,6 +43,7 @@ const certificateSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
 let Certificate;
 if (establishmentsDB) {
   Certificate = establishmentsDB.model("Certificate", certificateSchema);
@@ -47,4 +52,5 @@ if (establishmentsDB) {
     "❌ Cannot create Certificate model - database connection not available"
   );
 }
+
 module.exports = Certificate;

@@ -1,10 +1,10 @@
-// certifications.js
 let allCertificates = [];
 let filteredCertificates = [];
 let currentPage = 1;
 let pageSize = 10;
 let totalRecords = 0;
 let currentCertificate = null;
+let currentSignatureBase64 = null; // Store signature base64
 
 // Helper functions
 function getUserRole() {
@@ -88,7 +88,7 @@ function showSuccessMessage(message) {
   }, 3000);
 }
 
-// Handler functions (defined before they're used)
+// Handler functions
 function onEditCertificate(certificate) {
   console.log("Editing certificate:", certificate);
   if (!certificate || !certificate._id) {
@@ -97,6 +97,7 @@ function onEditCertificate(certificate) {
   }
   currentCertificate = certificate;
   const editModal = document.getElementById("editCertificateModal");
+
   // Populate form with current certificate data
   document.getElementById("editAccountNo").value = certificate.accountNo;
   document.getElementById("editBusinessName").value = certificate.businessName;
@@ -112,7 +113,6 @@ function onEditCertificate(certificate) {
           ? new Date(certificate.certificateDate)
           : certificate.certificateDate;
       if (!isNaN(certDate.getTime())) {
-        // Format as YYYY-MM-DD for input[type="date"]
         formattedDate = certDate.toISOString().split("T")[0];
       }
     } catch (error) {
@@ -126,19 +126,22 @@ function onEditCertificate(certificate) {
 async function handleApproveCertificate(certificate) {
   try {
     console.log("Approving certificate:", certificate);
-    // Validate certificate exists and has required properties
+
     if (!certificate || !certificate._id) {
       showErrorMessage("Invalid certificate selected");
       return;
     }
+
     // Show confirmation dialog
     const isConfirmed = confirm(
       `Are you sure you want to approve this certificate for ${certificate.businessName}?\n\n` +
         `This action will move the certificate to the signatory step.`
     );
+
     if (!isConfirmed) {
       return; // User cancelled the approval
     }
+
     const token = getAuthToken();
     const response = await fetch("/api/certificates/approve", {
       method: "POST",
@@ -150,6 +153,7 @@ async function handleApproveCertificate(certificate) {
         certificateId: certificate._id,
       }),
     });
+
     if (!response.ok) {
       if (response.status === 401) {
         handleUnauthorizedError();
@@ -161,6 +165,7 @@ async function handleApproveCertificate(certificate) {
           `Failed to approve certificate: ${response.status} ${response.statusText}`
       );
     }
+
     const result = await response.json();
     console.log("Approval response:", result);
     showSuccessMessage(result.message);
@@ -173,18 +178,22 @@ async function handleApproveCertificate(certificate) {
 
 async function handleSignCertificate(certificate) {
   console.log("Opening signature upload for:", certificate);
+
   if (!certificate || !certificate._id) {
     showErrorMessage("Invalid certificate selected");
     return;
   }
+
   currentCertificate = certificate;
   const signatureModal = document.getElementById("signatureModal");
   signatureModal.style.display = "block";
+
   // Reset form
   const signatureForm = document.getElementById("signatureForm");
   signatureForm.reset();
   document.getElementById("signaturePreview").innerHTML =
     "<span>No image selected</span>";
+  currentSignatureBase64 = null;
 }
 
 async function handleSendCertificate(certificate) {
@@ -208,9 +217,27 @@ async function handleSendCertificate(certificate) {
   const sendCertificatesModal = document.getElementById(
     "sendCertificatesModal"
   );
+
+  // Reset modal state before opening
+  const sendBtn = document.getElementById("sendCertificateBtn");
+  if (sendBtn) {
+    sendBtn.innerHTML = "Send Certificate";
+    sendBtn.className = "btn btn-primary";
+    sendBtn.disabled = false;
+  }
+
+  // Remove any existing success messages
+  const existingProgressContainers = sendCertificatesModal.querySelectorAll(
+    ".progress-container, .alert-success, .alert-danger"
+  );
+  existingProgressContainers.forEach((container) => {
+    container.remove();
+  });
+
   // Set the email subject and body with current certificate details
   const subject = document.getElementById("emailSubject");
   const body = document.getElementById("emailBody");
+
   // Generate HTML email body with all placeholders replaced
   body.value = generateCertificateEmailBody(certificate);
   sendCertificatesModal.style.display = "block";
@@ -219,9 +246,11 @@ async function handleSendCertificate(certificate) {
 async function handlePreviewCertificate(certificate) {
   console.log("Previewing certificate with PDF for:", certificate);
   currentCertificate = certificate;
+
   // Show loading state
   const emailPreviewModal = document.getElementById("emailPreviewModal");
   emailPreviewModal.style.display = "block";
+
   // Clear previous preview
   document.getElementById("previewToEmail").textContent = certificate.email;
   document.getElementById("previewSubject").textContent =
@@ -229,6 +258,7 @@ async function handlePreviewCertificate(certificate) {
   document.getElementById("previewEmailBody").innerHTML = "";
   document.getElementById("previewAttachmentName").textContent = "";
   document.getElementById("previewSignatureSection").style.display = "none";
+
   // Set status badge in preview
   const previewStatus = document.getElementById("previewStatus");
   previewStatus.textContent = certificate.status;
@@ -236,6 +266,7 @@ async function handlePreviewCertificate(certificate) {
   const normalizedStatus = certificate.status
     ? certificate.status.toLowerCase().trim()
     : "";
+
   if (normalizedStatus === "signed") {
     previewStatus.classList.add("signed");
   } else if (normalizedStatus === "for signatory") {
@@ -249,6 +280,7 @@ async function handlePreviewCertificate(certificate) {
   } else if (normalizedStatus === "resent") {
     previewStatus.classList.add("resent");
   }
+
   // Show loading indicator
   const pdfPreviewContainer = document.getElementById("pdfPreviewContainer");
   if (pdfPreviewContainer) {
@@ -261,6 +293,7 @@ async function handlePreviewCertificate(certificate) {
       </div>
     `;
   }
+
   try {
     const token = getAuthToken();
     const response = await fetch("/api/certificates/preview", {
@@ -273,6 +306,7 @@ async function handlePreviewCertificate(certificate) {
         certificateId: certificate._id,
       }),
     });
+
     if (!response.ok) {
       if (response.status === 401) {
         handleUnauthorizedError();
@@ -284,23 +318,28 @@ async function handlePreviewCertificate(certificate) {
           `Failed to generate preview: ${response.status} ${response.statusText}`
       );
     }
+
     const result = await response.json();
     console.log("Preview response:", result);
+
     // Generate HTML email body for preview
     const emailBodyHtml = generateCertificateEmailBody(certificate);
     document.getElementById("previewEmailBody").innerHTML = emailBodyHtml;
     document.getElementById("previewAttachmentName").textContent =
       result.fileName;
+
     // Show signature if available
     const signatureSection = document.getElementById("previewSignatureSection");
     const signatureImage = document.getElementById("previewSignatureImage");
-    if (certificate.signatureImage) {
+
+    if (certificate.signatureBase64) {
       signatureSection.style.display = "block";
-      signatureImage.src = certificate.signatureImage;
+      signatureImage.src = `data:image/png;base64,${certificate.signatureBase64}`;
     } else {
       signatureSection.style.display = "none";
     }
-    // Display PDF preview
+
+    // Display PDF preview using base64
     if (pdfPreviewContainer) {
       pdfPreviewContainer.innerHTML = `
         <div class="pdf-preview">
@@ -320,6 +359,7 @@ async function handlePreviewCertificate(certificate) {
         </div>
       `;
     }
+
     // Update send button state based on certificate status
     updateSendButtonState(certificate);
   } catch (error) {
@@ -341,10 +381,12 @@ async function handlePreviewCertificate(certificate) {
 function handleResendCertificate(certificate) {
   console.log("Resending certificate to:", certificate);
   currentCertificate = certificate;
+
   // For sent/resent certificates, bypass preview and resend directly
   const normalizedStatus = certificate.status
     ? certificate.status.toLowerCase().trim()
     : "";
+
   if (normalizedStatus === "sent" || normalizedStatus === "resent") {
     // Show confirmation dialog
     if (
@@ -356,6 +398,7 @@ function handleResendCertificate(certificate) {
     }
     return;
   }
+
   // For other statuses, open the send modal
   const sendCertificatesModal = document.getElementById(
     "sendCertificatesModal"
@@ -371,6 +414,7 @@ async function saveEditedCertificate() {
       showErrorMessage("No certificate selected for editing");
       return;
     }
+
     // Get form values
     const accountNo = document.getElementById("editAccountNo").value.trim();
     const businessName = document
@@ -381,17 +425,20 @@ async function saveEditedCertificate() {
     const certificateDate = document.getElementById(
       "editCertificateDate"
     ).value;
+
     // Validate required fields
     if (!accountNo || !businessName || !address || !email || !certificateDate) {
       showErrorMessage("All fields are required");
       return;
     }
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       showErrorMessage("Please enter a valid email address");
       return;
     }
+
     const token = getAuthToken();
     const response = await fetch(
       `/api/certificates/${currentCertificate._id}`,
@@ -410,6 +457,7 @@ async function saveEditedCertificate() {
         }),
       }
     );
+
     if (!response.ok) {
       if (response.status === 401) {
         handleUnauthorizedError();
@@ -421,9 +469,11 @@ async function saveEditedCertificate() {
           `Failed to update certificate: ${response.status} ${response.statusText}`
       );
     }
+
     const result = await response.json();
     console.log("Certificate update response:", result);
     showSuccessMessage("Certificate updated successfully");
+
     // Close modal and refresh data
     document.getElementById("editCertificateModal").style.display = "none";
     loadCertificateData();
@@ -432,8 +482,6 @@ async function saveEditedCertificate() {
     showErrorMessage(`Failed to update certificate: ${error.message}`);
   }
 }
-
-// Rest of the functions remain the same...
 
 // Function to load certificate data
 async function loadCertificateData() {
@@ -448,12 +496,14 @@ async function loadCertificateData() {
                 </div>
             `;
     }
+
     const token = getAuthToken();
     const response = await fetch("/api/certificates", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
+
     if (!response.ok) {
       if (response.status === 401) {
         handleUnauthorizedError();
@@ -463,6 +513,7 @@ async function loadCertificateData() {
         `Failed to load certificate data: ${response.status} ${response.statusText}`
       );
     }
+
     const certificates = await response.json();
     console.log("Certificate data loaded:", certificates);
     allCertificates = certificates;
@@ -482,6 +533,7 @@ function getPaginatedData() {
   if (!filteredCertificates || filteredCertificates.length === 0) {
     return [];
   }
+
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   return filteredCertificates.slice(startIndex, endIndex);
@@ -506,6 +558,7 @@ function updatePaginationControls() {
     });
     return;
   }
+
   const totalPages = Math.ceil(totalRecords / pageSize);
   const paginationInfo = document.getElementById("paginationInfo");
   if (paginationInfo) {
@@ -513,10 +566,12 @@ function updatePaginationControls() {
     const endRecord = Math.min(currentPage * pageSize, totalRecords);
     paginationInfo.textContent = `Showing ${startRecord}-${endRecord} of ${totalRecords} records`;
   }
+
   const firstPageBtn = document.getElementById("firstPageBtn");
   const prevPageBtn = document.getElementById("prevPageBtn");
   const nextPageBtn = document.getElementById("nextPageBtn");
   const lastPageBtn = document.getElementById("lastPageBtn");
+
   if (firstPageBtn) firstPageBtn.disabled = currentPage === 1;
   if (prevPageBtn) prevPageBtn.disabled = currentPage === 1;
   if (nextPageBtn)
@@ -531,6 +586,7 @@ function setupPaginationControls() {
   if (pageSizeSelect) {
     pageSize = parseInt(pageSizeSelect.value);
   }
+
   const firstPageBtn = document.getElementById("firstPageBtn");
   if (firstPageBtn) {
     firstPageBtn.addEventListener("click", function () {
@@ -541,6 +597,7 @@ function setupPaginationControls() {
       }
     });
   }
+
   const prevPageBtn = document.getElementById("prevPageBtn");
   if (prevPageBtn) {
     prevPageBtn.addEventListener("click", function () {
@@ -551,6 +608,7 @@ function setupPaginationControls() {
       }
     });
   }
+
   const nextPageBtn = document.getElementById("nextPageBtn");
   if (nextPageBtn) {
     nextPageBtn.addEventListener("click", function () {
@@ -562,6 +620,7 @@ function setupPaginationControls() {
       }
     });
   }
+
   const lastPageBtn = document.getElementById("lastPageBtn");
   if (lastPageBtn) {
     lastPageBtn.addEventListener("click", function () {
@@ -573,6 +632,7 @@ function setupPaginationControls() {
       }
     });
   }
+
   if (pageSizeSelect) {
     pageSizeSelect.addEventListener("change", function () {
       pageSize = parseInt(this.value);
@@ -587,10 +647,12 @@ function setupPaginationControls() {
 function setupSearch() {
   const searchInput = document.getElementById("searchInput");
   const searchBtn = document.getElementById("searchBtn");
+
   if (!searchInput || !searchBtn) {
     console.error("Search elements not found");
     return;
   }
+
   searchBtn.addEventListener("click", performSearch);
   searchInput.addEventListener("keypress", function (e) {
     if (e.key === "Enter") {
@@ -603,6 +665,7 @@ function setupSearch() {
 function performSearch() {
   const searchInput = document.getElementById("searchInput");
   const query = searchInput.value.trim().toLowerCase();
+
   if (!query) {
     filteredCertificates = [...allCertificates];
   } else {
@@ -614,6 +677,7 @@ function performSearch() {
       );
     });
   }
+
   totalRecords = filteredCertificates.length;
   currentPage = 1;
   updateCertificateTable(getPaginatedData());
@@ -627,16 +691,19 @@ function updateCertificateTable(certificates) {
     console.error("Certificate table root element not found");
     return;
   }
+
   if (typeof React === "undefined" || typeof ReactDOM === "undefined") {
     console.error("React or ReactDOM not loaded");
     renderSimpleTable(certificates);
     return;
   }
+
   try {
     const StatusBadge = ({ status }) => {
       let color = "";
       let text = status;
       const normalizedStatus = status ? status.toLowerCase().trim() : "";
+
       if (normalizedStatus === "signed") {
         color = "#17a2b8"; // Blue for signed
       } else if (normalizedStatus === "for signatory") {
@@ -652,6 +719,7 @@ function updateCertificateTable(certificates) {
       } else {
         color = "#6c757d"; // Gray for default
       }
+
       return React.createElement(
         "span",
         {
@@ -669,6 +737,7 @@ function updateCertificateTable(certificates) {
         text
       );
     };
+
     const ActionButton = ({
       certificate,
       onApprove,
@@ -681,6 +750,7 @@ function updateCertificateTable(certificates) {
         ? certificate.status.toLowerCase().trim()
         : "";
       const userRole = getUserRole();
+
       // Show preview button for all statuses except "sent" and "resent"
       let previewButton = null;
       if (normalizedStatus !== "sent" && normalizedStatus !== "resent") {
@@ -698,6 +768,7 @@ function updateCertificateTable(certificates) {
           "Preview"
         );
       }
+
       // Show approve button only for admin users when status is "for approval"
       let approveButton = null;
       if (userRole === "admin" && normalizedStatus === "for approval") {
@@ -715,6 +786,7 @@ function updateCertificateTable(certificates) {
           "Approve"
         );
       }
+
       // Show sign button only for admin users when status is "for signatory"
       let signButton = null;
       if (userRole === "admin" && normalizedStatus === "for signatory") {
@@ -732,6 +804,7 @@ function updateCertificateTable(certificates) {
           "Sign"
         );
       }
+
       // Show send button only for signed certificates
       let sendButton = null;
       if (normalizedStatus === "signed") {
@@ -749,6 +822,7 @@ function updateCertificateTable(certificates) {
           "Send"
         );
       }
+
       // Show resend button only for sent or resent certificates
       let resendButton = null;
       if (normalizedStatus === "sent" || normalizedStatus === "resent") {
@@ -766,6 +840,7 @@ function updateCertificateTable(certificates) {
           "Resend"
         );
       }
+
       return React.createElement(
         "div",
         { style: { display: "flex", gap: "5px" } },
@@ -776,6 +851,7 @@ function updateCertificateTable(certificates) {
         resendButton
       );
     };
+
     const App = () => {
       return React.createElement(
         "div",
@@ -940,6 +1016,7 @@ function updateCertificateTable(certificates) {
         )
       );
     };
+
     tableRoot.innerHTML = "";
     const root = ReactDOM.createRoot(tableRoot);
     root.render(React.createElement(App));
@@ -957,10 +1034,12 @@ function renderSimpleTable(certificates) {
     console.error("Certificate table root element not found");
     return;
   }
+
   const table = document.createElement("table");
   table.className = "certificate-table";
   table.style.width = "100%";
   table.style.borderCollapse = "collapse";
+
   const thead = document.createElement("thead");
   const headerRow = document.createElement("tr");
   const headers = [
@@ -971,6 +1050,7 @@ function renderSimpleTable(certificates) {
     "Status",
     "Actions",
   ];
+
   headers.forEach((headerText) => {
     const th = document.createElement("th");
     th.textContent = headerText;
@@ -981,13 +1061,17 @@ function renderSimpleTable(certificates) {
     th.style.borderBottom = "1px solid #e9ecef";
     headerRow.appendChild(th);
   });
+
   thead.appendChild(headerRow);
   table.appendChild(thead);
+
   const tbody = document.createElement("tbody");
   const userRole = getUserRole();
+
   certificates.forEach((certificate) => {
     const row = document.createElement("tr");
     row.style.borderBottom = "1px solid #e9ecef";
+
     // Account No. (clickable)
     const accountNoCell = document.createElement("td");
     accountNoCell.style.padding = "12px 15px";
@@ -1003,21 +1087,25 @@ function renderSimpleTable(certificates) {
     });
     accountNoCell.appendChild(accountNoLink);
     row.appendChild(accountNoCell);
+
     // Business Name
     const nameCell = document.createElement("td");
     nameCell.textContent = certificate.businessName;
     nameCell.style.padding = "12px 15px";
     row.appendChild(nameCell);
+
     // Address
     const addressCell = document.createElement("td");
     addressCell.textContent = certificate.address;
     addressCell.style.padding = "12px 15px";
     row.appendChild(addressCell);
+
     // Email
     const emailCell = document.createElement("td");
     emailCell.textContent = certificate.email;
     emailCell.style.padding = "12px 15px";
     row.appendChild(emailCell);
+
     // Status
     const statusCell = document.createElement("td");
     statusCell.style.padding = "12px 15px";
@@ -1030,9 +1118,11 @@ function renderSimpleTable(certificates) {
     statusBadge.style.color = "white";
     statusBadge.style.fontSize = "0.75rem";
     statusBadge.style.fontWeight = "500";
+
     const normalizedStatus = certificate.status
       ? certificate.status.toLowerCase().trim()
       : "";
+
     if (normalizedStatus === "signed") {
       statusBadge.style.backgroundColor = "#17a2b8";
     } else if (normalizedStatus === "for signatory") {
@@ -1048,13 +1138,16 @@ function renderSimpleTable(certificates) {
     } else {
       statusBadge.style.backgroundColor = "#6c757d";
     }
+
     statusCell.appendChild(statusBadge);
     row.appendChild(statusCell);
+
     // Actions
     const actionCell = document.createElement("td");
     actionCell.style.padding = "12px 15px";
     actionCell.style.display = "flex";
     actionCell.style.gap = "5px";
+
     // Preview button (not for sent or resent status)
     if (normalizedStatus !== "sent" && normalizedStatus !== "resent") {
       const previewBtn = document.createElement("button");
@@ -1068,6 +1161,7 @@ function renderSimpleTable(certificates) {
       );
       actionCell.appendChild(previewBtn);
     }
+
     // Approve button (admin only, for approval status)
     if (userRole === "admin" && normalizedStatus === "for approval") {
       const approveBtn = document.createElement("button");
@@ -1081,6 +1175,7 @@ function renderSimpleTable(certificates) {
       );
       actionCell.appendChild(approveBtn);
     }
+
     // Sign button (admin only, for signatory status)
     if (userRole === "admin" && normalizedStatus === "for signatory") {
       const signBtn = document.createElement("button");
@@ -1094,6 +1189,7 @@ function renderSimpleTable(certificates) {
       );
       actionCell.appendChild(signBtn);
     }
+
     // Send button (signed certificates only)
     if (normalizedStatus === "signed") {
       const sendBtn = document.createElement("button");
@@ -1107,6 +1203,7 @@ function renderSimpleTable(certificates) {
       );
       actionCell.appendChild(sendBtn);
     }
+
     // Resend button (sent or resent certificates only)
     if (normalizedStatus === "sent" || normalizedStatus === "resent") {
       const resendBtn = document.createElement("button");
@@ -1120,9 +1217,11 @@ function renderSimpleTable(certificates) {
       );
       actionCell.appendChild(resendBtn);
     }
+
     row.appendChild(actionCell);
     tbody.appendChild(row);
   });
+
   table.appendChild(tbody);
   tableRoot.innerHTML = "";
   tableRoot.appendChild(table);
@@ -1150,8 +1249,10 @@ function generateCertificateEmailBody(certificate) {
       console.error("Error formatting certificate date:", error);
     }
   }
+
   // Get current year
   const currentYear = new Date().getFullYear();
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -1250,7 +1351,7 @@ function generateCertificateEmailBody(certificate) {
             San Juan, Metro Manila<br>
             Mobile No: SMART (0939) 717-2394</p>
             
-            <p><img src="https://i.ibb.co/PzW6YYTN/243202270-164184122563361-4894751073863392126-n.png" alt="CENRO Logo" style="width: 100px; height: auto;"></p>
+            <p><img src="https://iili.io/KCjsBJS.th.png" alt="CENRO Logo" style="width: 100px; height: auto;"></p>
         </div>
         <div class="footer">
             <p>This is an automated message.</p>
@@ -1268,12 +1369,14 @@ function updateSendButtonState(certificate) {
   const normalizedStatus = certificate.status
     ? certificate.status.toLowerCase().trim()
     : "";
+
   // For sent or resent status, show the resend button
   if (normalizedStatus === "sent" || normalizedStatus === "resent") {
     sendCertificateBtn.disabled = false;
     sendCertificateBtn.className = "btn btn-primary";
     sendCertificateBtn.innerHTML = "Resend Certificate";
     sendCertificateBtn.title = "";
+
     // Remove any warning message if exists
     const warningMsg = document.getElementById("approvalWarning");
     if (warningMsg) {
@@ -1286,6 +1389,7 @@ function updateSendButtonState(certificate) {
     sendCertificateBtn.className = "btn btn-primary";
     sendCertificateBtn.innerHTML = "Send Certificate";
     sendCertificateBtn.title = "";
+
     // Remove any warning message if exists
     const warningMsg = document.getElementById("approvalWarning");
     if (warningMsg) {
@@ -1296,6 +1400,7 @@ function updateSendButtonState(certificate) {
   else {
     sendCertificateBtn.disabled = true;
     sendCertificateBtn.className = "btn btn-secondary";
+
     if (normalizedStatus === "for signatory") {
       sendCertificateBtn.innerHTML = `
         <i class="fas fa-pen-fancy"></i>
@@ -1311,12 +1416,14 @@ function updateSendButtonState(certificate) {
       sendCertificateBtn.title =
         "This certificate must be signed before it can be sent";
     }
+
     // Add warning message
     let warningMsg = document.getElementById("approvalWarning");
     if (!warningMsg) {
       warningMsg = document.createElement("div");
       warningMsg.id = "approvalWarning";
       warningMsg.className = "alert alert-warning mt-3";
+
       if (normalizedStatus === "for signatory") {
         warningMsg.innerHTML = `
           <i class="fas fa-exclamation-triangle me-2"></i>
@@ -1328,6 +1435,7 @@ function updateSendButtonState(certificate) {
           <strong>Warning:</strong> This certificate is not ready for sending. Please complete all required steps.
         `;
       }
+
       const modalBody = document.querySelector(
         "#emailPreviewModal .modal-body"
       );
@@ -1342,14 +1450,17 @@ async function resendCertificate(certificate) {
     const subject = document.getElementById("emailSubject").value.trim();
     const body = document.getElementById("emailBody").value;
     const template = document.getElementById("certificateTemplate").value;
+
     if (!subject || !body) {
       showErrorMessage("Please fill in all required fields");
       return;
     }
+
     // Create and show resend progress modal
     const resendProgressModal = createResendProgressModal();
     document.body.appendChild(resendProgressModal);
     resendProgressModal.style.display = "block";
+
     // Start progress animation
     const progressBar = resendProgressModal.querySelector(".progress-bar");
     const progressPercentage = resendProgressModal.querySelector(
@@ -1358,16 +1469,20 @@ async function resendCertificate(certificate) {
     const progressSteps = resendProgressModal.querySelectorAll(".step");
     let progress = 0;
     let currentStep = 0;
+
     const progressInterval = setInterval(() => {
       progress += 3;
       if (progress > 95) progress = 95;
+
       if (progressBar) {
         progressBar.style.width = `${progress}%`;
         progressBar.setAttribute("aria-valuenow", progress);
       }
+
       if (progressPercentage) {
         progressPercentage.textContent = `${progress}%`;
       }
+
       if (progress > 40 && currentStep === 0) {
         progressSteps[0].classList.remove("step-active");
         progressSteps[0].classList.add("step-completed");
@@ -1380,6 +1495,7 @@ async function resendCertificate(certificate) {
         currentStep = 2;
       }
     }, 100);
+
     const token = getAuthToken();
     const response = await fetch("/api/certificates/resend", {
       method: "POST",
@@ -1394,7 +1510,9 @@ async function resendCertificate(certificate) {
         template,
       }),
     });
+
     clearInterval(progressInterval);
+
     if (!response.ok) {
       if (response.status === 401) {
         handleUnauthorizedError();
@@ -1406,6 +1524,7 @@ async function resendCertificate(certificate) {
           `Failed to resend certificate: ${response.status} ${response.statusText}`
       );
     }
+
     // Complete progress animation
     progressBar.style.width = "100%";
     progressBar.setAttribute("aria-valuenow", 100);
@@ -1414,6 +1533,7 @@ async function resendCertificate(certificate) {
       step.classList.remove("step-active");
       step.classList.add("step-completed");
     });
+
     // Show success message
     setTimeout(() => {
       resendProgressModal.innerHTML = `
@@ -1432,6 +1552,7 @@ async function resendCertificate(certificate) {
         </div>
       `;
     }, 500);
+
     // Refresh data after delay
     setTimeout(() => {
       loadCertificateData();
@@ -1478,12 +1599,14 @@ function createResendProgressModal() {
       </div>
     </div>
   `;
+
   // Close modal when clicking outside
   modal.addEventListener("click", function (e) {
     if (e.target === modal) {
       modal.style.display = "none";
     }
   });
+
   return modal;
 }
 
@@ -1491,6 +1614,7 @@ function createResendProgressModal() {
 function setupTabs() {
   const tabs = document.querySelectorAll(".tab");
   const tabPanes = document.querySelectorAll(".tab-pane");
+
   tabs.forEach((tab) => {
     tab.addEventListener("click", function () {
       tabs.forEach((t) => t.classList.remove("active"));
@@ -1511,21 +1635,25 @@ function setupUploadButton() {
   const closeBtns = uploadModal.querySelectorAll(
     ".modal-close, .modal-close-btn"
   );
+
   if (uploadDataBtn) {
     uploadDataBtn.addEventListener("click", function () {
       uploadModal.style.display = "block";
     });
   }
+
   closeBtns.forEach((btn) => {
     btn.addEventListener("click", function () {
       uploadModal.style.display = "none";
     });
   });
+
   window.addEventListener("click", function (event) {
     if (event.target === uploadModal) {
       uploadModal.style.display = "none";
     }
   });
+
   if (uploadBtn) {
     uploadBtn.addEventListener("click", async function () {
       const fileInput = document.getElementById("csvFile");
@@ -1533,8 +1661,10 @@ function setupUploadButton() {
         showErrorMessage("Please select a CSV file to upload");
         return;
       }
+
       const formData = new FormData();
       formData.append("csvFile", fileInput.files[0]);
+
       try {
         const token = getAuthToken();
         const response = await fetch("/api/certificates/upload", {
@@ -1544,6 +1674,7 @@ function setupUploadButton() {
           },
           body: formData,
         });
+
         if (!response.ok) {
           if (response.status === 401) {
             handleUnauthorizedError();
@@ -1553,6 +1684,7 @@ function setupUploadButton() {
             `Upload failed: ${response.status} ${response.statusText}`
           );
         }
+
         const result = await response.json();
         showSuccessMessage(result.message);
         uploadModal.style.display = "none";
@@ -1575,28 +1707,33 @@ function setupSendCertificatesModal() {
   const closeBtns = sendCertificatesModal.querySelectorAll(
     ".modal-close, .modal-close-btn"
   );
+
   // Setup close buttons
   closeBtns.forEach((btn) => {
     btn.addEventListener("click", function () {
       sendCertificatesModal.style.display = "none";
     });
   });
+
   // Close modal when clicking outside
   window.addEventListener("click", function (event) {
     if (event.target === sendCertificatesModal) {
       sendCertificatesModal.style.display = "none";
     }
   });
+
   // Setup preview email button
   if (previewEmailBtn) {
     previewEmailBtn.addEventListener("click", function () {
       const subject = document.getElementById("emailSubject").value.trim();
       const body = document.getElementById("emailBody").value;
       const template = document.getElementById("certificateTemplate").value;
+
       if (!subject || !body) {
         showErrorMessage("Please fill in all required fields");
         return;
       }
+
       // Use the current certificate for preview, regardless of status
       if (currentCertificate) {
         sendCertificatesModal.style.display = "none";
@@ -1608,7 +1745,7 @@ function setupSendCertificatesModal() {
   }
 }
 
-// Function to setup signature modal
+// Function to setup signature modal - updated for base64
 function setupSignatureModal() {
   const signatureModal = document.getElementById("signatureModal");
   const signatureImageInput = document.getElementById("signatureImage");
@@ -1617,49 +1754,58 @@ function setupSignatureModal() {
   const closeBtns = signatureModal.querySelectorAll(
     ".modal-close, .modal-close-btn"
   );
-  // Handle image preview
+
+  // Handle image preview and base64 conversion
   signatureImageInput.addEventListener("change", function (e) {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = function (e) {
         signaturePreview.innerHTML = `<img src="${e.target.result}" alt="Signature preview" />`;
+        // Store base64 for upload (remove data URL prefix)
+        currentSignatureBase64 = e.target.result.split(",")[1];
       };
       reader.readAsDataURL(file);
     } else {
       signaturePreview.innerHTML = "<span>No image selected</span>";
+      currentSignatureBase64 = null;
     }
   });
+
   // Handle modal close
   closeBtns.forEach((btn) => {
     btn.addEventListener("click", function () {
       signatureModal.style.display = "none";
     });
   });
+
   window.addEventListener("click", function (event) {
     if (event.target === signatureModal) {
       signatureModal.style.display = "none";
     }
   });
-  // Handle signature upload
+
+  // Handle signature upload - now sends base64
   uploadSignatureBtn.addEventListener("click", async function () {
-    const fileInput = document.getElementById("signatureImage");
-    if (!fileInput.files.length) {
+    if (!currentSignatureBase64) {
       showErrorMessage("Please select a signature image to upload");
       return;
     }
-    const formData = new FormData();
-    formData.append("signatureImage", fileInput.files[0]);
-    formData.append("certificateId", currentCertificate._id);
+
     try {
       const token = getAuthToken();
       const response = await fetch("/api/certificates/upload-signature", {
         method: "POST",
         headers: {
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: formData,
+        body: JSON.stringify({
+          certificateId: currentCertificate._id,
+          signatureBase64: currentSignatureBase64,
+        }),
       });
+
       if (!response.ok) {
         if (response.status === 401) {
           handleUnauthorizedError();
@@ -1671,6 +1817,7 @@ function setupSignatureModal() {
             `Failed to upload signature: ${response.status} ${response.statusText}`
         );
       }
+
       const result = await response.json();
       showSuccessMessage(result.message);
       signatureModal.style.display = "none";
@@ -1689,48 +1836,58 @@ function setupEmailPreviewModal() {
   const closeBtns = emailPreviewModal.querySelectorAll(
     ".modal-close, .modal-close-btn"
   );
+
   // Setup close buttons
   closeBtns.forEach((btn) => {
     btn.addEventListener("click", function () {
       emailPreviewModal.style.display = "none";
     });
   });
+
   // Close modal when clicking outside
   window.addEventListener("click", function (event) {
     if (event.target === emailPreviewModal) {
       emailPreviewModal.style.display = "none";
     }
   });
+
   if (sendCertificateBtn) {
     sendCertificateBtn.addEventListener("click", async function () {
       if (!currentCertificate) {
         showErrorMessage("No certificate selected");
         return;
       }
+
       const normalizedStatus = currentCertificate.status
         ? currentCertificate.status.toLowerCase().trim()
         : "";
+
       // For sent or resent status, we can resend without any checks
       if (normalizedStatus === "sent" || normalizedStatus === "resent") {
         // Call the resend API directly
         await resendCertificate(currentCertificate);
         return;
       }
+
       // For signed status, proceed with the normal send flow
       if (normalizedStatus !== "signed") {
         showErrorMessage("Certificate must be signed before sending");
         return;
       }
+
       const subject = document.getElementById("emailSubject").value.trim();
       const body = document.getElementById("emailBody").value;
       const template = document.getElementById("certificateTemplate").value;
+
       if (!subject || !body) {
         showErrorMessage("Please fill in all required fields");
         return;
       }
+
       // Normal send flow for signed certificates
       const originalBtnText = sendCertificateBtn.innerHTML;
       const originalBtnClass = sendCertificateBtn.className;
+
       sendCertificateBtn.disabled = true;
       sendCertificateBtn.className = "btn btn-success";
       sendCertificateBtn.style.cursor = "not-allowed";
@@ -1738,12 +1895,14 @@ function setupEmailPreviewModal() {
                 <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                 Sending...
             `;
+
       const existingProgressContainers = emailPreviewModal.querySelectorAll(
         ".progress-container"
       );
       existingProgressContainers.forEach((container) => {
         container.remove();
       });
+
       const progressContainer = document.createElement("div");
       progressContainer.className = "progress-container mt-3";
       progressContainer.innerHTML = `
@@ -1765,10 +1924,12 @@ function setupEmailPreviewModal() {
                     <small class="step">Sending</small>
                 </div>
             `;
+
       sendCertificateBtn.parentNode.insertBefore(
         progressContainer,
         sendCertificateBtn.nextSibling
       );
+
       const progressBar = progressContainer.querySelector(".progress-bar");
       const progressPercentage = progressContainer.querySelector(
         ".progress-percentage"
@@ -1776,16 +1937,20 @@ function setupEmailPreviewModal() {
       const progressSteps = progressContainer.querySelectorAll(".step");
       let progress = 0;
       let currentStep = 0;
+
       const progressInterval = setInterval(() => {
         progress += 2;
         if (progress > 95) progress = 95;
+
         if (progressBar) {
           progressBar.style.width = `${progress}%`;
           progressBar.setAttribute("aria-valuenow", progress);
         }
+
         if (progressPercentage) {
           progressPercentage.textContent = `${progress}%`;
         }
+
         if (progress > 30 && currentStep === 0) {
           progressSteps[0].classList.remove("step-active");
           progressSteps[0].classList.add("step-completed");
@@ -1798,6 +1963,7 @@ function setupEmailPreviewModal() {
           currentStep = 2;
         }
       }, 100);
+
       try {
         const token = getAuthToken();
         // Use the HTML email body directly
@@ -1814,7 +1980,9 @@ function setupEmailPreviewModal() {
             template,
           }),
         });
+
         clearInterval(progressInterval);
+
         if (!response.ok) {
           if (response.status === 401) {
             handleUnauthorizedError();
@@ -1826,6 +1994,7 @@ function setupEmailPreviewModal() {
               `Failed to send certificate: ${response.status} ${response.statusText}`
           );
         }
+
         progressBar.style.width = "100%";
         progressBar.setAttribute("aria-valuenow", 100);
         progressPercentage.textContent = "100%";
@@ -1833,6 +2002,7 @@ function setupEmailPreviewModal() {
           step.classList.remove("step-active");
           step.classList.add("step-completed");
         });
+
         setTimeout(() => {
           const result = response.json();
           result.then((data) => {
@@ -1851,6 +2021,7 @@ function setupEmailPreviewModal() {
             showSuccessMessage(
               data.message || "Certificate sent successfully!"
             );
+
             setTimeout(() => {
               loadCertificateData().then(() => {
                 emailPreviewModal.style.display = "none";
@@ -1866,11 +2037,13 @@ function setupEmailPreviewModal() {
         }, 500);
       } catch (error) {
         clearInterval(progressInterval);
+
         sendCertificateBtn.innerHTML = `
                     <i class="fas fa-exclamation-triangle"></i>
                     Failed to Send
                 `;
         sendCertificateBtn.className = "btn btn-danger";
+
         progressContainer.innerHTML = `
                     <div class="alert alert-danger d-flex align-items-center" role="alert">
                         <i class="fas fa-exclamation-triangle me-2"></i>
@@ -1879,6 +2052,7 @@ function setupEmailPreviewModal() {
                         </div>
                     </div>
                 `;
+
         setTimeout(() => {
           sendCertificateBtn.innerHTML = originalBtnText;
           sendCertificateBtn.className = originalBtnClass;
@@ -1890,6 +2064,7 @@ function setupEmailPreviewModal() {
       }
     });
   }
+
   // Update the modal when it's opened to check certificate status
   const observer = new MutationObserver(function (mutations) {
     mutations.forEach(function (mutation) {
@@ -1903,6 +2078,7 @@ function setupEmailPreviewModal() {
       }
     });
   });
+
   observer.observe(emailPreviewModal, { attributes: true });
 }
 
@@ -1913,18 +2089,21 @@ function setupEditCertificateModal() {
   const closeBtns = editModal.querySelectorAll(
     ".modal-close, .modal-close-btn"
   );
+
   // Setup close buttons
   closeBtns.forEach((btn) => {
     btn.addEventListener("click", function () {
       editModal.style.display = "none";
     });
   });
+
   // Close modal when clicking outside
   window.addEventListener("click", function (event) {
     if (event.target === editModal) {
       editModal.style.display = "none";
     }
   });
+
   // Setup save button
   if (saveBtn) {
     saveBtn.addEventListener("click", saveEditedCertificate);
@@ -1934,16 +2113,19 @@ function setupEditCertificateModal() {
 // Function to setup refresh button
 function setupRefreshButton() {
   const refreshBtn = document.getElementById("refreshBtn");
+
   if (refreshBtn) {
     refreshBtn.addEventListener("click", function () {
       const icon = refreshBtn.querySelector("i");
       if (icon) {
         icon.classList.add("refreshing");
       }
+
       const searchInput = document.getElementById("searchInput");
       if (searchInput) {
         searchInput.value = "";
       }
+
       loadCertificateData().finally(() => {
         if (icon) {
           icon.classList.remove("refreshing");
@@ -1957,14 +2139,17 @@ function setupRefreshButton() {
 function setupDropdown() {
   const userDropdown = document.getElementById("userDropdown");
   const userDropdownMenu = document.getElementById("userDropdownMenu");
+
   if (!userDropdown || !userDropdownMenu) {
     console.error("Dropdown elements not found");
     return;
   }
+
   userDropdown.addEventListener("click", function (e) {
     e.preventDefault();
     e.stopPropagation();
     userDropdownMenu.classList.toggle("show");
+
     document.addEventListener("click", function closeDropdown(e) {
       if (!e.target.closest(".user-dropdown")) {
         userDropdownMenu.classList.remove("show");
@@ -1977,12 +2162,15 @@ function setupDropdown() {
 // Function to setup logout functionality
 function setupLogout() {
   const logoutBtn = document.getElementById("logoutBtn");
+
   if (!logoutBtn) {
     console.error("Logout button not found");
     return;
   }
+
   logoutBtn.addEventListener("click", async function (e) {
     e.preventDefault();
+
     try {
       const token = localStorage.getItem("auth_token");
       if (token) {
@@ -1993,6 +2181,7 @@ function setupLogout() {
             Authorization: `Bearer ${token}`,
           },
         });
+
         if (!response.ok) {
           console.error(
             "Logout API call failed:",
@@ -2018,10 +2207,12 @@ function isTokenExpired(token) {
     if (parts.length !== 3) {
       return true;
     }
+
     const payload = JSON.parse(atob(parts[1]));
     if (!payload.exp) {
       return true;
     }
+
     const now = Math.floor(Date.now() / 1000);
     return payload.exp < now;
   } catch (e) {
@@ -2080,10 +2271,12 @@ function updateDateTime() {
 function checkAuthentication() {
   const token = localStorage.getItem("auth_token");
   const userData = localStorage.getItem("user_data");
+
   if (!token || !userData) {
     window.location.href = "/";
     return;
   }
+
   try {
     if (isTokenExpired(token)) {
       localStorage.removeItem("auth_token");
@@ -2091,6 +2284,7 @@ function checkAuthentication() {
       window.location.href = "/";
       return;
     }
+
     const user = JSON.parse(userData);
     updateUserInterface(user);
     verifyTokenWithServer(token).catch((error) => {
@@ -2109,9 +2303,11 @@ async function updateUserInterface(user) {
   const userAvatarFallback = document.getElementById("userAvatarFallback");
   const greeting = getTimeBasedGreeting();
   const displayName = user.firstname || user.email;
+
   if (userEmailElement) {
     userEmailElement.textContent = `${greeting}, ${displayName}!`;
   }
+
   updateUserAvatar(user, userAvatarImage, userAvatarFallback);
 }
 
@@ -2148,6 +2344,7 @@ async function updateUserAvatar(user, imageElement, fallbackElement) {
     console.error("Avatar elements not found");
     return;
   }
+
   if (user.hasProfilePicture) {
     try {
       const token = localStorage.getItem("auth_token");
@@ -2155,12 +2352,14 @@ async function updateUserAvatar(user, imageElement, fallbackElement) {
         showFallbackAvatar(user, fallbackElement);
         return;
       }
+
       const response = await fetch(`/api/auth/profile-picture/${user.id}`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
+
       if (response.ok) {
         const blob = await response.blob();
         const imageUrl = URL.createObjectURL(blob);
@@ -2186,6 +2385,7 @@ function showFallbackAvatar(user, fallbackElement) {
   fallbackElement.style.display = "flex";
   fallbackElement.style.alignItems = "center";
   fallbackElement.style.justifyContent = "center";
+
   const imageElement = document.getElementById("userAvatarImage");
   if (imageElement) {
     imageElement.style.display = "none";
@@ -2196,6 +2396,7 @@ function showFallbackAvatar(user, fallbackElement) {
 function updateCurrentPage(page) {
   const token = localStorage.getItem("auth_token");
   if (!token) return;
+
   fetch("/api/auth/current-page", {
     method: "PUT",
     headers: {

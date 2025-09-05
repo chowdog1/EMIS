@@ -1,4 +1,3 @@
-// server.js
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -7,10 +6,14 @@ const authRoutes = require("./routes/authRoutes");
 const { establishmentsDB } = require("./db.js");
 const reportRoutes = require("./routes/reportRoutes");
 const auditRoutes = require("./routes/auditRoutes.js");
-const certificateRoutes = require("./routes/certificateRoutes.js");
+const {
+  router: certificateRoutes,
+  cleanupOldCertificates,
+} = require("./routes/certificateRoutes.js");
 const http = require("http");
 const socketIo = require("socket.io");
-const messageRoutes = require("./routes/messageRoutes"); // Make sure this is imported
+const messageRoutes = require("./routes/messageRoutes");
+const cron = require("node-cron");
 const app = express();
 const PORT = 3000;
 
@@ -66,7 +69,7 @@ app.use("/api/business2025", business2025Routes);
 app.use("/api/business2026", business2026Routes);
 app.use("/api/seminar2025", seminar2025Routes);
 app.use("/api/seminar2026", seminar2026Routes);
-app.use("/api/messages", messageRoutes); // Add this line - this is crucial!
+app.use("/api/messages", messageRoutes);
 app.use("/api/audit", auditRoutes);
 app.use("/api/certificates", certificateRoutes);
 
@@ -94,7 +97,6 @@ app.get("/businesses", (req, res) => {
 });
 
 // Seminars route
-
 app.get("/seminars", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "seminars.html"));
 });
@@ -156,7 +158,6 @@ io.on("connection", (socket) => {
 
   // Handle sending messages
   socket.on("sendMessage", (data) => {
-    // Save message to database (we'll do this via HTTP, so just broadcast)
     // Broadcast to recipient
     io.to(data.recipientId).emit("newMessage", data);
     // Mark as delivered
@@ -182,7 +183,6 @@ io.on("connection", (socket) => {
 
   // Handle marking messages as seen
   socket.on("markAsSeen", (data) => {
-    // Update message status in database
     // Notify sender
     io.to(data.senderId).emit("messageSeen", {
       messageId: data.messageId,
@@ -195,10 +195,37 @@ io.on("connection", (socket) => {
   });
 });
 
+// Schedule certificate cleanup job to run during working hours
+// Runs at 3:45 PM (15:45) Monday to Friday (1-5)
+cron.schedule(
+  "45 15 * * 1-5",
+  async () => {
+    try {
+      console.log(
+        "🧹 Running certificate cleanup job at:",
+        new Date().toLocaleString()
+      );
+      await cleanupOldCertificates();
+      console.log(
+        "✅ Certificate cleanup job completed successfully at:",
+        new Date().toLocaleString()
+      );
+    } catch (error) {
+      console.error("❌ Error running certificate cleanup job:", error);
+    }
+  },
+  {
+    scheduled: true,
+    timezone: "Asia/Manila", // Philippines timezone
+  }
+);
+
 // Start server - listen on all interfaces (0.0.0.0) to allow network access
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
   console.log(`🌐 CENRO Network: http://192.168.55.38:${PORT}`);
   console.log(`🏢 CGSJ_OSS Network: http://192.168.55.229:${PORT}`);
   console.log(`📡 Any device on 192.168.55.x subnet can access the server`);
+  console.log(`🕒 Server Hours: 7:00 AM - 4:00 PM Weekdays`);
+  console.log(`🧹 Certificate cleanup scheduled: 3:45 PM Monday-Friday`);
 });
