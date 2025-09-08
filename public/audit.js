@@ -3,7 +3,6 @@ let currentPage = 1;
 let pageSize = 10;
 let totalRecords = 0;
 let allAuditLogs = [];
-
 // Wait for DOM to be fully loaded
 window.addEventListener("load", function () {
   console.log("Audit Trail page loaded, initializing");
@@ -25,60 +24,29 @@ window.addEventListener("load", function () {
   setupPaginationControls();
   // Setup modal event listeners
   setupModalEventListeners();
+
+  // Initialize inactivity manager
+  window.inactivityManager = new InactivityManager();
+
   updateDateTime();
   setInterval(updateDateTime, 1000);
 });
 
-// Function to check authentication
-function checkAuthentication() {
-  const token = localStorage.getItem("auth_token");
-  const userData = localStorage.getItem("user_data");
-  if (!token || !userData) {
-    window.location.href = "/";
-    return;
-  }
-  try {
-    if (isTokenExpired(token)) {
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("user_data");
-      window.location.href = "/";
-      return;
+// Add page visibility handling
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    console.log("Page hidden - pausing session check");
+    if (window.inactivityManager) {
+      window.inactivityManager.stopSessionCheck();
     }
-    const user = JSON.parse(userData);
-    updateUserInterface(user);
-    verifyTokenWithServer(token).catch((error) => {
-      console.error("Token verification failed:", error);
-    });
-  } catch (e) {
-    console.error("Error parsing user data:", e);
-    window.location.href = "/";
-  }
-}
-
-// Function to update user interface
-async function updateUserInterface(user) {
-  const userEmailElement = document.getElementById("userEmail");
-  const userAvatarImage = document.getElementById("userAvatarImage");
-  const userAvatarFallback = document.getElementById("userAvatarFallback");
-  const greeting = getTimeBasedGreeting();
-  const displayName = user.firstname || user.email;
-  if (userEmailElement) {
-    userEmailElement.textContent = `${greeting}, ${displayName}!`;
-  }
-  updateUserAvatar(user, userAvatarImage, userAvatarFallback);
-}
-
-// Function to get time-based greeting
-function getTimeBasedGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) {
-    return "Good morning";
-  } else if (hour < 18) {
-    return "Good afternoon";
   } else {
-    return "Good evening";
+    console.log("Page visible - resuming session check");
+    if (window.inactivityManager) {
+      window.inactivityManager.startSessionCheck();
+      window.inactivityManager.resetInactivityTimer();
+    }
   }
-}
+});
 
 // Function to initialize audit table
 function initializeAuditTable() {
@@ -511,175 +479,4 @@ function showTableError(message) {
       </button>
     </div>
   `;
-}
-
-// Function to setup dropdown functionality
-function setupDropdown() {
-  const userDropdown = document.getElementById("userDropdown");
-  const userDropdownMenu = document.getElementById("userDropdownMenu");
-  if (!userDropdown || !userDropdownMenu) {
-    console.error("Dropdown elements not found");
-    return;
-  }
-  const newUserDropdown = userDropdown.cloneNode(true);
-  userDropdown.parentNode.replaceChild(newUserDropdown, userDropdown);
-  newUserDropdown.addEventListener("click", function (e) {
-    e.preventDefault();
-    e.stopPropagation();
-    userDropdownMenu.classList.toggle("show");
-    document.addEventListener("click", function closeDropdown(e) {
-      if (!e.target.closest(".user-dropdown")) {
-        userDropdownMenu.classList.remove("show");
-        document.removeEventListener("click", closeDropdown);
-      }
-    });
-  });
-}
-
-// Function to setup logout functionality
-function setupLogout() {
-  const logoutBtn = document.getElementById("logoutBtn");
-  if (!logoutBtn) {
-    console.error("Logout button not found");
-    return;
-  }
-  const newLogoutBtn = logoutBtn.cloneNode(true);
-  logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
-  newLogoutBtn.addEventListener("click", function (e) {
-    e.preventDefault();
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("user_data");
-    window.location.href = "/";
-  });
-}
-
-// Helper functions for token handling
-function isTokenExpired(token) {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) {
-      return true;
-    }
-    const payload = JSON.parse(atob(parts[1]));
-    if (!payload.exp) {
-      return true;
-    }
-    const now = Math.floor(Date.now() / 1000);
-    return payload.exp < now;
-  } catch (e) {
-    console.error("Error checking token expiration:", e);
-    return true;
-  }
-}
-
-function verifyTokenWithServer(token) {
-  return fetch("/api/auth/verify-token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  })
-    .then((response) => {
-      if (response.ok) {
-        console.log("Token verification successful");
-      } else {
-        console.log("Token verification failed, status:", response.status);
-        if (response.status === 401) {
-          localStorage.removeItem("auth_token");
-          localStorage.removeItem("user_data");
-          window.location.href = "/";
-        }
-      }
-    })
-    .catch((error) => {
-      console.error("Error verifying token:", error);
-    });
-}
-
-// Helper function to update user avatar
-async function updateUserAvatar(user, imageElement, fallbackElement) {
-  if (!imageElement || !fallbackElement) {
-    console.error("Avatar elements not found");
-    return;
-  }
-  if (user.hasProfilePicture) {
-    try {
-      const token = localStorage.getItem("auth_token");
-      if (!token) {
-        console.error("No auth token found");
-        showFallbackAvatar(user, fallbackElement);
-        return;
-      }
-      const response = await fetch(`/api/auth/profile-picture/${user.id}`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (response.ok) {
-        const blob = await response.blob();
-        const imageUrl = URL.createObjectURL(blob);
-        imageElement.src = imageUrl;
-        imageElement.style.display = "block";
-        fallbackElement.style.display = "none";
-        console.log("Profile picture loaded successfully");
-      } else {
-        console.error("Failed to load profile picture:", response.status);
-        showFallbackAvatar(user, fallbackElement);
-      }
-    } catch (error) {
-      console.error("Error loading profile picture:", error);
-      showFallbackAvatar(user, fallbackElement);
-    }
-  } else {
-    console.log("User has no profile picture, showing fallback");
-    showFallbackAvatar(user, fallbackElement);
-  }
-}
-
-function showFallbackAvatar(user, fallbackElement) {
-  const initials = getUserInitials(user);
-  fallbackElement.textContent = initials;
-  fallbackElement.style.display = "flex";
-  fallbackElement.style.alignItems = "center";
-  fallbackElement.style.justifyContent = "center";
-  const imageElement = document.getElementById("userAvatarImage");
-  if (imageElement) {
-    imageElement.style.display = "none";
-  }
-}
-
-function getUserInitials(user) {
-  if (user.firstname && user.lastname) {
-    return `${user.firstname.charAt(0)}${user.lastname.charAt(
-      0
-    )}`.toUpperCase();
-  } else if (user.firstname) {
-    return user.firstname.charAt(0).toUpperCase();
-  } else if (user.lastname) {
-    return user.lastname.charAt(0).toUpperCase();
-  } else {
-    return user.email.charAt(0).toUpperCase();
-  }
-}
-
-// Function to update the date and time display
-function updateDateTime() {
-  const now = new Date();
-  const options = {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  };
-  const dateTimeString = now.toLocaleDateString("en-US", options);
-  const datetimeElement = document.getElementById("datetime");
-  if (datetimeElement) {
-    datetimeElement.textContent = dateTimeString;
-  }
 }

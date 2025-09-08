@@ -3,7 +3,7 @@ const router = express.Router();
 const Business2026 = require("../models/business2026");
 const { verifyToken } = require("../middleware/authMiddleware");
 const { logAction } = require("../services/auditService");
-const barangayCoordinates = require("../barangayCoordinates");
+const barangayCoordinates = require("../public/js/barangayCoordinates");
 
 // Helper function to convert string values to uppercase
 function convertStringsToUppercase(data) {

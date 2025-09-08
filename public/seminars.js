@@ -1,9 +1,11 @@
+// seminars.js - Fixed to use paginationUtils.js
 let currentYear = "2025"; // Default to 2025
 let allSeminars = []; // Store all seminars for client-side operations
 let currentPage = 1;
 let pageSize = 10;
 let totalRecords = 0;
 let filteredSeminars = []; // Store filtered seminars for search functionality
+
 // Function to update current page for user tracking
 function updateCurrentPage(page) {
   const token = localStorage.getItem("auth_token");
@@ -25,20 +27,30 @@ function updateCurrentPage(page) {
       console.error("Error updating current page:", error);
     });
 }
-// Function to get the authentication token
-function getAuthToken() {
-  const token = localStorage.getItem("auth_token");
-  if (!token) {
-    throw new Error("Authentication token not found. Please login again.");
-  }
-  return token;
+
+// Function to update table with pagination - callback for pagination controls
+function updateTableWithPagination(page, size) {
+  console.log(`Updating table with page ${page}, size ${size}`);
+  // Update current page and page size
+  currentPage = page;
+  pageSize = size;
+  // Get paginated data
+  const paginatedData = getPaginatedData(
+    filteredSeminars,
+    currentPage,
+    pageSize
+  );
+  // Update table
+  updateSeminarTable(paginatedData);
+  // Update pagination controls with the callback function
+  updatePaginationControls(
+    currentPage,
+    pageSize,
+    totalRecords,
+    updateTableWithPagination
+  );
 }
-// Function to handle 401 errors
-function handleUnauthorizedError() {
-  localStorage.removeItem("auth_token");
-  localStorage.removeItem("user_data");
-  window.location.href = "/";
-}
+
 // Function to load seminar data
 async function loadSeminarData() {
   try {
@@ -80,127 +92,25 @@ async function loadSeminarData() {
     // Reset pagination
     currentPage = 1;
     // Update table with paginated data
-    updateSeminarTable(getPaginatedData());
+    const paginatedData = getPaginatedData(
+      filteredSeminars,
+      currentPage,
+      pageSize
+    );
+    updateSeminarTable(paginatedData);
     // Update pagination controls
-    updatePaginationControls();
+    updatePaginationControls(
+      currentPage,
+      pageSize,
+      totalRecords,
+      updateTableWithPagination
+    );
   } catch (error) {
     console.error("Error loading seminar data:", error);
     showErrorMessage(`Failed to load seminar data: ${error.message}`);
   }
 }
-// Function to get paginated data
-function getPaginatedData() {
-  if (!filteredSeminars || filteredSeminars.length === 0) {
-    return [];
-  }
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  return filteredSeminars.slice(startIndex, endIndex);
-}
-// Function to update pagination controls
-function updatePaginationControls() {
-  if (totalRecords === 0) {
-    // Handle case when there are no records
-    const paginationInfo = document.getElementById("paginationInfo");
-    if (paginationInfo) {
-      paginationInfo.textContent = "Showing 0 of 0 records";
-    }
-    // Disable all pagination buttons
-    const buttons = [
-      "firstPageBtn",
-      "prevPageBtn",
-      "nextPageBtn",
-      "lastPageBtn",
-    ];
-    buttons.forEach((id) => {
-      const btn = document.getElementById(id);
-      if (btn) btn.disabled = true;
-    });
-    return;
-  }
-  const totalPages = Math.ceil(totalRecords / pageSize);
-  // Update pagination info
-  const paginationInfo = document.getElementById("paginationInfo");
-  if (paginationInfo) {
-    const startRecord = totalRecords > 0 ? (currentPage - 1) * pageSize + 1 : 0;
-    const endRecord = Math.min(currentPage * pageSize, totalRecords);
-    paginationInfo.textContent = `Showing ${startRecord}-${endRecord} of ${totalRecords} records`;
-  }
-  // Update button states
-  const firstPageBtn = document.getElementById("firstPageBtn");
-  const prevPageBtn = document.getElementById("prevPageBtn");
-  const nextPageBtn = document.getElementById("nextPageBtn");
-  const lastPageBtn = document.getElementById("lastPageBtn");
-  if (firstPageBtn) firstPageBtn.disabled = currentPage === 1;
-  if (prevPageBtn) prevPageBtn.disabled = currentPage === 1;
-  if (nextPageBtn)
-    nextPageBtn.disabled = currentPage === totalPages || totalPages === 0;
-  if (lastPageBtn)
-    lastPageBtn.disabled = currentPage === totalPages || totalPages === 0;
-}
-// Function to setup pagination controls
-function setupPaginationControls() {
-  // Set initial page size from the select element
-  const pageSizeSelect = document.getElementById("pageSizeSelect");
-  if (pageSizeSelect) {
-    pageSize = parseInt(pageSizeSelect.value);
-  }
-  // First page button
-  const firstPageBtn = document.getElementById("firstPageBtn");
-  if (firstPageBtn) {
-    firstPageBtn.addEventListener("click", function () {
-      if (currentPage > 1) {
-        currentPage = 1;
-        updateSeminarTable(getPaginatedData());
-        updatePaginationControls();
-      }
-    });
-  }
-  // Previous page button
-  const prevPageBtn = document.getElementById("prevPageBtn");
-  if (prevPageBtn) {
-    prevPageBtn.addEventListener("click", function () {
-      if (currentPage > 1) {
-        currentPage--;
-        updateSeminarTable(getPaginatedData());
-        updatePaginationControls();
-      }
-    });
-  }
-  // Next page button
-  const nextPageBtn = document.getElementById("nextPageBtn");
-  if (nextPageBtn) {
-    nextPageBtn.addEventListener("click", function () {
-      const totalPages = Math.ceil(totalRecords / pageSize);
-      if (currentPage < totalPages) {
-        currentPage++;
-        updateSeminarTable(getPaginatedData());
-        updatePaginationControls();
-      }
-    });
-  }
-  // Last page button
-  const lastPageBtn = document.getElementById("lastPageBtn");
-  if (lastPageBtn) {
-    lastPageBtn.addEventListener("click", function () {
-      const totalPages = Math.ceil(totalRecords / pageSize);
-      if (currentPage < totalPages) {
-        currentPage = totalPages;
-        updateSeminarTable(getPaginatedData());
-        updatePaginationControls();
-      }
-    });
-  }
-  // Page size selector
-  if (pageSizeSelect) {
-    pageSizeSelect.addEventListener("change", function () {
-      pageSize = parseInt(this.value);
-      currentPage = 1; // Reset to first page
-      updateSeminarTable(getPaginatedData());
-      updatePaginationControls();
-    });
-  }
-}
+
 // Function to setup search functionality
 function setupSearch() {
   const searchInput = document.getElementById("searchInput");
@@ -218,6 +128,7 @@ function setupSearch() {
     }
   });
 }
+
 // Function to perform search
 function performSearch() {
   const searchInput = document.getElementById("searchInput");
@@ -237,10 +148,21 @@ function performSearch() {
   totalRecords = filteredSeminars.length;
   currentPage = 1; // Reset to first page
   // Update table with paginated data
-  updateSeminarTable(getPaginatedData());
+  const paginatedData = getPaginatedData(
+    filteredSeminars,
+    currentPage,
+    pageSize
+  );
+  updateSeminarTable(paginatedData);
   // Update pagination controls
-  updatePaginationControls();
+  updatePaginationControls(
+    currentPage,
+    pageSize,
+    totalRecords,
+    updateTableWithPagination
+  );
 }
+
 // Function to update seminar table
 function updateSeminarTable(seminars) {
   const tableRoot = document.getElementById("seminarTable");
@@ -460,6 +382,7 @@ function updateSeminarTable(seminars) {
     renderSimpleTable(seminars);
   }
 }
+
 // Fallback function to render a simple table
 function renderSimpleTable(seminars) {
   const tableRoot = document.getElementById("seminarTable");
@@ -571,13 +494,13 @@ function renderSimpleTable(seminars) {
   tableRoot.appendChild(table);
   console.log("Simple table rendered successfully");
 }
+
 // Function to handle resend invitation
 function handleResendInvitation(seminar) {
   console.log("Resending invitation to:", seminar);
   // Populate the resend modal with seminar details
   document.getElementById("resendEmail").value = seminar.email;
   document.getElementById("resendBusinessName").value = seminar.businessName;
-
   // Reset modal state before opening
   const resendBtn = document.getElementById("resendInvitationBtn");
   if (resendBtn) {
@@ -585,7 +508,6 @@ function handleResendInvitation(seminar) {
     resendBtn.className = "btn btn-primary";
     resendBtn.disabled = false;
   }
-
   // Remove any existing success messages
   const resendModal = document.getElementById("resendInvitationModal");
   const existingProgressContainers = resendModal.querySelectorAll(
@@ -594,7 +516,6 @@ function handleResendInvitation(seminar) {
   existingProgressContainers.forEach((container) => {
     container.remove();
   });
-
   // Set default values for the form
   const today = new Date();
   const nextWeek = new Date(today);
@@ -606,13 +527,12 @@ function handleResendInvitation(seminar) {
   document.getElementById("resendSeminarVenue").value = "Via Zoom Meeting";
   document.getElementById("resendContactInfo").value =
     "Email: cenrosanjuanpcu@gmail.com | Phone: (0939)717-2394";
-
   // Generate initial email body
   generateResendEmailBody();
-
   // Show the modal
   resendModal.style.display = "block";
 }
+
 // Function to generate resend email body
 function generateResendEmailBody() {
   const seminarDate = document.getElementById("resendSeminarDate");
@@ -636,7 +556,6 @@ function generateResendEmailBody() {
     hour: "2-digit",
     minute: "2-digit",
   });
-
   // Build event details with Zoom information included
   let eventDetails = `
     <div class="details">
@@ -647,7 +566,6 @@ function generateResendEmailBody() {
         <li><strong>Venue:</strong> ${seminarVenue.value}</li>
         <li><strong>Program:</strong> 9:00 AM - 12:00 PM</li>
   `;
-
   // Add Zoom details to the event details if provided
   if (zoomLink.value || zoomMeetingId.value) {
     if (zoomLink.value) {
@@ -670,7 +588,6 @@ function generateResendEmailBody() {
     </ul>
   </div>
 `;
-
   const businessName = document.getElementById("resendBusinessName").value;
   const body = `<!DOCTYPE html>
 <html>
@@ -769,7 +686,7 @@ function generateResendEmailBody() {
             
             <p>Best regards,<br>
             <strong>CENRO San Juan City</strong><br>
-            <img src="https://iili.io/KCjsBJS.th.png" alt="cenro logo" style="width: 100px; height: auto;"></p>
+            <img src="https://8upload.com/image/68be3f83c9e7e/freepik_br_bb4e2098-1dee-4111-8179-ddc41996d8da.png" alt="cenro logo" style="width: 100px; height: auto;"></p>
         </div>
         <div class="footer">
             <p>This is an automated message.</p>
@@ -783,6 +700,7 @@ function generateResendEmailBody() {
   emailBodyPreview.innerHTML = body;
   return body;
 }
+
 // Function to setup resend invitation modal
 function setupResendInvitationModal() {
   const resendModal = document.getElementById("resendInvitationModal");
@@ -799,6 +717,7 @@ function setupResendInvitationModal() {
   const zoomMeetingId = document.getElementById("resendZoomMeetingId");
   const zoomPassword = document.getElementById("resendZoomPassword");
   const contactInfo = document.getElementById("resendContactInfo");
+  const emailBodyPreview = document.getElementById("resendEmailBodyPreview");
   // Add event listeners to form fields to auto-generate email body
   [
     seminarDate,
@@ -1063,6 +982,7 @@ function setupResendInvitationModal() {
     });
   }
 }
+
 // Function to setup year selection
 function setupYearSelection() {
   const yearSelect = document.getElementById("yearSelect");
@@ -1088,6 +1008,7 @@ function setupYearSelection() {
     });
   }
 }
+
 // Function to setup refresh button
 function setupRefreshButton() {
   const refreshBtn = document.getElementById("refreshBtn");
@@ -1113,6 +1034,7 @@ function setupRefreshButton() {
     });
   }
 }
+
 // Function to setup upload button
 function setupUploadButton() {
   const uploadDataBtn = document.getElementById("uploadDataBtn");
@@ -1183,12 +1105,12 @@ function setupUploadButton() {
     });
   }
 }
+
 // Function to reset send invitations modal
 function resetSendInvitationsModal() {
   const sendInvitationsModal = document.getElementById("sendInvitationsModal");
   const invitationForm = document.getElementById("invitationForm");
   const sendInvitationsBtn = document.getElementById("sendInvitationsBtn");
-
   // Remove any existing progress containers or alert messages
   const existingMessages = sendInvitationsModal.querySelectorAll(
     ".progress-container, .alert-success, .alert-danger"
@@ -1196,16 +1118,13 @@ function resetSendInvitationsModal() {
   existingMessages.forEach((container) => {
     container.remove();
   });
-
   // Reset form
   invitationForm.reset();
-
   // Reset button to original state
   sendInvitationsBtn.disabled = false;
   sendInvitationsBtn.className = "btn btn-primary";
   sendInvitationsBtn.style.cursor = "";
   sendInvitationsBtn.innerHTML = "Send Invitations";
-
   // Set default values
   const today = new Date();
   const nextWeek = new Date(today);
@@ -1214,14 +1133,12 @@ function resetSendInvitationsModal() {
   const seminarTime = document.getElementById("seminarTime");
   const seminarVenue = document.getElementById("seminarVenue");
   const contactInfo = document.getElementById("contactInfo");
-
   if (seminarDate) seminarDate.value = nextWeek.toISOString().split("T")[0];
   if (seminarTime) seminarTime.value = "09:00";
   if (seminarVenue) seminarVenue.value = "Via Zoom Meeting";
   if (contactInfo)
     contactInfo.value =
       "Email: cenrosanjuanpcu@gmail.com | Mobile: (0939)717-2394";
-
   // Generate initial email body
   const generateEmailBody =
     window.generateEmailBody ||
@@ -1230,6 +1147,7 @@ function resetSendInvitationsModal() {
     };
   generateEmailBody();
 }
+
 // Function to setup send invitations button
 function setupSendInvitationsButton() {
   const sendInvitationsDataBtn = document.getElementById(
@@ -1267,7 +1185,6 @@ function setupSendInvitationsButton() {
     });
     // Add this line to define businessName
     const businessName = "{{businessName}}"; // This is a placeholder that will be replaced when sending emails
-
     // Build event details with Zoom information included
     let eventDetails = `
       <div class="details">
@@ -1278,7 +1195,6 @@ function setupSendInvitationsButton() {
           <li><strong>Venue:</strong> ${seminarVenue.value}</li>
           <li><strong>Program:</strong> 9:00 AM - 12:00 PM</li>
     `;
-
     // Add Zoom details to the event details if provided
     if (zoomLink.value || zoomMeetingId.value) {
       if (zoomLink.value) {
@@ -1301,7 +1217,6 @@ function setupSendInvitationsButton() {
     </ul>
   </div>
 `;
-
     const body = `<!DOCTYPE html>
 <html>
 <head>
@@ -1399,7 +1314,7 @@ function setupSendInvitationsButton() {
             
             <p>Best regards,<br>
             <strong>CENRO San Juan City</strong><br>
-            <img src="https://iili.io/KCjsBJS.th.png" alt="cenro logo" style="width: 100px; height: auto;">
+            <img src="https://8upload.com/image/68be3f83c9e7e/freepik_br_bb4e2098-1dee-4111-8179-ddc41996d8da.png" alt="cenro logo" style="width: 100px; height: auto;">
             </p>
         </div>
         <div class="footer">
@@ -1646,84 +1561,7 @@ function setupSendInvitationsButton() {
     });
   }
 }
-// Function to show success message
-function showSuccessMessage(message) {
-  const alertDiv = document.createElement("div");
-  alertDiv.className = "alert alert-success";
-  alertDiv.style.position = "fixed";
-  alertDiv.style.top = "20px";
-  alertDiv.style.right = "20px";
-  alertDiv.style.padding = "15px 20px";
-  alertDiv.style.backgroundColor = "var(--success)";
-  alertDiv.style.color = "white";
-  alertDiv.style.borderRadius = "var(--border-radius-md)";
-  alertDiv.style.boxShadow = "var(--shadow-lg)";
-  alertDiv.style.zIndex = "10001";
-  alertDiv.style.display = "flex";
-  alertDiv.style.alignItems = "center";
-  alertDiv.style.gap = "10px";
-  alertDiv.innerHTML = `
-    <i class="fas fa-check-circle"></i>
-    <span>${message}</span>
-  `;
-  document.body.appendChild(alertDiv);
-  setTimeout(() => {
-    alertDiv.style.opacity = "0";
-    alertDiv.style.transition = "opacity 0.5s";
-    setTimeout(() => {
-      document.body.removeChild(alertDiv);
-    }, 500);
-  }, 3000);
-}
-// Function to show error message
-function showErrorMessage(message) {
-  const alertDiv = document.createElement("div");
-  alertDiv.className = "alert alert-danger";
-  alertDiv.style.position = "fixed";
-  alertDiv.style.top = "20px";
-  alertDiv.style.right = "20px";
-  alertDiv.style.padding = "15px 20px";
-  alertDiv.style.backgroundColor = "var(--danger)";
-  alertDiv.style.color = "white";
-  alertDiv.style.borderRadius = "var(--border-radius-md)";
-  alertDiv.style.boxShadow = "var(--shadow-lg)";
-  alertDiv.style.zIndex = "10001";
-  alertDiv.style.display = "flex";
-  alertDiv.style.alignItems = "center";
-  alertDiv.style.gap = "10px";
-  alertDiv.innerHTML = `
-    <i class="fas fa-exclamation-circle"></i>
-    <span>${message}</span>
-  `;
-  document.body.appendChild(alertDiv);
-  setTimeout(() => {
-    alertDiv.style.opacity = "0";
-    alertDiv.style.transition = "opacity 0.5s";
-    setTimeout(() => {
-      document.body.removeChild(alertDiv);
-    }, 500);
-  }, 5000);
-}
-// Function to setup dropdown functionality
-function setupDropdown() {
-  const userDropdown = document.getElementById("userDropdown");
-  const userDropdownMenu = document.getElementById("userDropdownMenu");
-  if (!userDropdown || !userDropdownMenu) {
-    console.error("Dropdown elements not found");
-    return;
-  }
-  userDropdown.addEventListener("click", function (e) {
-    e.preventDefault();
-    e.stopPropagation();
-    userDropdownMenu.classList.toggle("show");
-    document.addEventListener("click", function closeDropdown(e) {
-      if (!e.target.closest(".user-dropdown")) {
-        userDropdownMenu.classList.remove("show");
-        document.removeEventListener("click", closeDropdown);
-      }
-    });
-  });
-}
+
 // Function to setup logout functionality
 function setupLogout() {
   const logoutBtn = document.getElementById("logoutBtn");
@@ -1762,178 +1600,7 @@ function setupLogout() {
     }
   });
 }
-// Function to check if token is expired
-function isTokenExpired(token) {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) {
-      return true;
-    }
-    const payload = JSON.parse(atob(parts[1]));
-    if (!payload.exp) {
-      return true;
-    }
-    const now = Math.floor(Date.now() / 1000);
-    return payload.exp < now;
-  } catch (e) {
-    console.error("Error checking token expiration:", e);
-    return true;
-  }
-}
-// Function to verify token with server
-function verifyTokenWithServer(token) {
-  return fetch("/api/auth/verify-token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  })
-    .then((response) => {
-      if (response.ok) {
-        console.log("Token verification successful");
-      } else {
-        console.log("Token verification failed, status:", response.status);
-        if (response.status === 401) {
-          localStorage.removeItem("auth_token");
-          localStorage.removeItem("user_data");
-          window.location.href = "/";
-        }
-      }
-    })
-    .catch((error) => {
-      console.error("Error verifying token:", error);
-    });
-}
-// Function to update the date and time display
-function updateDateTime() {
-  const now = new Date();
-  const options = {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  };
-  const dateTimeString = now.toLocaleDateString("en-US", options);
-  const datetimeElement = document.getElementById("datetime");
-  if (datetimeElement) {
-    datetimeElement.textContent = dateTimeString;
-  }
-}
-// Function to check authentication
-function checkAuthentication() {
-  const token = localStorage.getItem("auth_token");
-  const userData = localStorage.getItem("user_data");
-  if (!token || !userData) {
-    window.location.href = "/";
-    return;
-  }
-  try {
-    if (isTokenExpired(token)) {
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("user_data");
-      window.location.href = "/";
-      return;
-    }
-    const user = JSON.parse(userData);
-    updateUserInterface(user);
-    verifyTokenWithServer(token).catch((error) => {
-      console.error("Token verification failed:", error);
-    });
-  } catch (e) {
-    console.error("Error parsing user data:", e);
-    window.location.href = "/";
-  }
-}
-// Function to update user interface
-async function updateUserInterface(user) {
-  const userEmailElement = document.getElementById("userEmail");
-  const userAvatarImage = document.getElementById("userAvatarImage");
-  const userAvatarFallback = document.getElementById("userAvatarFallback");
-  const greeting = getTimeBasedGreeting();
-  const displayName = user.firstname || user.email;
-  if (userEmailElement) {
-    userEmailElement.textContent = `${greeting}, ${displayName}!`;
-  }
-  updateUserAvatar(user, userAvatarImage, userAvatarFallback);
-}
-// Function to get time-based greeting
-function getTimeBasedGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) {
-    return "Good morning";
-  } else if (hour < 18) {
-    return "Good afternoon";
-  } else {
-    return "Good evening";
-  }
-}
-// Helper function to get user initials
-function getUserInitials(user) {
-  if (user.firstname && user.lastname) {
-    return `${user.firstname.charAt(0)}${user.lastname.charAt(
-      0
-    )}`.toUpperCase();
-  } else if (user.firstname) {
-    return user.firstname.charAt(0).toUpperCase();
-  } else if (user.lastname) {
-    return user.lastname.charAt(0).toUpperCase();
-  } else {
-    return user.email.charAt(0).toUpperCase();
-  }
-}
-// Helper function to update user avatar
-async function updateUserAvatar(user, imageElement, fallbackElement) {
-  if (!imageElement || !fallbackElement) {
-    console.error("Avatar elements not found");
-    return;
-  }
-  if (user.hasProfilePicture) {
-    try {
-      const token = localStorage.getItem("auth_token");
-      if (!token) {
-        showFallbackAvatar(user, fallbackElement);
-        return;
-      }
-      const response = await fetch(`/api/auth/profile-picture/${user.id}`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (response.ok) {
-        const blob = await response.blob();
-        const imageUrl = URL.createObjectURL(blob);
-        imageElement.src = imageUrl;
-        imageElement.style.display = "block";
-        fallbackElement.style.display = "none";
-      } else {
-        showFallbackAvatar(user, fallbackElement);
-      }
-    } catch (error) {
-      console.error("Error loading profile picture:", error);
-      showFallbackAvatar(user, fallbackElement);
-    }
-  } else {
-    showFallbackAvatar(user, fallbackElement);
-  }
-}
-// Show fallback avatar with initials
-function showFallbackAvatar(user, fallbackElement) {
-  const initials = getUserInitials(user);
-  fallbackElement.textContent = initials;
-  fallbackElement.style.display = "flex";
-  fallbackElement.style.alignItems = "center";
-  fallbackElement.style.justifyContent = "center";
-  const imageElement = document.getElementById("userAvatarImage");
-  if (imageElement) {
-    imageElement.style.display = "none";
-  }
-}
+
 // Wait for DOM to be fully loaded
 window.addEventListener("load", function () {
   console.log("Seminars page loaded, initializing");
@@ -1958,10 +1625,35 @@ window.addEventListener("load", function () {
   // Setup search functionality
   setupSearch();
   // Setup pagination controls
-  setupPaginationControls();
+  setupPaginationControls(
+    currentPage,
+    pageSize,
+    totalRecords,
+    updateTableWithPagination
+  );
   // Setup resend invitation modal
   setupResendInvitationModal();
+
+  // Initialize inactivity manager
+  window.inactivityManager = new InactivityManager();
+
   // Start updating the datetime
   updateDateTime();
   setInterval(updateDateTime, 1000);
+});
+
+// Add page visibility handling
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    console.log("Page hidden - pausing session check");
+    if (window.inactivityManager) {
+      window.inactivityManager.stopSessionCheck();
+    }
+  } else {
+    console.log("Page visible - resuming session check");
+    if (window.inactivityManager) {
+      window.inactivityManager.startSessionCheck();
+      window.inactivityManager.resetInactivityTimer();
+    }
+  }
 });

@@ -1,361 +1,16 @@
-// businesses.js
+// businesses.js - Fixed to use paginationUtils.js
 const logoUrls = [
   "https://upload.wikimedia.org/wikipedia/commons/b/b1/Bagong_Pilipinas_logo.png",
   "https://upload.wikimedia.org/wikipedia/commons/3/34/Seal_of_San_Juan%2C_Metro_Manila.png",
   "/makabagong%20san%20juan%20Logo.png",
 ];
 let currentYear = "2025"; // Default to 2025
+
 // Pagination variables - Global scope
 let currentPage = 1;
 let pageSize = 10;
 let totalRecords = 0;
 let allBusinesses = []; // Store all businesses for client-side pagination
-
-// Helper function to get the authentication token
-function getAuthToken() {
-  const token = localStorage.getItem("auth_token");
-  if (!token) {
-    throw new Error("Authentication token not found. Please login again.");
-  }
-  return token;
-}
-
-// Helper function to handle 401 errors
-function handleUnauthorizedError() {
-  localStorage.removeItem("auth_token");
-  localStorage.removeItem("user_data");
-  window.location.href = "/";
-}
-
-// Inactivity Manager Class
-class InactivityManager {
-  constructor() {
-    this.sessionCheckInterval = null;
-    this.inactivityTimer = null;
-    this.warningTimer = null;
-    this.inactivityTimeout = 180 * 1000; // 1 minute in milliseconds
-    this.warningTimeout = 160 * 1000; // Show warning 20 seconds before logout
-    this.init();
-  }
-  init() {
-    console.log("Initializing inactivity manager");
-    // Start periodic session check
-    this.startSessionCheck();
-    // Setup inactivity detection
-    this.setupInactivityDetection();
-    // Create inactivity warning popup
-    this.createInactivityWarning();
-  }
-  // Start periodic session check
-  startSessionCheck() {
-    // Clear any existing interval
-    if (this.sessionCheckInterval) {
-      clearInterval(this.sessionCheckInterval);
-    }
-    // Check every 1 minute
-    this.sessionCheckInterval = setInterval(async () => {
-      const isValid = await this.checkSessionValidity();
-      if (!isValid) {
-        console.log("Session expired or invalid");
-        this.clearSessionData();
-        window.location.href = "/";
-      }
-    }, 1 * 60 * 1000); // 1 minute
-    console.log("Session check started (1 minute interval)");
-  }
-  // Stop session check
-  stopSessionCheck() {
-    if (this.sessionCheckInterval) {
-      clearInterval(this.sessionCheckInterval);
-      this.sessionCheckInterval = null;
-      console.log("Session check stopped");
-    }
-  }
-  // Setup inactivity detection
-  setupInactivityDetection() {
-    console.log("Setting up inactivity detection");
-    // Reset inactivity timer on user activity
-    const resetInactivityTimer = () => {
-      console.log("User activity detected, resetting inactivity timer");
-      this.resetInactivityTimer();
-    };
-    // Add event listeners for user activity
-    const events = [
-      "mousedown",
-      "mousemove",
-      "keypress",
-      "scroll",
-      "touchstart",
-      "click",
-      "keydown",
-      "input",
-    ];
-    events.forEach((event) => {
-      document.addEventListener(event, resetInactivityTimer, true);
-    });
-    // Start the inactivity timer
-    this.resetInactivityTimer();
-    console.log("Inactivity detection setup complete");
-  }
-  // Reset inactivity timer
-  resetInactivityTimer() {
-    // Clear existing timers
-    if (this.inactivityTimer) {
-      clearTimeout(this.inactivityTimer);
-    }
-    if (this.warningTimer) {
-      clearTimeout(this.warningTimer);
-    }
-    // Hide warning popup if it's visible
-    this.hideInactivityWarning();
-    // Set warning timer (40 seconds before logout)
-    this.warningTimer = setTimeout(() => {
-      console.log("Showing inactivity warning");
-      this.showInactivityWarning();
-    }, this.warningTimeout);
-    // Set logout timer (60 seconds total)
-    this.inactivityTimer = setTimeout(() => {
-      console.log("User inactive for 1 minute, logging out");
-      this.logout();
-    }, this.inactivityTimeout);
-    console.log(
-      `Inactivity timer reset (will logout after ${
-        this.inactivityTimeout / 1000
-      } seconds of inactivity)`
-    );
-  }
-  // Create inactivity warning popup
-  createInactivityWarning() {
-    // Create popup container
-    const popup = document.createElement("div");
-    popup.id = "inactivityWarning";
-    popup.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-      padding: 24px;
-      max-width: 400px;
-      width: 90%;
-      z-index: 10000;
-      display: none;
-      text-align: center;
-      border: 1px solid #e0e0e0;
-    `;
-    // Create warning icon
-    const icon = document.createElement("div");
-    icon.innerHTML = `
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ff9800" stroke-width="2">
-        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-        <line x1="12" y1="9" x2="12" y2="13"></line>
-        <line x1="12" y1="17" x2="12.01" y2="17"></line>
-      </svg>
-    `;
-    icon.style.marginBottom = "16px";
-    // Create warning message
-    const message = document.createElement("h3");
-    message.textContent = "Session Timeout Warning";
-    message.style.cssText = `
-      margin: 0 0 12px 0;
-      color: #333;
-      font-size: 18px;
-      font-weight: 600;
-    `;
-    // Create warning text
-    const text = document.createElement("p");
-    text.textContent =
-      "You have been inactive for a while. You will be automatically logged out in 20 seconds.";
-    text.style.cssText = `
-      margin: 0 0 24px 0;
-      color: #666;
-      font-size: 14px;
-      line-height: 1.5;
-    `;
-    // Create countdown timer
-    const countdown = document.createElement("div");
-    countdown.id = "inactivityCountdown";
-    countdown.textContent = "20";
-    countdown.style.cssText = `
-      font-size: 24px;
-      font-weight: bold;
-      color: #ff9800;
-      margin-bottom: 20px;
-    `;
-    // Create buttons container
-    const buttons = document.createElement("div");
-    buttons.style.cssText =
-      "display: flex; gap: 12px; justify-content: center;";
-    // Create stay logged in button
-    const stayButton = document.createElement("button");
-    stayButton.textContent = "Stay Logged In";
-    stayButton.style.cssText = `
-      background: #4caf50;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 10px 20px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
-    `;
-    stayButton.addEventListener("click", () => {
-      this.resetInactivityTimer();
-    });
-    stayButton.addEventListener("mouseenter", () => {
-      stayButton.style.background = "#45a049";
-    });
-    stayButton.addEventListener("mouseleave", () => {
-      stayButton.style.background = "#4caf50";
-    });
-    // Create logout button
-    const logoutButton = document.createElement("button");
-    logoutButton.textContent = "Logout Now";
-    logoutButton.style.cssText = `
-      background: #f44336;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 10px 20px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
-    `;
-    logoutButton.addEventListener("click", () => {
-      this.logout();
-    });
-    logoutButton.addEventListener("mouseenter", () => {
-      logoutButton.style.background = "#d32f2f";
-    });
-    logoutButton.addEventListener("mouseleave", () => {
-      logoutButton.style.background = "#f44336";
-    });
-    // Append elements
-    buttons.appendChild(stayButton);
-    buttons.appendChild(logoutButton);
-    popup.appendChild(icon);
-    popup.appendChild(message);
-    popup.appendChild(text);
-    popup.appendChild(countdown);
-    popup.appendChild(buttons);
-    // Create overlay
-    const overlay = document.createElement("div");
-    overlay.id = "inactivityOverlay";
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 9999;
-      display: none;
-    `;
-    // Add to document
-    document.body.appendChild(overlay);
-    document.body.appendChild(popup);
-    console.log("Inactivity warning popup created");
-  }
-  // Show inactivity warning popup
-  showInactivityWarning() {
-    const popup = document.getElementById("inactivityWarning");
-    const overlay = document.getElementById("inactivityOverlay");
-    const countdown = document.getElementById("inactivityCountdown");
-    if (popup && overlay && countdown) {
-      popup.style.display = "block";
-      overlay.style.display = "block";
-      // Start countdown
-      let timeLeft = 20;
-      countdown.textContent = timeLeft;
-      const countdownInterval = setInterval(() => {
-        timeLeft--;
-        countdown.textContent = timeLeft;
-        if (timeLeft <= 0) {
-          clearInterval(countdownInterval);
-        }
-      }, 1000);
-      // Store interval ID to clear it later
-      popup.countdownInterval = countdownInterval;
-    }
-  }
-  // Hide inactivity warning popup
-  hideInactivityWarning() {
-    const popup = document.getElementById("inactivityWarning");
-    const overlay = document.getElementById("inactivityOverlay");
-    if (popup && overlay) {
-      popup.style.display = "none";
-      overlay.style.display = "none";
-      // Clear countdown interval if it exists
-      if (popup.countdownInterval) {
-        clearInterval(popup.countdownInterval);
-      }
-    }
-  }
-  // Check session validity
-  async checkSessionValidity() {
-    try {
-      const token = localStorage.getItem("auth_token");
-      if (!token) return false;
-      const response = await fetch("/api/auth/verify-token", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-      return response.ok;
-    } catch (error) {
-      console.error("Session check error:", error);
-      // If server is unavailable, allow the session to continue
-      return true;
-    }
-  }
-  // Clear session data
-  clearSessionData() {
-    console.log("Clearing session data");
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("user_data");
-    // Clear all cookies
-    document.cookie.split(";").forEach(function (c) {
-      document.cookie = c
-        .replace(/^ +/, "")
-        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-    });
-    // Clear sessionStorage
-    sessionStorage.clear();
-  }
-  // Logout function
-  async logout() {
-    try {
-      const token = localStorage.getItem("auth_token");
-      if (token) {
-        // Call server logout endpoint
-        const response = await fetch("/api/auth/logout", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-        if (response.ok) {
-          console.log("Server logout successful");
-        } else {
-          console.error("Server logout failed");
-        }
-      }
-    } catch (error) {
-      console.error("Error during logout:", error);
-    } finally {
-      // Always clear local data and redirect
-      this.clearSessionData();
-      window.location.href = "/";
-    }
-  }
-}
 
 // Function to update current page for user tracking
 function updateCurrentPage(page) {
@@ -384,7 +39,7 @@ window.addEventListener("load", function () {
   console.log("Businesses page loaded, initializing");
   // Update current page for user tracking
   updateCurrentPage("Business Directory");
-  //Preload logos
+  // Preload logos
   preloadLogos();
   // Check if user is logged in
   checkAuthentication();
@@ -424,177 +79,48 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
-// Handle beforeunload event
-window.addEventListener("beforeunload", () => {
-  // Note: This won't reliably call the server logout
-  // It's better to rely on the periodic session check
-  console.log("Page is unloading");
-});
-
-// Function to check authentication
-function checkAuthentication() {
-  console.log("=== Checking Authentication ===");
-  const token = localStorage.getItem("auth_token");
-  const userData = localStorage.getItem("user_data");
-  console.log("Token found:", !!token);
-  console.log("User data found:", !!userData);
-  if (!token || !userData) {
-    console.log("No token or user data found, redirecting to login");
-    window.location.href = "/";
-    return;
-  }
-  try {
-    // Check if token has valid format first
-    if (!window.isValidTokenFormat(token)) {
-      console.log("Invalid token format, clearing data and redirecting");
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("user_data");
-      window.location.href = "/";
-      return;
-    }
-    // Check if token is expired locally first
-    if (window.isTokenExpired(token)) {
-      console.log("Token is expired, clearing data and redirecting");
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("user_data");
-      window.location.href = "/";
-      return;
-    }
-    const user = JSON.parse(userData);
-    console.log("User data parsed successfully:", user);
-    console.log("User ID:", user.id);
-    console.log("User Email:", user.email);
-    // Verify that the token user matches the stored user data
-    const tokenUser = window.getUserFromToken(token);
-    if (!tokenUser || tokenUser.userId !== user.id) {
-      console.log("Token user ID doesn't match stored user ID, clearing data");
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("user_data");
-      window.location.href = "/";
-      return;
-    }
-    // Update user info in the UI
-    updateUserInterface(user);
-    // Verify token with server in the background - don't await it
-    verifyTokenWithServer(token)
-      .then((success) => {
-        console.log("Server token verification successful");
-      })
-      .catch((error) => {
-        console.error("Token verification failed:", error);
-        // Only redirect if it's a 401 error
-        if (error.status === 401) {
-          console.log("Server rejected token, logging out");
-          localStorage.removeItem("auth_token");
-          localStorage.removeItem("user_data");
-          window.location.href = "/";
-        }
-      });
-  } catch (e) {
-    console.error("Error parsing user data:", e);
-    window.location.href = "/";
-  }
-}
-
-// Function to get time-based greeting
-function getTimeBasedGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) {
-    return "Good morning";
-  } else if (hour < 18) {
-    return "Good afternoon";
-  } else {
-    return "Good evening";
-  }
-}
-
-// Function to update user interface
-async function updateUserInterface(user) {
-  console.log("Updating user interface with user:", user);
-  const userEmailElement = document.getElementById("userEmail");
-  const userAvatarImage = document.getElementById("userAvatarImage");
-  const userAvatarFallback = document.getElementById("userAvatarFallback");
-  // Get the greeting based on current time
-  const greeting = getTimeBasedGreeting();
-  // Get the user's first name if available, otherwise fall back to email
-  const displayName = user.firstname || user.email;
-  if (userEmailElement) {
-    // Update with greeting and first name
-    userEmailElement.textContent = `${greeting}, ${displayName}!`;
-    console.log("Updated user greeting to:", userEmailElement.textContent);
-  } else {
-    console.error("User email element not found");
-  }
-  // Update avatar using the shared utility function
-  updateUserAvatar(user, userAvatarImage, userAvatarFallback);
-}
-
-// Helper function to get user initials
-function getUserInitials(user) {
-  if (user.firstname && user.lastname) {
-    return `${user.firstname.charAt(0)}${user.lastname.charAt(
-      0
-    )}`.toUpperCase();
-  } else if (user.firstname) {
-    return user.firstname.charAt(0).toUpperCase();
-  } else if (user.lastname) {
-    return user.lastname.charAt(0).toUpperCase();
-  } else {
-    return user.email.charAt(0).toUpperCase();
-  }
-}
-
-// Function to verify token with server
-async function verifyTokenWithServer(token) {
-  try {
-    console.log("=== Verifying Token with Server ===");
-    console.log("Token being verified:", token.substring(0, 20) + "...");
-    const response = await fetch("/api/auth/verify-token", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    console.log("Response status:", response.status);
-    console.log("Response ok:", response.ok);
-    if (response.ok) {
-      console.log("Token verification successful");
-      const data = await response.json();
-      console.log("Response data:", data);
-      // Update localStorage with fresh user data
-      if (data.user && data.valid) {
-        localStorage.setItem("user_data", JSON.stringify(data.user));
-        console.log("Updated localStorage with fresh user data");
-      }
-      return true;
-    } else {
-      console.log("Token verification failed, status:", response.status);
-      // Only reject if the token is actually invalid (401)
-      if (response.status === 401) {
-        throw new Error("Invalid token");
-      }
-      // For other errors, don't reject
-      return true;
-    }
-  } catch (error) {
-    console.error("Error verifying token:", error);
-    // For network errors or other issues, don't reject
-    return true;
-  }
-}
-
 // Function to initialize business table
 function initializeBusinessTable() {
   console.log("Initializing business table");
   // Setup pagination controls first to set the initial page size
-  setupPaginationControls();
+  setupPaginationControls(
+    currentPage,
+    pageSize,
+    totalRecords,
+    updateTableWithPagination
+  );
   // Setup refresh button
   setupRefreshButton();
   // Load initial data
   loadBusinessData();
   // Setup add business button
   setupAddBusinessButton();
+}
+
+// Function to update table with pagination - callback for pagination controls
+function updateTableWithPagination(page, size) {
+  console.log(`Updating table with page ${page}, size ${size}`);
+  // Update current page and page size
+  currentPage = page;
+  pageSize = size;
+  // Get paginated data
+  const paginatedData = getPaginatedData(allBusinesses, currentPage, pageSize);
+  // Update table
+  updateBusinessTable(paginatedData);
+  // Update pagination controls with the callback function
+  updatePaginationControls(
+    currentPage,
+    pageSize,
+    totalRecords,
+    updateTableWithPagination
+  );
+  // Re-setup pagination button event listeners to ensure they have the latest state
+  setupPaginationButtonListeners(
+    currentPage,
+    pageSize,
+    totalRecords,
+    updateTableWithPagination
+  );
 }
 
 // Function to load business data
@@ -643,9 +169,19 @@ async function loadBusinessData() {
     // Reset to first page
     currentPage = 1;
     // Update table with paginated data
-    updateBusinessTable(getPaginatedData());
+    const paginatedData = getPaginatedData(
+      allBusinesses,
+      currentPage,
+      pageSize
+    );
+    updateBusinessTable(paginatedData);
     // Update pagination controls
-    updatePaginationControls();
+    updatePaginationControls(
+      currentPage,
+      pageSize,
+      totalRecords,
+      updateTableWithPagination
+    );
   } catch (error) {
     console.error("Error loading business data:", error);
     // Show error message in table
@@ -677,16 +213,6 @@ function setupYearSelection() {
       loadBusinessData();
     });
   }
-}
-
-// Function to get paginated data
-function getPaginatedData() {
-  if (!allBusinesses || allBusinesses.length === 0) {
-    return [];
-  }
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  return allBusinesses.slice(startIndex, endIndex);
 }
 
 // Function to update business table using React
@@ -1243,21 +769,17 @@ function printAEC() {
   const amountPaid = document.getElementById("modalAmountPaid").textContent;
   const dateOfPayment =
     document.getElementById("modalDateOfPayment").textContent;
-
   // Get the selected year from the year selector dropdown
   const selectedYear = document.getElementById("yearSelect").value;
-
   // Get current date for the certificate
   const currentDate = new Date().toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
-
   // Get generated date and time
   const generatedDateTime =
     new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString();
-
   // Create a temporary div with the certificate content
   const tempDiv = document.createElement("div");
   tempDiv.style.position = "absolute";
@@ -1270,7 +792,6 @@ function printAEC() {
   tempDiv.style.border = "1px solid green";
   tempDiv.style.display = "flex";
   tempDiv.style.flexDirection = "column";
-
   // Set the HTML content
   tempDiv.innerHTML = `
     <!-- Logos -->
@@ -1311,15 +832,15 @@ function printAEC() {
     </div>
     
     <!-- Certification Section -->
-  <div style="margin-bottom: 0.2cm;">
-  <div style="text-align: center; font-size: 6pt; margin-bottom: 0.05cm;">This is to certify that</div>
-  <div style="text-align: center; font-weight: bold; font-size: 9pt; margin-bottom: 0.05cm; line-height: 1.1; max-height: 1.2cm; overflow: hidden;">${businessName}</div>
-  <div style="text-align: left; font-size: 6pt; margin-top: 0.5cm; margin-bottom: 0.2cm; line-height: 1.2;">
-    located at <span style="font-weight: bold;">${address}</span>, 
-    <span style="font-weight: bold;">${barangay}</span>, has paid environmental protection and preservation fee of 
-    <span style="font-weight: bold;">${selectedYear}</span>
-  </div>
-  </div>
+    <div style="margin-bottom: 0.2cm;">
+      <div style="text-align: center; font-size: 6pt; margin-bottom: 0.05cm;">This is to certify that</div>
+      <div style="text-align: center; font-weight: bold; font-size: 9pt; margin-bottom: 0.05cm; line-height: 1.1; max-height: 1.2cm; overflow: hidden;">${businessName}</div>
+      <div style="text-align: left; font-size: 6pt; margin-top: 0.5cm; margin-bottom: 0.2cm; line-height: 1.2;">
+        located at <span style="font-weight: bold;">${address}</span>, 
+        <span style="font-weight: bold;">${barangay}</span>, has paid environmental protection and preservation fee of 
+        <span style="font-weight: bold;">${selectedYear}</span>
+      </div>
+    </div>
     
     <!-- Info Box -->
     <div style="border: 1px solid #000; padding: 0.15cm; margin-bottom: 0.4cm; font-size: 6pt; line-height: 1.2;">
@@ -1346,16 +867,13 @@ function printAEC() {
       </div>
     </div>
   `;
-
   // Add to body temporarily
   document.body.appendChild(tempDiv);
-
   // Load libraries if not already loaded
   loadLibraries(() => {
     // Wait for images to load
     const images = tempDiv.querySelectorAll("img");
     let loadedImages = 0;
-
     const onImageLoad = () => {
       loadedImages++;
       if (loadedImages === images.length) {
@@ -1363,7 +881,6 @@ function printAEC() {
         generatePDF(tempDiv);
       }
     };
-
     // Check if images are already loaded (cached)
     const checkIfLoaded = () => {
       let allLoaded = true;
@@ -1376,7 +893,6 @@ function printAEC() {
         onImageLoad();
       }
     };
-
     // Add load event listeners to images
     images.forEach((img) => {
       if (img.complete) {
@@ -1386,7 +902,6 @@ function printAEC() {
         img.addEventListener("error", onImageLoad);
       }
     });
-
     // Check if images are already loaded (cached)
     checkIfLoaded();
   });
@@ -1404,9 +919,7 @@ function loadLibraries(callback) {
       url: "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
     },
   ];
-
   let loadedCount = 0;
-
   libraries.forEach((lib) => {
     if (window[lib.name]) {
       loadedCount++;
@@ -1415,7 +928,6 @@ function loadLibraries(callback) {
       }
       return;
     }
-
     const script = document.createElement("script");
     script.src = lib.url;
     script.onload = () => {
@@ -1442,7 +954,6 @@ function generatePDF(element) {
       const pageHeight = 120; // 12cm in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       let heightLeft = imgHeight;
-
       // Create PDF
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({
@@ -1450,22 +961,17 @@ function generatePDF(element) {
         unit: "mm",
         format: [imgWidth, pageHeight],
       });
-
       let position = 0;
-
       // Add image to PDF
       const imgData = canvas.toDataURL("image/png");
       doc.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
-
       // Remove the temporary element
       document.body.removeChild(element);
-
       // Generate PDF as blob and open in new tab
       const pdfBlob = doc.output("blob");
       const pdfUrl = URL.createObjectURL(pdfBlob);
       window.open(pdfUrl, "_blank");
-
       // Show success message
       alert("PDF generated successfully! It should open in a new tab.");
     })
@@ -1726,72 +1232,6 @@ async function addNewBusiness() {
   }
 }
 
-// Function to show success message
-function showSuccessMessage(message) {
-  // Create success alert element
-  const alertDiv = document.createElement("div");
-  alertDiv.className = "alert alert-success";
-  alertDiv.style.position = "fixed";
-  alertDiv.style.top = "20px";
-  alertDiv.style.right = "20px";
-  alertDiv.style.padding = "15px 20px";
-  alertDiv.style.backgroundColor = "var(--success)";
-  alertDiv.style.color = "white";
-  alertDiv.style.borderRadius = "var(--border-radius-md)";
-  alertDiv.style.boxShadow = "var(--shadow-lg)";
-  alertDiv.style.zIndex = "10001";
-  alertDiv.style.display = "flex";
-  alertDiv.style.alignItems = "center";
-  alertDiv.style.gap = "10px";
-  alertDiv.innerHTML = `
-        <i class="fas fa-check-circle"></i>
-        <span>${message}</span>
-    `;
-  // Add to body
-  document.body.appendChild(alertDiv);
-  // Remove after 3 seconds
-  setTimeout(() => {
-    alertDiv.style.opacity = "0";
-    alertDiv.style.transition = "opacity 0.5s";
-    setTimeout(() => {
-      document.body.removeChild(alertDiv);
-    }, 500);
-  }, 3000);
-}
-
-// Function to show error message
-function showErrorMessage(message) {
-  // Create error alert element
-  const alertDiv = document.createElement("div");
-  alertDiv.className = "alert alert-danger";
-  alertDiv.style.position = "fixed";
-  alertDiv.style.top = "20px";
-  alertDiv.style.right = "20px";
-  alertDiv.style.padding = "15px 20px";
-  alertDiv.style.backgroundColor = "var(--danger)";
-  alertDiv.style.color = "white";
-  alertDiv.style.borderRadius = "var(--border-radius-md)";
-  alertDiv.style.boxShadow = "var(--shadow-lg)";
-  alertDiv.style.zIndex = "10001";
-  alertDiv.style.display = "flex";
-  alertDiv.style.alignItems = "center";
-  alertDiv.style.gap = "10px";
-  alertDiv.innerHTML = `
-        <i class="fas fa-exclamation-circle"></i>
-        <span>${message}</span>
-    `;
-  // Add to body
-  document.body.appendChild(alertDiv);
-  // Remove after 5 seconds
-  setTimeout(() => {
-    alertDiv.style.opacity = "0";
-    alertDiv.style.transition = "opacity 0.5s";
-    setTimeout(() => {
-      document.body.removeChild(alertDiv);
-    }, 500);
-  }, 5000);
-}
-
 // Function to handle modify button click
 function handleModify() {
   // Get the business details from the modal
@@ -1923,113 +1363,6 @@ function showTableError(message) {
     `;
 }
 
-// Function to update pagination controls
-function updatePaginationControls() {
-  if (totalRecords === 0) {
-    // Handle case when there are no records
-    const paginationInfo = document.getElementById("paginationInfo");
-    if (paginationInfo) {
-      paginationInfo.textContent = "Showing 0 of 0 records";
-    }
-    // Disable all pagination buttons
-    const buttons = [
-      "firstPageBtn",
-      "prevPageBtn",
-      "nextPageBtn",
-      "lastPageBtn",
-    ];
-    buttons.forEach((id) => {
-      const btn = document.getElementById(id);
-      if (btn) btn.disabled = true;
-    });
-    return;
-  }
-  const totalPages = Math.ceil(totalRecords / pageSize);
-  // Update pagination info
-  const paginationInfo = document.getElementById("paginationInfo");
-  if (paginationInfo) {
-    const startRecord = totalRecords > 0 ? (currentPage - 1) * pageSize + 1 : 0;
-    const endRecord = Math.min(currentPage * pageSize, totalRecords);
-    paginationInfo.textContent = `Showing ${startRecord}-${endRecord} of ${totalRecords} records`;
-  }
-  // Update button states
-  const firstPageBtn = document.getElementById("firstPageBtn");
-  const prevPageBtn = document.getElementById("prevPageBtn");
-  const nextPageBtn = document.getElementById("nextPageBtn");
-  const lastPageBtn = document.getElementById("lastPageBtn");
-  if (firstPageBtn) firstPageBtn.disabled = currentPage === 1;
-  if (prevPageBtn) prevPageBtn.disabled = currentPage === 1;
-  if (nextPageBtn)
-    nextPageBtn.disabled = currentPage === totalPages || totalPages === 0;
-  if (lastPageBtn)
-    lastPageBtn.disabled = currentPage === totalPages || totalPages === 0;
-}
-
-// Function to setup pagination controls
-function setupPaginationControls() {
-  // Set initial page size from the select element
-  const pageSizeSelect = document.getElementById("pageSizeSelect");
-  if (pageSizeSelect) {
-    pageSize = parseInt(pageSizeSelect.value);
-    console.log("Initial page size set to:", pageSize);
-  }
-  // First page button
-  const firstPageBtn = document.getElementById("firstPageBtn");
-  if (firstPageBtn) {
-    firstPageBtn.addEventListener("click", function () {
-      if (currentPage > 1) {
-        currentPage = 1;
-        updateBusinessTable(getPaginatedData());
-        updatePaginationControls();
-      }
-    });
-  }
-  // Previous page button
-  const prevPageBtn = document.getElementById("prevPageBtn");
-  if (prevPageBtn) {
-    prevPageBtn.addEventListener("click", function () {
-      if (currentPage > 1) {
-        currentPage--;
-        updateBusinessTable(getPaginatedData());
-        updatePaginationControls();
-      }
-    });
-  }
-  // Next page button
-  const nextPageBtn = document.getElementById("nextPageBtn");
-  if (nextPageBtn) {
-    nextPageBtn.addEventListener("click", function () {
-      const totalPages = Math.ceil(totalRecords / pageSize);
-      if (currentPage < totalPages) {
-        currentPage++;
-        updateBusinessTable(getPaginatedData());
-        updatePaginationControls();
-      }
-    });
-  }
-  // Last page button
-  const lastPageBtn = document.getElementById("lastPageBtn");
-  if (lastPageBtn) {
-    lastPageBtn.addEventListener("click", function () {
-      const totalPages = Math.ceil(totalRecords / pageSize);
-      if (currentPage < totalPages) {
-        currentPage = totalPages;
-        updateBusinessTable(getPaginatedData());
-        updatePaginationControls();
-      }
-    });
-  }
-  // Page size selector
-  if (pageSizeSelect) {
-    pageSizeSelect.addEventListener("change", function () {
-      pageSize = parseInt(this.value);
-      currentPage = 1; // Reset to first page
-      updateBusinessTable(getPaginatedData());
-      updatePaginationControls();
-    });
-  }
-}
-
 // Function to setup refresh button
 function setupRefreshButton() {
   const refreshBtn = document.getElementById("refreshBtn");
@@ -2110,188 +1443,21 @@ async function performSearch() {
     totalRecords = businesses.length;
     currentPage = 1; // Reset to first page
     // Update table with paginated data
-    updateBusinessTable(getPaginatedData());
+    const paginatedData = getPaginatedData(
+      allBusinesses,
+      currentPage,
+      pageSize
+    );
+    updateBusinessTable(paginatedData);
     // Update pagination controls
-    updatePaginationControls();
+    updatePaginationControls(
+      currentPage,
+      pageSize,
+      totalRecords,
+      updateTableWithPagination
+    );
   } catch (error) {
     console.error("Error searching businesses:", error);
     showErrorMessage(`Search failed: ${error.message}`);
-  }
-}
-
-// Function to setup dropdown functionality
-function setupDropdown() {
-  console.log("Setting up dropdown functionality");
-  const userDropdown = document.getElementById("userDropdown");
-  const userDropdownMenu = document.getElementById("userDropdownMenu");
-  if (!userDropdown || !userDropdownMenu) {
-    console.error("Dropdown elements not found");
-    return;
-  }
-  // Remove any existing event listeners
-  const newUserDropdown = userDropdown.cloneNode(true);
-  userDropdown.parentNode.replaceChild(newUserDropdown, userDropdown);
-  // Add click event listener
-  newUserDropdown.addEventListener("click", function (e) {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log("Dropdown clicked");
-    // Toggle dropdown menu
-    userDropdownMenu.classList.toggle("show");
-    // Close dropdown when clicking outside
-    document.addEventListener("click", function closeDropdown(e) {
-      if (!e.target.closest(".user-dropdown")) {
-        userDropdownMenu.classList.remove("show");
-        document.removeEventListener("click", closeDropdown);
-      }
-    });
-  });
-  console.log("Dropdown functionality setup complete");
-}
-
-// Function to setup logout functionality
-function setupLogout() {
-  console.log("Setting up logout functionality");
-  const logoutBtn = document.getElementById("logoutBtn");
-  if (!logoutBtn) {
-    console.error("Logout button not found");
-    return;
-  }
-  // Remove any existing event listeners
-  const newLogoutBtn = logoutBtn.cloneNode(true);
-  logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
-  // Add click event listener
-  newLogoutBtn.addEventListener("click", function (e) {
-    e.preventDefault();
-    console.log("Logout button clicked");
-    // Use the inactivity manager's logout method if available
-    if (window.inactivityManager) {
-      window.inactivityManager.logout();
-    } else {
-      // Fallback logout
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("user_data");
-      window.location.href = "/";
-    }
-  });
-  console.log("Logout functionality setup complete");
-}
-
-// Helper functions for token handling
-function isTokenExpired(token) {
-  try {
-    // Split the token and get the payload
-    const parts = token.split(".");
-    if (parts.length !== 3) {
-      return true; // Invalid token format
-    }
-    // Decode the payload
-    const payload = JSON.parse(atob(parts[1]));
-    // Check if it has an expiration time
-    if (!payload.exp) {
-      return true; // No expiration time
-    }
-    // Check if it's expired
-    const now = Math.floor(Date.now() / 1000);
-    return payload.exp < now;
-  } catch (e) {
-    console.error("Error checking token expiration:", e);
-    return true; // Assume expired if there's an error
-  }
-}
-
-function getUserFromToken(token) {
-  try {
-    // Split the token and get the payload
-    const parts = token.split(".");
-    if (parts.length !== 3) {
-      return null; // Invalid token format
-    }
-    // Decode the payload
-    return JSON.parse(atob(parts[1]));
-  } catch (e) {
-    console.error("Error decoding token:", e);
-    return null;
-  }
-}
-
-// Helper function to update user avatar
-async function updateUserAvatar(user, imageElement, fallbackElement) {
-  if (!imageElement || !fallbackElement) {
-    console.error("Avatar elements not found");
-    return;
-  }
-  // Check if user has a profile picture
-  if (user.hasProfilePicture) {
-    try {
-      // Get the token for authorization
-      const token = localStorage.getItem("auth_token");
-      if (!token) {
-        console.error("No auth token found");
-        showFallbackAvatar(user, fallbackElement);
-        return;
-      }
-      // Fetch the profile picture
-      const response = await fetch(`/api/auth/profile-picture/${user.id}`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (response.ok) {
-        // Convert the response to a blob URL
-        const blob = await response.blob();
-        const imageUrl = URL.createObjectURL(blob);
-        // Set the image source and show it
-        imageElement.src = imageUrl;
-        imageElement.style.display = "block";
-        fallbackElement.style.display = "none";
-        console.log("Profile picture loaded successfully");
-      } else {
-        console.error("Failed to load profile picture:", response.status);
-        showFallbackAvatar(user, fallbackElement);
-      }
-    } catch (error) {
-      console.error("Error loading profile picture:", error);
-      showFallbackAvatar(user, fallbackElement);
-    }
-  } else {
-    // User doesn't have a profile picture, show fallback
-    console.log("User has no profile picture, showing fallback");
-    showFallbackAvatar(user, fallbackElement);
-  }
-}
-
-// Show fallback avatar with initials
-function showFallbackAvatar(user, fallbackElement) {
-  const initials = getUserInitials(user);
-  fallbackElement.textContent = initials;
-  fallbackElement.style.display = "flex";
-  fallbackElement.style.alignItems = "center";
-  fallbackElement.style.justifyContent = "center";
-  // Hide the image element
-  const imageElement = document.getElementById("userAvatarImage");
-  if (imageElement) {
-    imageElement.style.display = "none";
-  }
-}
-
-// Function to update the date and time display
-function updateDateTime() {
-  const now = new Date();
-  const options = {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  };
-  const dateTimeString = now.toLocaleDateString("en-US", options);
-  const datetimeElement = document.getElementById("datetime");
-  if (datetimeElement) {
-    datetimeElement.textContent = dateTimeString;
   }
 }

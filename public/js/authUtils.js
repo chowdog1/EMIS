@@ -1,4 +1,5 @@
 // public/js/authUtils.js
+
 // Function to check if token is expired without making a server request
 function isTokenExpired(token) {
   try {
@@ -16,6 +17,7 @@ function isTokenExpired(token) {
     return true; // Treat as expired if there's an error
   }
 }
+
 // Function to get user data from token without server verification
 function getUserFromToken(token) {
   try {
@@ -28,6 +30,7 @@ function getUserFromToken(token) {
     return null;
   }
 }
+
 // Function to validate token format
 function isValidTokenFormat(token) {
   try {
@@ -43,6 +46,7 @@ function isValidTokenFormat(token) {
     return false;
   }
 }
+
 // Make functions available globally
 window.isTokenExpired = isTokenExpired;
 window.getUserFromToken = getUserFromToken;

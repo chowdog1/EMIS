@@ -7,7 +7,7 @@ const {
   syncBusinessTo2026,
   deleteBusinessFrom2026,
 } = require("../services/businessSyncService");
-const barangayCoordinates = require("../barangayCoordinates");
+const barangayCoordinates = require("../public/js/barangayCoordinates");
 
 // Helper function to convert string values to uppercase
 function convertStringsToUppercase(data) {
