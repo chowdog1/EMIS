@@ -30,38 +30,22 @@ const createEmailTransporter = () => {
   });
 };
 
-// Cleanup function to remove old base64 data
+// Cleanup function to remove old certificates data
 async function cleanupOldCertificates() {
   try {
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
 
-    const result = await Certificate.updateMany(
-      {
-        generatedAt: { $lt: thirtyDaysAgo },
-        $or: [
-          { pdfBase64: { $exists: true, $ne: null } },
-          { signatureBase64: { $exists: true, $ne: null } },
-        ],
-      },
-      {
-        $unset: {
-          pdfBase64: 1,
-          signatureBase64: 1,
-        },
-        $set: {
-          cleanedAt: new Date(),
-        },
-      }
+    const result = await Certificate.deleteMany({
+      generatedAt: { $lt: oneYearAgo },
+    });
+
+    console.log(
+      `Deleted ${result.deletedCount} certificates that reached 1-year retention period`
     );
-
-    console.log(`Cleaned up ${result.modifiedCount} certificates`);
   } catch (error) {
     console.error("Error cleaning up certificates:", error);
   }
 }
-
-// Schedule cleanup to run daily at midnight
-cron.schedule("0 0 * * *", cleanupOldCertificates);
 
 // Get all certificates
 router.get("/", async (req, res) => {
@@ -304,6 +288,7 @@ router.post("/upload", verifyToken, upload.single("csvFile"), (req, res) => {
         res.status(200).json({
           message: `File uploaded and ${savedCertificates.length} records saved successfully`,
           count: savedCertificates.length,
+          newCertificates: savedCertificates, // Return new certificates
         });
       } catch (error) {
         console.error("Error saving certificate data:", error);

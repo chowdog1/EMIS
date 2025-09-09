@@ -195,23 +195,22 @@ io.on("connection", (socket) => {
   });
 });
 
-// Schedule certificate cleanup job to run during working hours
-// Runs at 3:45 PM (15:45) Monday to Friday (1-5)
+// Schedule certificate cleanup to run on weekdays at 3:45 PM
 cron.schedule(
-  "45 15 * * 1-5",
+  "45 15 * * 1-5", // Runs at 3:45 PM Monday to Friday (1-5)
   async () => {
     try {
       console.log(
-        "🧹 Running certificate cleanup job at:",
+        "🧹 Running weekday certificate cleanup job at:",
         new Date().toLocaleString()
       );
       await cleanupOldCertificates();
       console.log(
-        "✅ Certificate cleanup job completed successfully at:",
+        "✅ Weekday certificate cleanup job completed successfully at:",
         new Date().toLocaleString()
       );
     } catch (error) {
-      console.error("❌ Error running certificate cleanup job:", error);
+      console.error("❌ Error running weekday certificate cleanup job:", error);
     }
   },
   {

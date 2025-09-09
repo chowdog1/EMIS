@@ -381,11 +381,11 @@ async function loadCertificateData() {
     const tableRoot = document.getElementById("certificateTable");
     if (tableRoot) {
       tableRoot.innerHTML = `
-                <div style="padding: 20px; text-align: center; color: #6c757d">
-                    <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 10px"></i>
-                    <p>Loading certificate data...</p>
-                </div>
-            `;
+        <div style="padding: 20px; text-align: center; color: #6c757d">
+          <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 10px"></i>
+          <p>Loading certificate data...</p>
+        </div>
+      `;
     }
     const token = getAuthToken();
     const response = await fetch("/api/certificates", {
@@ -402,12 +402,25 @@ async function loadCertificateData() {
         `Failed to load certificate data: ${response.status} ${response.statusText}`
       );
     }
-    const certificates = await response.json();
-    console.log("Certificate data loaded:", certificates);
+    let certificates = await response.json();
+    console.log("Certificate data loaded:", certificates.length);
+
+    // Explicitly sort by creation date (newest first)
+    certificates.sort((a, b) => {
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+
     allCertificates = certificates;
     filteredCertificates = [...certificates];
     totalRecords = filteredCertificates.length;
-    currentPage = 1;
+    currentPage = 1; // Always start at first page
+
+    // Clear the search input
+    const searchInput = document.getElementById("searchInput");
+    if (searchInput) {
+      searchInput.value = "";
+    }
+
     updateCertificateTable(
       getPaginatedData(filteredCertificates, currentPage, pageSize)
     );
@@ -1111,9 +1124,8 @@ function generateCertificateEmailBody(certificate) {
             <p><strong>CITY ENVIRONMENT AND NATURAL RESOURCES OFFICE</strong><br>
             Pollution Control Unit<br>
             San Juan, Metro Manila<br>
-            Mobile No: SMART (0939) 717-2394</p>
-            
-            <p><img src="https://8upload.com/image/68be3f83c9e7e/freepik_br_bb4e2098-1dee-4111-8179-ddc41996d8da.png" alt="CENRO Logo" style="width: 100px; height: auto;"></p>
+            Mobile No: SMART (0939) 717-2394
+            </p>
         </div>
         <div class="footer">
             <p>This is an automated message.</p>
