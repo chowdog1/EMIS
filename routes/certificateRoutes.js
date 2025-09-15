@@ -34,11 +34,9 @@ const createEmailTransporter = () => {
 async function cleanupOldCertificates() {
   try {
     const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-
     const result = await Certificate.deleteMany({
       generatedAt: { $lt: oneYearAgo },
     });
-
     console.log(
       `Deleted ${result.deletedCount} certificates that reached 1-year retention period`
     );
@@ -80,6 +78,7 @@ router.put("/:id", verifyToken, async (req, res) => {
     certificate.address = address;
     certificate.email = email;
     certificate.certificateDate = new Date(certificateDate);
+
     await certificate.save();
 
     res.status(200).json({
@@ -285,6 +284,7 @@ router.post("/upload", verifyToken, upload.single("csvFile"), (req, res) => {
         );
 
         fs.unlinkSync(req.file.path);
+
         res.status(200).json({
           message: `File uploaded and ${savedCertificates.length} records saved successfully`,
           count: savedCertificates.length,
@@ -305,11 +305,67 @@ router.post("/upload", verifyToken, upload.single("csvFile"), (req, res) => {
     });
 });
 
-// Approve certificate (admin only) - now sets status to "for signatory"
+// Approve certificate with signature (admin only) - new endpoint
+router.post("/approve-with-signature", verifyToken, async (req, res) => {
+  try {
+    const { certificateId, signatureBase64 } = req.body;
+    if (!certificateId) {
+      return res.status(400).json({ message: "Certificate ID is required" });
+    }
+    if (!signatureBase64) {
+      return res.status(400).json({ message: "No signature image provided" });
+    }
+
+    if (req.user.role !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Only admin users can approve certificates" });
+    }
+
+    const certificate = await Certificate.findById(certificateId);
+    if (!certificate) {
+      return res.status(404).json({ message: "Certificate not found" });
+    }
+
+    if (certificate.status !== "for approval") {
+      return res
+        .status(400)
+        .json({ message: "Certificate is not in approval status" });
+    }
+
+    const adminUser = await User.findById(req.user.userId);
+    if (!adminUser) {
+      return res.status(404).json({ message: "Admin user not found" });
+    }
+
+    // Update certificate with approval info and signature
+    certificate.status = "signed"; // Skip "for signatory" status
+    certificate.approvedBy = req.user.userId;
+    certificate.approvedAt = new Date();
+    certificate.signedBy = req.user.userId;
+    certificate.signedAt = new Date();
+    certificate.signatureBase64 = signatureBase64;
+    certificate.signatureName = `${adminUser.firstname} ${adminUser.lastname}`;
+
+    await certificate.save();
+
+    res.status(200).json({
+      message: "Certificate approved and signed successfully",
+      certificate,
+    });
+  } catch (error) {
+    console.error("Error approving certificate with signature:", error);
+    res.status(500).json({
+      message: "Error approving certificate",
+      error: error.message,
+    });
+  }
+});
+
+// Approve certificate (admin only) - updated to set status directly to "signed"
 router.post("/approve", verifyToken, async (req, res) => {
   try {
     const { certificateId } = req.body;
-
     if (!certificateId) {
       return res.status(400).json({ message: "Certificate ID is required" });
     }
@@ -336,15 +392,16 @@ router.post("/approve", verifyToken, async (req, res) => {
       return res.status(404).json({ message: "Admin user not found" });
     }
 
-    // Update status to "for signatory" instead of "approved"
-    certificate.status = "for signatory";
+    // Update status directly to "signed" instead of "for signatory"
+    certificate.status = "signed";
     certificate.approvedBy = req.user.userId;
     certificate.approvedAt = new Date();
     certificate.signatureName = `${adminUser.firstname} ${adminUser.lastname}`;
+
     await certificate.save();
 
     res.status(200).json({
-      message: "Certificate approved and ready for signature",
+      message: "Certificate approved successfully",
       certificate,
     });
   } catch (error) {
@@ -355,15 +412,13 @@ router.post("/approve", verifyToken, async (req, res) => {
   }
 });
 
-// Upload signature for certificate (admin only) - now accepts base64
+// Upload signature for certificate (admin only) - updated to handle direct signing
 router.post("/upload-signature", verifyToken, async (req, res) => {
   try {
     const { certificateId, signatureBase64 } = req.body;
-
     if (!certificateId) {
       return res.status(400).json({ message: "Certificate ID is required" });
     }
-
     if (!signatureBase64) {
       return res.status(400).json({ message: "No signature image provided" });
     }
@@ -379,7 +434,11 @@ router.post("/upload-signature", verifyToken, async (req, res) => {
       return res.status(404).json({ message: "Certificate not found" });
     }
 
-    if (certificate.status !== "for signatory") {
+    // Allow signing if the certificate is either "for signatory" or "approved"
+    if (
+      certificate.status !== "for signatory" &&
+      certificate.status !== "approved"
+    ) {
       return res
         .status(400)
         .json({ message: "Certificate is not ready for signature" });
@@ -408,7 +467,6 @@ router.post("/upload-signature", verifyToken, async (req, res) => {
 router.post("/preview", verifyToken, async (req, res) => {
   try {
     const { certificateId } = req.body;
-
     if (!certificateId) {
       return res.status(400).json({ message: "Certificate ID is required" });
     }
@@ -495,6 +553,7 @@ async function fillCertificateTemplate(certificateData) {
         "Rubik Bold font not found. Please ensure 'Rubik-Bold.ttf' is in the fonts directory."
       );
     }
+
     const fontBytes = fs.readFileSync(fontPath);
     const rubikBoldFont = await pdfDoc.embedFont(fontBytes);
 
@@ -575,7 +634,6 @@ async function fillCertificateTemplate(certificateData) {
               lines.push(currentLine);
               currentLine = "";
             }
-
             if (word.length > maxLineLength) {
               for (let i = 0; i < word.length; i += maxLineLength) {
                 lines.push(word.substring(i, i + maxLineLength));
@@ -604,18 +662,15 @@ async function fillCertificateTemplate(certificateData) {
         if (widgets.length > 0) {
           const widget = widgets[0];
           const rect = widget.getRectangle();
-
           const fontSize = 12;
           const lineHeight = fontSize * 1.2;
           const upwardAdjustment = (lines.length - 1) * lineHeight;
-
           const adjustedRect = {
             x: rect.x,
             y: rect.y + upwardAdjustment,
             width: rect.width,
             height: rect.height,
           };
-
           widget.setRectangle(adjustedRect);
           console.log(
             `Address field moved upward by ${upwardAdjustment} points to accommodate ${lines.length} lines`
@@ -653,7 +708,6 @@ async function fillCertificateTemplate(certificateData) {
         const signatureWidth = 180;
         const signatureHeight = 95;
         const centeredX = (width - signatureWidth) / 2;
-
         const signaturePosition = {
           x: centeredX,
           y: twoInchesFromBottom,
@@ -747,6 +801,7 @@ async function fillCertificateTemplate(certificateData) {
 
     // Flatten the form to prevent further editing
     form.flatten();
+
     const pdfBytes = await pdfDoc.save();
 
     // Convert to base64 instead of saving to file
@@ -772,11 +827,9 @@ async function fillCertificateTemplate(certificateData) {
 router.post("/send", verifyToken, async (req, res) => {
   try {
     const { certificateId, subject, body, template } = req.body;
-
     if (!certificateId) {
       return res.status(400).json({ message: "Certificate ID is required" });
     }
-
     if (!subject || !body) {
       return res.status(400).json({ message: "Subject and body are required" });
     }
@@ -906,6 +959,7 @@ router.post("/send", verifyToken, async (req, res) => {
     );
 
     await transporter.sendMail(mailOptions);
+
     console.log(`Certificate sent successfully to ${certificate.email}`);
 
     res.status(200).json({
@@ -925,7 +979,6 @@ router.post("/send", verifyToken, async (req, res) => {
 router.post("/resend", verifyToken, async (req, res) => {
   try {
     const { certificateId, subject, body, template } = req.body;
-
     if (!certificateId || !subject || !body) {
       return res
         .status(400)
@@ -1046,6 +1099,7 @@ router.post("/resend", verifyToken, async (req, res) => {
     );
 
     await transporter.sendMail(mailOptions);
+
     console.log(`Certificate resent successfully to ${certificate.email}`);
 
     // Update the certificate status to "resent"
@@ -1053,6 +1107,7 @@ router.post("/resend", verifyToken, async (req, res) => {
     certificate.resentAt = new Date();
     certificate.status = "resent";
     await certificate.save();
+
     console.log(`Updated status for ${certificate.email} to 'resent'`);
 
     res.status(200).json({
@@ -1082,6 +1137,7 @@ router.get("/debug-template", verifyToken, async (req, res) => {
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
     const form = pdfDoc.getForm();
     const fields = form.getFields();
+
     const fieldInfo = fields.map((field) => ({
       name: field.getName(),
       type: field.constructor.name,
@@ -1103,7 +1159,6 @@ router.get("/debug-template", verifyToken, async (req, res) => {
 router.post("/test-fill", verifyToken, async (req, res) => {
   try {
     const { businessName, accountNo, address } = req.body;
-
     if (!businessName || !accountNo || !address) {
       return res
         .status(400)
@@ -1117,6 +1172,7 @@ router.post("/test-fill", verifyToken, async (req, res) => {
     };
 
     const pdfInfo = await fillCertificateTemplate(certificateData);
+
     res.json({
       message: "Test certificate generated successfully",
       fileName: pdfInfo.fileName,
