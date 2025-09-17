@@ -33,6 +33,8 @@ router.post("/register", authController.register);
 router.post("/check-email", authController.checkEmail);
 router.post("/verify-token", authController.verifyToken); // This now uses the renamed method
 router.post("/logout", authController.logout); // Add logout route
+router.post("/lock-account", verifyToken, authController.lockUserAccount);
+router.post("/unlock-account", verifyToken, authController.unlockUserAccount);
 // Protected routes - use the middleware
 router.put("/update-profile", verifyToken, authController.updateProfile);
 router.post(

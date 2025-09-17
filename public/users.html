@@ -15,6 +15,7 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
     <link rel="stylesheet" href="dashboard.css" />
+    <link rel="stylesheet" href="users.css" />
     <!-- Add users-specific CSS file -->
     <link
       rel="icon"
@@ -50,6 +51,9 @@
       .status-offline {
         background-color: var(--danger);
       }
+      .status-locked {
+        background-color: #dc3545;
+      }
       .refresh-btn {
         background-color: var(--primary-green);
         color: white;
@@ -60,6 +64,115 @@
         margin-left: 10px;
       }
       .refresh-btn:hover {
+        background-color: var(--forest-dark);
+      }
+      /* Create User Button */
+      .create-user-btn {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-left: 10px;
+        display: none; /* Hidden by default, only shown to admins */
+      }
+      .create-user-btn:hover {
+        background-color: #218838;
+      }
+      /* Action buttons */
+      .action-btn {
+        padding: 5px 10px;
+        margin: 0 2px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        color: white;
+      }
+      .lock-btn {
+        background-color: #dc3545;
+      }
+      .lock-btn:hover {
+        background-color: #c82333;
+      }
+      .unlock-btn {
+        background-color: #28a745;
+      }
+      .unlock-btn:hover {
+        background-color: #218838;
+      }
+      /* Modal styles */
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+      }
+      .modal-content {
+        background-color: #fff;
+        margin: 10% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 50%;
+        border-radius: 5px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      .modal-header h2 {
+        margin: 0;
+        color: var(--primary-green);
+      }
+      .close {
+        color: #aaa;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+      }
+      .close:hover {
+        color: black;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+      }
+      .form-group input,
+      .form-group select {
+        width: 100%;
+        padding: 8px;
+        box-sizing: border-box;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      .form-group input:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 2px rgba(45, 90, 39, 0.2);
+      }
+      .submit-btn {
+        background-color: var(--primary-green);
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+      }
+      .submit-btn:hover {
         background-color: var(--forest-dark);
       }
       /* Chat button styles */
@@ -143,6 +256,10 @@
             <button id="refreshBtn" class="refresh-btn">
               <i class="fas fa-sync-alt"></i> Refresh
             </button>
+            <!-- Create New User Button (only visible to admins) -->
+            <button id="createUserBtn" class="create-user-btn">
+              <i class="fas fa-user-plus"></i> Create New User
+            </button>
           </div>
           <div class="user-info">
             <div class="user-avatar" id="userAvatar">
@@ -181,7 +298,8 @@
                   <th>Status</th>
                   <th>Current Page</th>
                   <th>Last Activity</th>
-                  <th>Actions</th>
+                  <th class="actions-header">Actions</th>
+                  <!-- Added class for easier selection -->
                 </tr>
               </thead>
               <tbody id="usersTableBody">
@@ -191,6 +309,44 @@
           </div>
         </div>
       </main>
+    </div>
+
+    <!-- Create User Modal -->
+    <div id="createUserModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Create New User</h2>
+          <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+          <form id="createUserForm">
+            <div class="form-group">
+              <label for="newFirstname">First Name</label>
+              <input type="text" id="newFirstname" required />
+            </div>
+            <div class="form-group">
+              <label for="newLastname">Last Name</label>
+              <input type="text" id="newLastname" required />
+            </div>
+            <div class="form-group">
+              <label for="newEmail">Email</label>
+              <input type="email" id="newEmail" required />
+            </div>
+            <div class="form-group">
+              <label for="newPassword">Password</label>
+              <input type="password" id="newPassword" required />
+            </div>
+            <div class="form-group">
+              <label for="newRole">Role</label>
+              <select id="newRole">
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <button type="submit" class="submit-btn">Create User</button>
+          </form>
+        </div>
+      </div>
     </div>
 
     <!-- Load Socket.IO first -->

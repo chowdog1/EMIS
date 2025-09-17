@@ -19,6 +19,10 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  isLocked: {
+    type: Boolean,
+    default: false,
+  },
   // For session tracking
   currentSessionId: String,
   lastLoginAt: Date,

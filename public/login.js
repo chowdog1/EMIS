@@ -215,7 +215,8 @@ class LoginManager {
     console.log("Response content-type:", response.headers.get("content-type"));
     const result = await response.json();
     if (!response.ok) {
-      throw new Error(result.message || "Login failed");
+      // Pass the entire error result to the error handler
+      throw result;
     }
     this.lastLoginResult = result;
     return result;
@@ -256,9 +257,33 @@ class LoginManager {
     console.error("Login error:", error);
     let errorMessage = "Login failed. Please try again.";
 
-    // Check if the error is due to an existing session
-    if (error.message.includes("This account is currently being used")) {
-      errorMessage = error.message;
+    // Handle specific error messages from the server
+    if (error.message) {
+      // Check for locked account message
+      if (
+        error.message.includes("This account is locked") ||
+        error.message.includes("Contact the administrator")
+      ) {
+        errorMessage = error.message;
+      }
+      // Check for incorrect password message
+      else if (error.message.includes("Incorrect password")) {
+        errorMessage = error.message;
+      }
+      // Check for user not found message
+      else if (error.message.includes("User not found")) {
+        errorMessage = error.message;
+      }
+      // Check for account inactive message
+      else if (error.message.includes("Account is inactive")) {
+        errorMessage = error.message;
+      }
+      // Check for existing session message
+      else if (
+        error.message.includes("currently being used in another session")
+      ) {
+        errorMessage = error.message;
+      }
     }
 
     this.showGlobalError(errorMessage);

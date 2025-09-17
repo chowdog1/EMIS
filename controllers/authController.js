@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const JWT_SECRET = "your_jwt_secret_key";
 // Debug: Log when the controller is loaded
 console.log("AuthController loaded");
+
 //for logging in
 const login = async (req, res) => {
   const { email, password } = req.body;
@@ -23,6 +24,13 @@ const login = async (req, res) => {
     if (user.isActive === false) {
       console.log("❌ Account inactive");
       return res.status(403).json({ message: "Account is inactive" });
+    }
+    // Check if account is locked
+    if (user.isLocked === true) {
+      console.log("❌ Account locked");
+      return res.status(403).json({
+        message: "This account is locked. Contact the administrator.",
+      });
     }
     // Check if user is already logged in
     if (user.currentSessionId) {
@@ -52,6 +60,7 @@ const login = async (req, res) => {
     // Update user session info
     user.currentSessionId = sessionId;
     user.lastLoginAt = new Date();
+    user.isOnline = true;
     await user.save();
     console.log("✅ Login successful");
     // Return the token and user information
@@ -73,6 +82,7 @@ const login = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 // logout function
 const logout = async (req, res) => {
   try {
@@ -96,6 +106,7 @@ const logout = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 // Check if email exists
 const checkEmail = async (req, res) => {
   try {
@@ -119,6 +130,7 @@ const checkEmail = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 //for user register
 const register = async (req, res) => {
   const { firstname, lastname, email, password, role } = req.body;
@@ -138,6 +150,7 @@ const register = async (req, res) => {
       role: role || "user",
       createdAt: new Date(),
       isActive: true,
+      isLocked: false, // Initialize as not locked
     });
     await newUser.save();
     res.status(201).json({ message: "User registered successfully" });
@@ -146,6 +159,7 @@ const register = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 //for verifying user - renamed to avoid conflict with middleware
 const verifyToken = async (req, res) => {
   try {
@@ -183,6 +197,7 @@ const verifyToken = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 // Update user profile
 const updateProfile = async (req, res) => {
   try {
@@ -223,6 +238,7 @@ const updateProfile = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 // Upload profile picture
 const uploadProfilePicture = async (req, res) => {
   try {
@@ -250,6 +266,7 @@ const uploadProfilePicture = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 // Get profile picture
 const getProfilePicture = async (req, res) => {
   try {
@@ -265,6 +282,7 @@ const getProfilePicture = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 // Change password
 const changePassword = async (req, res) => {
   try {
@@ -291,6 +309,7 @@ const changePassword = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 // Get all users with online status and current page
 const getAllUsers = async (req, res) => {
   try {
@@ -318,7 +337,8 @@ const getAllUsers = async (req, res) => {
           lastActivity: user.lastActivity,
           hasProfilePicture: !!(
             user.profilePicture && user.profilePicture.data
-          ), // ADD THIS LINE
+          ),
+          isLocked: user.isLocked || false, // Include lock status
         };
       }
       return {
@@ -330,7 +350,8 @@ const getAllUsers = async (req, res) => {
         isOnline: user.isOnline,
         currentPage: user.currentPage || "N/A",
         lastActivity: user.lastActivity,
-        hasProfilePicture: !!(user.profilePicture && user.profilePicture.data), // ADD THIS LINE
+        hasProfilePicture: !!(user.profilePicture && user.profilePicture.data),
+        isLocked: user.isLocked || false, // Include lock status
       };
     });
     res.json(usersWithStatus);
@@ -339,6 +360,7 @@ const getAllUsers = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 // Update user's current page
 const updateCurrentPage = async (req, res) => {
   try {
@@ -361,6 +383,69 @@ const updateCurrentPage = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+// Lock user account
+const lockUserAccount = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if the requesting user is an admin
+    const requestingUser = await User.findById(req.user.userId);
+    if (requestingUser.role !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Only administrators can lock user accounts" });
+    }
+
+    user.isLocked = true;
+    await user.save();
+
+    console.log(
+      `User ${user.email} account locked by admin ${requestingUser.email}`
+    );
+    res.json({ message: "User account locked successfully" });
+  } catch (error) {
+    console.error("Error locking user account:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Unlock user account
+const unlockUserAccount = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if the requesting user is an admin
+    const requestingUser = await User.findById(req.user.userId);
+    if (requestingUser.role !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Only administrators can unlock user accounts" });
+    }
+
+    user.isLocked = false;
+    await user.save();
+
+    console.log(
+      `User ${user.email} account unlocked by admin ${requestingUser.email}`
+    );
+    res.json({ message: "User account unlocked successfully" });
+  } catch (error) {
+    console.error("Error unlocking user account:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 // Debug: Log before exporting
 console.log("Exporting methods:", {
   login,
@@ -374,7 +459,10 @@ console.log("Exporting methods:", {
   logout,
   getAllUsers,
   updateCurrentPage,
+  lockUserAccount,
+  unlockUserAccount,
 });
+
 module.exports = {
   login,
   register,
@@ -387,4 +475,6 @@ module.exports = {
   logout,
   getAllUsers,
   updateCurrentPage,
+  lockUserAccount,
+  unlockUserAccount,
 };
