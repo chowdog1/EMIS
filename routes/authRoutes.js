@@ -2,7 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const authController = require("../controllers/authController");
-const { verifyToken } = require("../middleware/authMiddleware"); // Import middleware
+const { verifyToken } = require("../middleware/authMiddleware");
 const multer = require("multer");
 const upload = multer({ storage: multer.memoryStorage() });
 // Debug: Check if authController and its methods are properly loaded
@@ -33,7 +33,11 @@ router.post("/register", authController.register);
 router.post("/check-email", authController.checkEmail);
 router.post("/verify-token", authController.verifyToken); // This now uses the renamed method
 router.post("/logout", authController.logout); // Add logout route
-router.post("/lock-account", verifyToken, authController.lockUserAccount);
+router.post("/lock-account", verifyToken, (req, res) => {
+  // Get io instance from app
+  const io = req.app.get("io");
+  authController.lockUserAccount(req, res, io);
+});
 router.post("/unlock-account", verifyToken, authController.unlockUserAccount);
 // Protected routes - use the middleware
 router.put("/update-profile", verifyToken, authController.updateProfile);

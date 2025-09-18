@@ -63,6 +63,68 @@ const seminar2025Routes = require("./routes/seminar2025Routes.js");
 // seminar2026
 const seminar2026Routes = require("./routes/seminar2026Routes.js");
 
+// Create HTTP server and attach Socket.IO
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+});
+
+// Store io instance in app for access in routes
+app.set("io", io);
+
+// Socket.IO connection handling
+io.on("connection", (socket) => {
+  console.log("A user connected");
+
+  // Join a room based on user ID
+  socket.on("joinRoom", (userId) => {
+    socket.join(userId);
+    socket.userId = userId; // Store userId in socket object
+    console.log(`User ${userId} joined their room`);
+  });
+
+  // Handle sending messages
+  socket.on("sendMessage", (data) => {
+    // Broadcast to recipient
+    io.to(data.recipientId).emit("newMessage", data);
+    // Mark as delivered
+    io.to(data.senderId).emit("messageDelivered", {
+      messageId: data.messageId,
+    });
+  });
+
+  // Handle typing indicators
+  socket.on("typing", (data) => {
+    socket.to(data.recipientId).emit("userTyping", {
+      userId: data.senderId,
+      isTyping: true,
+    });
+  });
+
+  socket.on("stopTyping", (data) => {
+    socket.to(data.recipientId).emit("userTyping", {
+      userId: data.senderId,
+      isTyping: false,
+    });
+  });
+
+  // Handle marking messages as seen
+  socket.on("markAsSeen", (data) => {
+    // Notify sender
+    io.to(data.senderId).emit("messageSeen", {
+      messageId: data.messageId,
+      seenBy: data.seenBy,
+    });
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected");
+  });
+});
+
 // API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/business2025", business2025Routes);
@@ -134,65 +196,6 @@ app.get("/", (req, res) => {
 // Handle 404 for any other routes
 app.use((req, res) => {
   res.status(404).sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-// Create HTTP server and attach Socket.IO
-const server = http.createServer(app);
-const io = socketIo(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-  },
-});
-
-// Socket.IO connection handling
-io.on("connection", (socket) => {
-  console.log("A user connected");
-
-  // Join a room based on user ID
-  socket.on("joinRoom", (userId) => {
-    socket.join(userId);
-    socket.userId = userId; // Store userId in socket object
-    console.log(`User ${userId} joined their room`);
-  });
-
-  // Handle sending messages
-  socket.on("sendMessage", (data) => {
-    // Broadcast to recipient
-    io.to(data.recipientId).emit("newMessage", data);
-    // Mark as delivered
-    io.to(data.senderId).emit("messageDelivered", {
-      messageId: data.messageId,
-    });
-  });
-
-  // Handle typing indicators
-  socket.on("typing", (data) => {
-    socket.to(data.recipientId).emit("userTyping", {
-      userId: data.senderId,
-      isTyping: true,
-    });
-  });
-
-  socket.on("stopTyping", (data) => {
-    socket.to(data.recipientId).emit("userTyping", {
-      userId: data.senderId,
-      isTyping: false,
-    });
-  });
-
-  // Handle marking messages as seen
-  socket.on("markAsSeen", (data) => {
-    // Notify sender
-    io.to(data.senderId).emit("messageSeen", {
-      messageId: data.messageId,
-      seenBy: data.seenBy,
-    });
-  });
-
-  socket.on("disconnect", () => {
-    console.log("User disconnected");
-  });
 });
 
 // Schedule certificate cleanup to run on weekdays at 3:45 PM

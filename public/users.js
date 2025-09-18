@@ -57,6 +57,19 @@ function initializePage() {
   // Initialize inactivity manager
   window.inactivityManager = new InactivityManager();
 
+  // Initialize account lock notifier
+  if (typeof initAccountLockNotifier === "function") {
+    console.log("Initializing account lock notifier");
+    initAccountLockNotifier();
+  } else {
+    console.error("Account lock notifier function not found");
+  }
+
+  // Initialize account lock notifier
+  if (typeof initAccountLockNotifier === "function") {
+    initAccountLockNotifier();
+  }
+
   // Start updating the datetime
   updateDateTime();
   setInterval(updateDateTime, 1000);

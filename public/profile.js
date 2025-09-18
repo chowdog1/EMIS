@@ -24,6 +24,13 @@ window.addEventListener("load", function () {
   setInterval(updateDateTime, 1000);
 });
 
+// Initialize account lock notifier
+if (typeof initAccountLockNotifier === "function") {
+  console.log("Initializing account lock notifier");
+  initAccountLockNotifier();
+} else {
+  console.error("Account lock notifier function not found");
+}
 // Function to update current page for user tracking
 function updateCurrentPage(page) {
   const token = localStorage.getItem("auth_token");

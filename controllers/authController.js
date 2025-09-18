@@ -385,7 +385,7 @@ const updateCurrentPage = async (req, res) => {
 };
 
 // Lock user account
-const lockUserAccount = async (req, res) => {
+const lockUserAccount = async (req, res, io) => {
   try {
     const { userId } = req.body;
     const user = await User.findById(userId);
@@ -408,6 +408,15 @@ const lockUserAccount = async (req, res) => {
     console.log(
       `User ${user.email} account locked by admin ${requestingUser.email}`
     );
+
+    // Emit socket event to the user's room
+    if (io) {
+      io.to(userId.toString()).emit("accountLocked", {
+        message:
+          "Your account has been locked by administrator. You will be automatically logged out.",
+      });
+    }
+
     res.json({ message: "User account locked successfully" });
   } catch (error) {
     console.error("Error locking user account:", error);

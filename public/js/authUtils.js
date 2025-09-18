@@ -47,7 +47,15 @@ function isValidTokenFormat(token) {
   }
 }
 
+// Add logout function
+function logout() {
+  localStorage.removeItem("auth_token");
+  localStorage.removeItem("user_data");
+  window.location.href = "/";
+}
+
 // Make functions available globally
 window.isTokenExpired = isTokenExpired;
 window.getUserFromToken = getUserFromToken;
 window.isValidTokenFormat = isValidTokenFormat;
+window.logout = logout;

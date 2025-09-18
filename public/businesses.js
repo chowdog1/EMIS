@@ -62,6 +62,14 @@ window.addEventListener("load", function () {
   setInterval(updateDateTime, 1000);
 });
 
+// Initialize account lock notifier
+if (typeof initAccountLockNotifier === "function") {
+  console.log("Initializing account lock notifier");
+  initAccountLockNotifier();
+} else {
+  console.error("Account lock notifier function not found");
+}
+
 // Handle page visibility change
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
@@ -774,8 +782,8 @@ function printAEC() {
   // Get current date for the certificate
   const currentDate = new Date().toLocaleDateString("en-US", {
     year: "numeric",
-    month: "long",
-    day: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   });
   // Get generated date and time
   const generatedDateTime =

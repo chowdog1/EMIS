@@ -481,6 +481,14 @@ window.addEventListener("DOMContentLoaded", function () {
   window.dashboardManager.setupMapLink();
 });
 
+// Initialize account lock notifier
+if (typeof initAccountLockNotifier === "function") {
+  console.log("Initializing account lock notifier");
+  initAccountLockNotifier();
+} else {
+  console.error("Account lock notifier function not found");
+}
+
 // Add page visibility handling
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {

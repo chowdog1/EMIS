@@ -7,6 +7,14 @@ let totalRecords = 0;
 let currentCertificate = null;
 let currentSignatureBase64 = null; // Store signature base64
 
+// Initialize account lock notifier
+if (typeof initAccountLockNotifier === "function") {
+  console.log("Initializing account lock notifier");
+  initAccountLockNotifier();
+} else {
+  console.error("Account lock notifier function not found");
+}
+
 // Helper functions
 function getUserRole() {
   const userData = localStorage.getItem("user_data");
