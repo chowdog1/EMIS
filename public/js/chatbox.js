@@ -16,6 +16,8 @@ class ChatWindow {
     this.unreadCount = 0; // Track unread messages for this user
     this.blinkInterval = null; // For blinking effect
     console.log("Creating ChatWindow for user:", user);
+    this.typingSoundPlayed = false;
+    this.initTypingSound();
     this.init();
   }
   init() {
@@ -45,6 +47,17 @@ class ChatWindow {
       this.showTestNotification();
     } else {
       console.log("Notification permission denied");
+    }
+  }
+  initTypingSound() {
+    try {
+      this.typingAudio = new Audio("/sounds/typing.mp3");
+      this.typingAudio.volume = 0.4;
+      this.typingAudio.load();
+      console.log("Typing sound initialized successfully");
+    } catch (error) {
+      console.error("Error initializing typing sound");
+      this.typingAudio = null;
     }
   }
   showTestNotification() {
@@ -87,7 +100,8 @@ class ChatWindow {
     this.container.style.display = "flex";
     this.container.style.flexDirection = "column";
     this.container.style.transition = "height 0.2s ease, right 0.3s ease";
-    // Create header with proper structure to avoid overlapping
+
+    // Create header with proper structure
     const header = document.createElement("div");
     header.style.backgroundColor = "#2d5a27"; // Dark green
     header.style.color = "white";
@@ -98,13 +112,37 @@ class ChatWindow {
     header.style.cursor = "pointer";
     header.style.borderRadius = "3px 3px 0 0";
     header.style.position = "relative"; // For badge positioning
-    // Left section: Title and badge
+
+    // Left section: Online indicator, Title and typing indicator
     const leftSection = document.createElement("div");
     leftSection.style.display = "flex";
     leftSection.style.alignItems = "center";
     leftSection.style.flex = "1";
-    leftSection.style.minWidth = "0"; // Allows flex item to shrink below content size
+    leftSection.style.minWidth = "0"; // Allows flex item to shrink
     leftSection.style.marginRight = "10px"; // Space between title and buttons
+    leftSection.style.overflow = "hidden"; // Hide overflow
+    leftSection.style.paddingLeft = "2px"; // Add some padding on the left
+
+    // Online status indicator
+    const onlineIndicator = document.createElement("div");
+    onlineIndicator.className = "chat-online-indicator";
+    onlineIndicator.style.width = "10px";
+    onlineIndicator.style.height = "10px";
+    onlineIndicator.style.borderRadius = "50%";
+    onlineIndicator.style.marginRight = "8px";
+    onlineIndicator.style.flexShrink = "0"; // Prevent it from shrinking
+
+    // Set initial online status with embossed effect
+    if (this.user.isOnline) {
+      onlineIndicator.style.backgroundColor = "#4caf50"; // Green for online
+      onlineIndicator.style.boxShadow =
+        "inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 1px 1px rgba(0, 0, 0, 0.2)";
+    } else {
+      onlineIndicator.style.backgroundColor = "#999"; // Gray for offline
+      onlineIndicator.style.boxShadow =
+        "inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 1px 1px rgba(0, 0, 0, 0.2)";
+    }
+
     // Title with truncation
     const title = document.createElement("div");
     title.textContent = `${this.user.firstname} ${this.user.lastname}`;
@@ -113,24 +151,48 @@ class ChatWindow {
     title.style.whiteSpace = "nowrap";
     title.style.overflow = "hidden";
     title.style.textOverflow = "ellipsis";
-    title.style.flex = "1";
-    title.style.minWidth = "0";
+    title.style.flexShrink = "1"; // Allow title to shrink if needed
+
+    // Minimized typing indicator - positioned inline with the title
+    const minimizedTypingIndicator = document.createElement("div");
+    minimizedTypingIndicator.className = "minimized-typing-indicator";
+    minimizedTypingIndicator.style.display = "none";
+    minimizedTypingIndicator.style.fontSize = "12px"; // Increased size
+    minimizedTypingIndicator.style.color = "white";
+    minimizedTypingIndicator.style.fontWeight = "bold"; // Make it bold
+    minimizedTypingIndicator.style.marginLeft = "5px"; // Space between name and ellipsis
+    minimizedTypingIndicator.style.flexShrink = "0"; // Prevent it from shrinking
+
+    // Create the animated ellipsis
+    const ellipsis = document.createElement("span");
+    ellipsis.className = "typing-ellipsis";
+    ellipsis.innerHTML = "<span>.</span><span>.</span><span>.</span>";
+    minimizedTypingIndicator.appendChild(ellipsis);
+
+    // Add elements to left section in order
+    leftSection.appendChild(onlineIndicator);
     leftSection.appendChild(title);
-    // Unread badge positioned absolutely to avoid affecting layout
+    leftSection.appendChild(minimizedTypingIndicator);
+
+    // Unread badge positioned absolutely
     this.unreadBadge = document.createElement("div");
     this.unreadBadge.className = "chat-unread-badge";
     this.unreadBadge.style.display = "none"; // Initially hidden
     this.unreadBadge.style.position = "absolute";
     this.unreadBadge.style.top = "2px";
-    this.unreadBadge.style.right = "60px"; // Position to the left of buttons (adjusted for delete button)
+    this.unreadBadge.style.right = "60px"; // Position to the left of buttons
     this.unreadBadge.style.zIndex = "10"; // Ensure it's above other elements
+
+    // Add sections to header
     header.appendChild(leftSection);
     header.appendChild(this.unreadBadge);
+
     // Buttons section
     const buttons = document.createElement("div");
     buttons.style.display = "flex";
     buttons.style.gap = "5px";
     buttons.style.flexShrink = "0"; // Prevent buttons from shrinking
+
     // Delete button
     const deleteBtn = document.createElement("button");
     deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
@@ -147,6 +209,7 @@ class ChatWindow {
       e.stopPropagation(); // Prevent header click event
       this.deleteConversation();
     });
+
     // Close button
     const closeBtn = document.createElement("button");
     closeBtn.textContent = "×";
@@ -162,9 +225,11 @@ class ChatWindow {
       e.stopPropagation(); // Prevent header click event
       this.close();
     });
+
     buttons.appendChild(deleteBtn);
     buttons.appendChild(closeBtn);
     header.appendChild(buttons);
+
     // Add click event to the entire header to toggle minimize
     header.addEventListener("click", (e) => {
       // Don't toggle if clicking on the buttons
@@ -172,12 +237,14 @@ class ChatWindow {
         this.toggleMinimize();
       }
     });
+
     // Create body (messages and input)
     const body = document.createElement("div");
     body.style.flex = "1";
     body.style.display = this.minimized ? "none" : "flex";
     body.style.flexDirection = "column";
     body.style.overflow = "hidden";
+
     // Messages area
     const messagesArea = document.createElement("div");
     messagesArea.className = "chat-messages";
@@ -186,6 +253,7 @@ class ChatWindow {
     messagesArea.style.padding = "10px";
     messagesArea.style.backgroundColor = "#fff";
     messagesArea.style.fontSize = "12px";
+
     // Typing indicator
     const typingIndicator = document.createElement("div");
     typingIndicator.className = "typing-indicator";
@@ -195,6 +263,7 @@ class ChatWindow {
     typingIndicator.style.marginBottom = "5px";
     typingIndicator.style.display = "none";
     typingIndicator.textContent = `${this.user.firstname} is typing...`;
+
     // Input area - simplified without image upload
     const inputArea = document.createElement("div");
     inputArea.style.padding = "8px";
@@ -203,6 +272,7 @@ class ChatWindow {
     inputArea.style.display = "flex";
     inputArea.style.alignItems = "center"; // Center items vertically
     inputArea.style.gap = "8px"; // Add consistent spacing between elements
+
     const messageInput = document.createElement("input");
     messageInput.type = "text";
     messageInput.placeholder = "Type a message...";
@@ -212,6 +282,7 @@ class ChatWindow {
     messageInput.style.borderRadius = "4px";
     messageInput.style.fontSize = "12px";
     messageInput.style.outline = "none";
+
     const sendBtn = document.createElement("button");
     sendBtn.textContent = "Send";
     sendBtn.style.padding = "8px 12px";
@@ -223,6 +294,7 @@ class ChatWindow {
     sendBtn.style.fontSize = "12px";
     sendBtn.style.fontWeight = "bold";
     sendBtn.style.flexShrink = "0"; // Prevent button from shrinking
+
     // Typing indicator events
     messageInput.addEventListener("input", () => {
       this.handleTyping();
@@ -240,16 +312,20 @@ class ChatWindow {
         this.stopTyping();
       }
     });
+
     // Add elements to input area in the correct order
     inputArea.appendChild(messageInput);
     inputArea.appendChild(sendBtn);
     body.appendChild(messagesArea);
     body.appendChild(typingIndicator);
     body.appendChild(inputArea);
+
     this.container.appendChild(header);
     this.container.appendChild(body);
     document.body.appendChild(this.container);
+
     console.log("Chat window added to DOM");
+
     // Store references
     this.chatWindow = {
       container: this.container,
@@ -260,19 +336,33 @@ class ChatWindow {
       sendBtn: sendBtn,
       typingIndicator: typingIndicator,
     };
+
+    // Store references to elements
+    this.titleElement = title;
+    this.minimizedTypingIndicator = minimizedTypingIndicator;
+    this.onlineIndicator = onlineIndicator;
+
     // Track window visibility
     this.setupVisibilityTracking();
+
     // Add scroll event listener to detect when user scrolls to bottom
     messagesArea.addEventListener("scroll", () => {
       this.handleScroll();
     });
+
     // Focus the input field when the window is created
     if (!this.minimized) {
       setTimeout(() => {
         messageInput.focus();
       }, 100);
     }
+
+    // Request initial online status for this user
+    if (this.socket) {
+      this.socket.emit("getUserStatus", { userId: this.user.id });
+    }
   }
+
   // Update user avatar - FIXED VERSION
   async updateUserAvatar(user, imageElement, fallbackElement) {
     if (!imageElement || !fallbackElement) {
@@ -319,6 +409,7 @@ class ChatWindow {
       this.showFallbackAvatar(user, fallbackElement);
     }
   }
+
   // Show fallback avatar with initials
   showFallbackAvatar(user, fallbackElement) {
     const initials = this.getUserInitials(user);
@@ -332,6 +423,7 @@ class ChatWindow {
       imageElement.style.display = "none";
     }
   }
+
   handleScroll() {
     const messagesArea = this.chatWindow.messagesArea;
     const isAtBottom =
@@ -341,6 +433,7 @@ class ChatWindow {
       this.markMessagesAsSeen();
     }
   }
+
   setupVisibilityTracking() {
     // Check if window is visible
     const observer = new IntersectionObserver(
@@ -359,6 +452,7 @@ class ChatWindow {
     );
     observer.observe(this.container);
   }
+
   setupSocketListeners() {
     // Listen for typing indicators
     this.socket.on("userTyping", (data) => {
@@ -366,6 +460,14 @@ class ChatWindow {
         this.showTypingIndicator(data.isTyping);
       }
     });
+
+    // Listen for user online status changes
+    this.socket.on("userStatus", (data) => {
+      if (data.userId === this.user.id) {
+        this.updateOnlineStatus(data.isOnline);
+      }
+    });
+
     // Listen for message seen
     this.socket.on("messageSeen", (data) => {
       if (data.seenBy === this.user.id) {
@@ -373,6 +475,32 @@ class ChatWindow {
       }
     });
   }
+
+  // Update online status indicator
+  updateOnlineStatus(isOnline) {
+    if (this.onlineIndicator) {
+      if (isOnline) {
+        this.onlineIndicator.style.backgroundColor = "#4caf50"; // Green for online
+        this.onlineIndicator.style.boxShadow =
+          "inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 1px 1px rgba(0, 0, 0, 0.2)";
+      } else {
+        this.onlineIndicator.style.backgroundColor = "#999"; // Gray for offline
+        this.onlineIndicator.style.boxShadow =
+          "inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 1px 1px rgba(0, 0, 0, 0.2)";
+      }
+    }
+
+    // Also update the user object
+    this.user.isOnline = isOnline;
+
+    // Log the status change
+    console.log(
+      `User ${this.user.firstname} ${this.user.lastname} is now ${
+        isOnline ? "online" : "offline"
+      }`
+    );
+  }
+
   handleTyping() {
     if (!this.isTyping) {
       this.isTyping = true;
@@ -388,6 +516,7 @@ class ChatWindow {
       this.stopTyping();
     }, 1000);
   }
+
   stopTyping() {
     if (this.isTyping) {
       this.isTyping = false;
@@ -397,26 +526,80 @@ class ChatWindow {
       });
     }
   }
+
   showTypingIndicator(isTyping) {
-    this.chatWindow.typingIndicator.style.display = isTyping ? "block" : "none";
+    // Handle the regular typing indicator (when window is open)
+    if (isTyping) {
+      // Only play sound when indicator first appears
+      if (this.chatWindow.typingIndicator.style.display === "none") {
+        this.playTypingSound();
+      }
+      this.chatWindow.typingIndicator.style.display = "block";
+    } else {
+      this.chatWindow.typingIndicator.style.display = "none";
+      // Reset sound flag when typing stops
+      this.typingSoundPlayed = false;
+    }
+
+    // Handle the minimized typing indicator
+    if (isTyping) {
+      // Update the minimized typing indicator content
+      this.minimizedTypingIndicator.innerHTML = "";
+      const ellipsis = document.createElement("span");
+      ellipsis.className = "typing-ellipsis";
+      ellipsis.innerHTML = "<span>.</span><span>.</span><span>.</span>";
+      this.minimizedTypingIndicator.appendChild(ellipsis);
+
+      // Show the minimized indicator only if the window is minimized
+      if (this.minimized) {
+        this.minimizedTypingIndicator.style.display = "block";
+        // Adjust title to make room for typing indicator
+        this.titleElement.style.flexShrink = "1";
+      }
+    } else {
+      this.minimizedTypingIndicator.style.display = "none";
+      // Reset title when typing stops
+      this.titleElement.style.flexShrink = "";
+    }
   }
+
   toggleMinimize() {
     this.minimized = !this.minimized;
+
     // Update the container height and body display
     this.container.style.height = this.minimized ? "30px" : "350px";
     this.chatWindow.body.style.display = this.minimized ? "none" : "flex";
+
+    // Handle the minimized typing indicator
+    if (this.minimized) {
+      // If user is currently typing, show the minimized indicator
+      if (this.chatWindow.typingIndicator.style.display === "block") {
+        this.minimizedTypingIndicator.style.display = "block";
+        // Adjust title to make room for typing indicator
+        this.titleElement.style.flexShrink = "1";
+      }
+    } else {
+      // Hide the minimized indicator when window is restored
+      this.minimizedTypingIndicator.style.display = "none";
+      // Reset title when window is restored
+      this.titleElement.style.flexShrink = "";
+    }
+
     // Update blinking effect when minimized state changes
     this.updateHeaderBlinking();
+
     // If window is activated, mark messages as seen
     if (!this.minimized && this.isActive) {
       this.handleScroll();
     }
   }
+
   close() {
     this.container.remove();
     // Notify the chatbox manager that this window is closed
     this.chatboxManager.removeChatWindow(this);
   }
+
   loadMessages() {
     if (!this.userId) return;
     const token = localStorage.getItem("auth_token");
@@ -435,6 +618,7 @@ class ChatWindow {
         console.error("Error loading messages:", error);
       });
   }
+
   renderMessages() {
     const messagesArea = this.chatWindow.messagesArea;
     messagesArea.innerHTML = "";
@@ -454,6 +638,7 @@ class ChatWindow {
     // Scroll to bottom
     messagesArea.scrollTop = messagesArea.scrollHeight;
   }
+
   createMessageElement(message) {
     const messageEl = document.createElement("div");
     messageEl.style.marginBottom = "10px";
@@ -503,6 +688,7 @@ class ChatWindow {
     messageEl.appendChild(messageContainer);
     return messageEl;
   }
+
   sendMessage(content) {
     if (!this.user || !this.userId) return;
     const message = {
@@ -544,6 +730,7 @@ class ChatWindow {
         console.error("Error sending message:", error);
       });
   }
+
   // New method to delete conversation
   deleteConversation() {
     // Show confirmation dialog
@@ -619,6 +806,7 @@ class ChatWindow {
         });
     }
   }
+
   receiveMessage(message) {
     // Add to messages if it's from the current chat user
     if (message.senderId === this.user.id) {
@@ -643,37 +831,84 @@ class ChatWindow {
       }
     }
   }
+
+  playTypingSound() {
+    try {
+      if (this.typingAudio) {
+        // Clone the audio to allow overlapping sounds if needed
+        const sound = this.typingAudio.cloneNode();
+        sound.play().catch((error) => {
+          console.error("Error playing typing sound:", error);
+        });
+        console.log("Playing typing sound");
+      } else {
+        // Fallback if audio wasn't initialized
+        const audio = new Audio("/sounds/typing.mp3");
+        audio.volume = 0.4;
+        audio.play().catch((error) => {
+          console.error("Error playing typing sound (fallback):", error);
+        });
+      }
+    } catch (error) {
+      console.error("Error with typing sound:", error);
+    }
+  }
+
   playNotificationSound() {
-    // Create audio context for notification sound
+    try {
+      // Create audio element with embedded MP3 file
+      const audio = new Audio("/sounds/notification.mp3");
+
+      // Set volume to a reasonable level
+      audio.volume = 0.8;
+
+      // Play the sound
+      audio.play().catch((error) => {
+        console.error("Error playing notification sound:", error);
+
+        // Fallback to Web Audio API if MP3 fails
+        this.playFallbackSound();
+      });
+
+      console.log("Playing notification sound from MP3 file");
+    } catch (error) {
+      console.error("Error with notification sound:", error);
+
+      // Fallback to Web Audio API if MP3 fails
+      this.playFallbackSound();
+    }
+  }
+
+  // Fallback method using Web Audio API
+  playFallbackSound() {
     try {
       const audioContext = new (window.AudioContext ||
         window.webkitAudioContext)();
-      // iPhone-like tri-tone sound: three beeps at different frequencies
-      const frequencies = [941, 1175, 1397]; // D5, D6, F6 notes
-      const duration = 0.15; // 150ms per beep
-      const gap = 0.1; // 100ms gap between beeps
-      // Create gain node for volume control
+      const frequencies = [941, 1175, 1397];
+      const duration = 0.15;
+      const gap = 0.1;
+
       const gainNode = audioContext.createGain();
       gainNode.connect(audioContext.destination);
-      gainNode.gain.value = 0.2; // Set volume
-      // Play each beep in sequence
+      gainNode.gain.value = 0.2;
+
       frequencies.forEach((freq, index) => {
         const oscillator = audioContext.createOscillator();
-        oscillator.type = "sine"; // Sine wave for pure tone
+        oscillator.type = "sine";
         oscillator.frequency.value = freq;
-        // Connect oscillator to gain node
         oscillator.connect(gainNode);
-        // Calculate start time with delays
+
         const startTime = audioContext.currentTime + index * (duration + gap);
-        // Start and stop the oscillator
         oscillator.start(startTime);
         oscillator.stop(startTime + duration);
       });
-      console.log("Playing iPhone-style notification sound");
+
+      console.log("Playing fallback notification sound");
     } catch (error) {
-      console.error("Error playing notification sound:", error);
+      console.error("Error playing fallback sound:", error);
     }
   }
+
   markMessagesAsSeen() {
     // Only mark messages as seen if the user has scrolled to the bottom
     const messagesArea = this.chatWindow.messagesArea;
@@ -710,6 +945,7 @@ class ChatWindow {
     // Re-render messages to show updated status
     this.renderMessages();
   }
+
   updateMessageStatus(messageId, status) {
     const message = this.messages.find((m) => m._id === messageId);
     if (message) {
@@ -723,6 +959,7 @@ class ChatWindow {
       }
     }
   }
+
   // New methods for blinking functionality
   updateUnreadBadge() {
     if (this.unreadCount > 0) {
@@ -733,6 +970,7 @@ class ChatWindow {
       this.unreadBadge.style.display = "none";
     }
   }
+
   updateHeaderBlinking() {
     // If there are unread messages and the window is minimized or not active, add blinking class
     if (this.unreadCount > 0 && (this.minimized || !this.isActive)) {
@@ -742,6 +980,7 @@ class ChatWindow {
     }
   }
 }
+
 class ChatSidebar {
   constructor() {
     this.container = null;
@@ -756,8 +995,10 @@ class ChatSidebar {
     this.bubble = null; // Reference to the chat bubble
     this.friendsList = null; // Reference to the friends list
     this.isExpanded = false; // Track if bubble is expanded
+    this.isUserOnline = true; // Track if the current user is online
     this.init();
   }
+
   init() {
     console.log("Initializing ChatSidebar");
     // Get user info from token
@@ -779,7 +1020,22 @@ class ChatSidebar {
     window.addEventListener("resize", () => {
       this.repositionChatWindows();
     });
+
+    // Track online status
+    window.addEventListener("online", () => {
+      this.isUserOnline = true;
+      console.log("User is online");
+    });
+
+    window.addEventListener("offline", () => {
+      this.isUserOnline = false;
+      console.log("User is offline");
+    });
+
+    // Check initial online status
+    this.isUserOnline = navigator.onLine;
   }
+
   createChatBubble() {
     console.log("Creating chat bubble DOM elements");
     // Remove existing chat bubble if any
@@ -1376,18 +1632,113 @@ class ChatSidebar {
   setupNotificationListener() {
     // Listen for new messages
     this.socket.on("newMessage", (data) => {
+      console.log("New message received:", data);
+
       // Find the chat window for the sender
       const chatWindow = this.chatWindows.find(
         (window) => window.user.id === data.senderId
       );
+
       if (chatWindow) {
+        // If chat window exists, add the message to it
         chatWindow.receiveMessage(data);
       } else {
-        // Update unread count
-        const user = this.users.find((u) => u.id === data.senderId);
-        if (user) {
-          const currentCount = this.unreadCounts[user.id] || 0;
-          this.updateUnreadCount(user.id, currentCount + 1);
+        // If no chat window exists, check if user is online
+        if (this.isUserOnline) {
+          // User is online - create a new chat window and play sound
+          console.log("User is online, creating new chat window");
+
+          // Find the user in the users list
+          const user = this.users.find((u) => u.id === data.senderId);
+          if (user) {
+            // Create a new chat window
+            const newChatWindow = new ChatWindow(
+              user,
+              this,
+              this.chatWindows.length
+            );
+            this.chatWindows.push(newChatWindow);
+
+            // Add the message to the new chat window
+            newChatWindow.receiveMessage(data);
+
+            // Play notification sound
+            newChatWindow.playNotificationSound();
+
+            // Reposition chat windows
+            this.repositionChatWindows();
+
+            // Bring the new window to front
+            newChatWindow.container.style.zIndex = "10000";
+          } else {
+            // User not found in users list, update unread count
+            console.log("User not found in users list, updating unread count");
+            const currentCount = this.unreadCounts[data.senderId] || 0;
+            this.updateUnreadCount(data.senderId, currentCount + 1);
+          }
+        } else {
+          // User is offline - only update unread count
+          console.log("User is offline, updating unread count");
+          const currentCount = this.unreadCounts[data.senderId] || 0;
+          this.updateUnreadCount(data.senderId, currentCount + 1);
+        }
+      }
+    });
+
+    // Listen for user status changes
+    this.socket.on("userStatus", (data) => {
+      console.log("User status changed:", data);
+
+      // Update the user in the users list
+      const user = this.users.find((u) => u.id === data.userId);
+      if (user) {
+        user.isOnline = data.isOnline;
+        console.log(
+          `User ${user.firstname} ${user.lastname} is now ${
+            data.isOnline ? "online" : "offline"
+          }`
+        );
+
+        // Update the user list if friends list is open
+        if (this.isExpanded && this.friendsList) {
+          this.renderUserList();
+        }
+
+        // Update the chat window if it exists
+        const chatWindow = this.chatWindows.find(
+          (window) => window.user.id === data.userId
+        );
+        if (chatWindow) {
+          chatWindow.updateOnlineStatus(data.isOnline);
+        }
+      }
+    });
+
+    // Listen for user status response
+    this.socket.on("userStatusResponse", (data) => {
+      console.log("User status response received:", data);
+
+      // Update the user in the users list
+      const user = this.users.find((u) => u.id === data.userId);
+      if (user) {
+        user.isOnline = data.isOnline;
+        console.log(
+          `User ${user.firstname} ${user.lastname} status updated to ${
+            data.isOnline ? "online" : "offline"
+          }`
+        );
+
+        // Update the user list if friends list is open
+        if (this.isExpanded && this.friendsList) {
+          this.renderUserList();
+        }
+
+        // Update the chat window if it exists
+        const chatWindow = this.chatWindows.find(
+          (window) => window.user.id === data.userId
+        );
+        if (chatWindow) {
+          chatWindow.updateOnlineStatus(data.isOnline);
         }
       }
     });
@@ -1427,11 +1778,13 @@ class ChatSidebar {
     });
   }
 }
+
 // Initialize the chat sidebar when the page loads
 document.addEventListener("DOMContentLoaded", () => {
   console.log("DOM loaded, initializing chat sidebar");
   window.chatSidebar = new ChatSidebar();
 });
+
 // Add CSS for notification animations and blinking effect
 const style = document.createElement("style");
 style.textContent = `
@@ -1492,6 +1845,67 @@ style.textContent = `
   /* Friends list animation */
   #chat-friends-list {
     transition: all 0.3s ease;
+  }
+  
+  /* Animated ellipsis for typing indicator */
+  .typing-ellipsis span {
+    opacity: 0;
+    animation: waveEllipsis 1.4s infinite;
+    display: inline-block;
+    width: 4px; /* Increased width for bolder appearance */
+    text-align: left;
+    font-weight: bold; /* Make the dots bold */
+    font-size: 14px; /* Increased size */
+  }
+  
+  .typing-ellipsis span:nth-child(1) {
+    animation-delay: 0s;
+  }
+  
+  .typing-ellipsis span:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  
+  .typing-ellipsis span:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+  
+  @keyframes waveEllipsis {
+    0% {
+      opacity: 0;
+      transform: translateY(0);
+    }
+    50% {
+      opacity: 1;
+      transform: translateY(-5px);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Minimized typing indicator */
+  .minimized-typing-indicator {
+    animation: pulse 2s infinite;
+  }
+  
+  @keyframes pulse {
+    0% {
+      opacity: 0.7;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0.7;
+    }
+  }
+  
+  /* Online status indicator in chat window header */
+  .chat-online-indicator {
+    /* Embossed effect */
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 1px 1px rgba(0, 0, 0, 0.2);
   }
 `;
 document.head.appendChild(style);
