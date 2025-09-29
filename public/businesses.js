@@ -1,10 +1,18 @@
-// businesses.js - Fixed to use paginationUtils.js
+// businesses.js
 const logoUrls = [
   "https://upload.wikimedia.org/wikipedia/commons/b/b1/Bagong_Pilipinas_logo.png",
   "https://upload.wikimedia.org/wikipedia/commons/3/34/Seal_of_San_Juan%2C_Metro_Manila.png",
   "/makabagong%20san%20juan%20Logo.png",
 ];
-let currentYear = "2025"; // Default to 2025
+
+// Automatically detect current year and set as default (within supported range 2025-2030)
+let currentYear = new Date().getFullYear().toString();
+if (currentYear < "2025") {
+  currentYear = "2025";
+} else if (currentYear > "2030") {
+  currentYear = "2030";
+}
+console.log("Current year set to:", currentYear);
 
 // Pagination variables - Global scope
 let currentPage = 1;
@@ -55,6 +63,8 @@ window.addEventListener("load", function () {
   setupModalEventListeners();
   // Setup year selection
   setupYearSelection();
+  // Set the year dropdown value to match current year
+  setYearDropdownValue();
   // Initialize inactivity manager
   window.inactivityManager = new InactivityManager();
   // Start updating the datetime
@@ -146,9 +156,9 @@ async function loadBusinessData() {
         </div>
       `;
     }
+
     // Use the appropriate API endpoint based on the current year
-    const apiUrl =
-      currentYear === "2026" ? "/api/business2026" : "/api/business2025";
+    const apiUrl = `/api/business${currentYear}`;
     const token = getAuthToken();
     const response = await fetch(apiUrl, {
       headers: {
@@ -197,12 +207,22 @@ async function loadBusinessData() {
   }
 }
 
+// Function to set the year dropdown value
+function setYearDropdownValue() {
+  const yearSelect = document.getElementById("yearSelect");
+  if (yearSelect) {
+    yearSelect.value = currentYear;
+    console.log(`Year dropdown set to: ${currentYear}`);
+  }
+}
+
 // Function to setup year selection
 function setupYearSelection() {
   const yearSelect = document.getElementById("yearSelect");
   if (yearSelect) {
     // Set the current value
     yearSelect.value = currentYear;
+
     // Add change event listener
     yearSelect.addEventListener("change", function () {
       currentYear = this.value;
@@ -1200,13 +1220,10 @@ async function addNewBusiness() {
     const originalText = addBtn.innerHTML;
     addBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
     addBtn.disabled = true;
+
     // Determine the correct API endpoint based on the current year
-    let apiUrl;
-    if (currentYear === "2026") {
-      apiUrl = "/api/business2026";
-    } else {
-      apiUrl = "/api/business2025";
-    }
+    const apiUrl = `/api/business${currentYear}`;
+
     // Send create request to server
     console.log("Sending request to server at:", apiUrl);
     const response = await fetch(apiUrl, {

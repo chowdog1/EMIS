@@ -1,8 +1,10 @@
-// audit.js
+// audit.js - Updated with year selector functionality
 let currentPage = 1;
 let pageSize = 10;
 let totalRecords = 0;
 let allAuditLogs = [];
+let selectedYear = ""; // Default to all years
+
 // Wait for DOM to be fully loaded
 window.addEventListener("load", function () {
   console.log("Audit Trail page loaded, initializing");
@@ -24,6 +26,8 @@ window.addEventListener("load", function () {
   setupPaginationControls();
   // Setup modal event listeners
   setupModalEventListeners();
+  // Setup year selector
+  setupYearSelector();
 
   // Initialize inactivity manager
   window.inactivityManager = new InactivityManager();
@@ -40,21 +44,33 @@ window.addEventListener("load", function () {
   setInterval(updateDateTime, 1000);
 });
 
-// Add page visibility handling
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-    console.log("Page hidden - pausing session check");
-    if (window.inactivityManager) {
-      window.inactivityManager.stopSessionCheck();
-    }
+// Setup year selector
+function setupYearSelector() {
+  const yearSelect = document.getElementById("yearSelect");
+  if (yearSelect) {
+    // Set the initial value
+    yearSelect.value = selectedYear;
+    // Add change event listener
+    yearSelect.addEventListener("change", (e) => {
+      selectedYear = e.target.value;
+      console.log(`Year changed to: ${selectedYear}`);
+      // Update the collection filter to match the selected year
+      const collectionFilter = document.getElementById("collectionFilter");
+      if (collectionFilter) {
+        if (selectedYear) {
+          collectionFilter.value = `business${selectedYear}`;
+        } else {
+          collectionFilter.value = ""; // All years
+        }
+      }
+      // Reload audit data
+      currentPage = 1;
+      loadAuditData();
+    });
   } else {
-    console.log("Page visible - resuming session check");
-    if (window.inactivityManager) {
-      window.inactivityManager.startSessionCheck();
-      window.inactivityManager.resetInactivityTimer();
-    }
+    console.error("Year selector element not found");
   }
-});
+}
 
 // Function to initialize audit table
 function initializeAuditTable() {
@@ -345,19 +361,13 @@ async function performSearch() {
 // Function to setup filter functionality
 function setupFilters() {
   const actionFilter = document.getElementById("actionFilter");
-  const collectionFilter = document.getElementById("collectionFilter");
   if (actionFilter) {
     actionFilter.addEventListener("change", function () {
       currentPage = 1;
       loadAuditData();
     });
   }
-  if (collectionFilter) {
-    collectionFilter.addEventListener("change", function () {
-      currentPage = 1;
-      loadAuditData();
-    });
-  }
+  // Note: Collection filter is now handled by the year selector
 }
 
 // Function to setup refresh button
@@ -488,3 +498,19 @@ function showTableError(message) {
     </div>
   `;
 }
+
+// Add page visibility handling
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    console.log("Page hidden - pausing session check");
+    if (window.inactivityManager) {
+      window.inactivityManager.stopSessionCheck();
+    }
+  } else {
+    console.log("Page visible - resuming session check");
+    if (window.inactivityManager) {
+      window.inactivityManager.startSessionCheck();
+      window.inactivityManager.resetInactivityTimer();
+    }
+  }
+});

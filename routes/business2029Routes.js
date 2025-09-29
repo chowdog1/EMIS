@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const Business2025 = require("../models/business2025");
+const Business2029 = require("../models/business2029");
 const { verifyToken } = require("../middleware/authMiddleware");
 const { logAction } = require("../services/auditService");
 const barangayCoordinates = require("../public/js/barangayCoordinates");
@@ -52,8 +52,8 @@ function transformToDatabaseFormat(data) {
     BARANGAY: data.barangay,
     "NATURE OF BUSINESS": data.natureOfBusiness,
     REMARKS: data.remarks,
-    "2025_STATUS": data.status2025, // Map 2025 specific fields
-    "2025_NOTES": data.notes2025, // Map 2025 specific fields
+    "2029_STATUS": data.status2029, // Map 2029 specific fields
+    "2029_NOTES": data.notes2029, // Map 2029 specific fields
   };
 }
 
@@ -71,61 +71,61 @@ function getChanges(before, after) {
   return changes;
 }
 
-// Get all businesses from 2025
+// Get all businesses from 2029
 router.get("/", async (req, res) => {
   try {
-    const businesses = await Business2025.find({});
+    const businesses = await Business2029.find({});
     res.json(businesses);
   } catch (error) {
-    console.error("Error fetching 2025 businesses:", error);
+    console.error("Error fetching 2029 businesses:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// Get business statistics for 2025
+// Get business statistics for 2029
 router.get("/stats", async (req, res) => {
   try {
     // Total businesses count
-    const totalBusinesses = await Business2025.countDocuments();
+    const totalBusinesses = await Business2029.countDocuments();
     // Count by status
-    const highRiskCount = await Business2025.countDocuments({
+    const highRiskCount = await Business2029.countDocuments({
       STATUS: "HIGHRISK",
     });
-    const lowRiskCount = await Business2025.countDocuments({
+    const lowRiskCount = await Business2029.countDocuments({
       STATUS: "LOWRISK",
     });
     // Count businesses with no payments
-    const renewalPendingCount = await Business2025.countDocuments({
+    const renewalPendingCount = await Business2029.countDocuments({
       $or: [{ "AMOUNT PAID": { $exists: false } }, { "AMOUNT PAID": null }],
     });
     // Count active businesses
-    const activeBusinessesCount = await Business2025.countDocuments({
+    const activeBusinessesCount = await Business2029.countDocuments({
       "AMOUNT PAID": { $exists: true, $ne: null },
     });
     // Count by application status
-    const renewalCount = await Business2025.countDocuments({
+    const renewalCount = await Business2029.countDocuments({
       "APPLICATION STATUS": "RENEWAL",
     });
-    const newCount = await Business2025.countDocuments({
+    const newCount = await Business2029.countDocuments({
       "APPLICATION STATUS": "NEW",
     });
     // Count by barangay
-    const barangayStats = await Business2025.aggregate([
+    const barangayStats = await Business2029.aggregate([
       { $group: { _id: "$BARANGAY", count: { $sum: 1 } } },
       { $sort: { count: -1 } },
     ]);
     // Calculate total amount paid
-    const totalAmountResult = await Business2025.aggregate([
+    const totalAmountResult = await Business2029.aggregate([
       { $group: { _id: null, totalAmount: { $sum: "$AMOUNT PAID" } } },
     ]);
     const totalAmountPaid =
       totalAmountResult.length > 0 ? totalAmountResult[0].totalAmount : 0;
     // Calculate monthly payment totals
-    const monthlyTotals = await Business2025.aggregate([
+    const monthlyTotals = await Business2029.aggregate([
       {
         $match: {
           "DATE OF PAYMENT": { $exists: true, $ne: null },
-          $expr: { $eq: [{ $year: "$DATE OF PAYMENT" }, 2025] },
+          $expr: { $eq: [{ $year: "$DATE OF PAYMENT" }, 2029] },
         },
       },
       {
@@ -153,12 +153,12 @@ router.get("/stats", async (req, res) => {
       monthlyTotals,
     });
   } catch (error) {
-    console.error("Error fetching 2025 business stats:", error);
+    console.error("Error fetching 2029 business stats:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// Search businesses in 2025
+// Search businesses in 2029
 router.get("/search", async (req, res) => {
   try {
     const { query, field } = req.query;
@@ -168,27 +168,27 @@ router.get("/search", async (req, res) => {
     let businesses;
     switch (field) {
       case "accountNo":
-        businesses = await Business2025.find({
+        businesses = await Business2029.find({
           "ACCOUNT NO": { $regex: query, $options: "i" },
         });
         break;
       case "businessName":
-        businesses = await Business2025.find({
+        businesses = await Business2029.find({
           "NAME OF BUSINESS": { $regex: query, $options: "i" },
         });
         break;
       case "ownerName":
-        businesses = await Business2025.find({
+        businesses = await Business2029.find({
           "NAME OF OWNER": { $regex: query, $options: "i" },
         });
         break;
       case "barangay":
-        businesses = await Business2025.find({
+        businesses = await Business2029.find({
           BARANGAY: { $regex: query, $options: "i" },
         });
         break;
       default:
-        businesses = await Business2025.find({
+        businesses = await Business2029.find({
           $or: [
             { "ACCOUNT NO": { $regex: query, $options: "i" } },
             { "NAME OF BUSINESS": { $regex: query, $options: "i" } },
@@ -201,15 +201,15 @@ router.get("/search", async (req, res) => {
     }
     res.json(businesses);
   } catch (error) {
-    console.error("Error searching 2025 businesses:", error);
+    console.error("Error searching 2029 businesses:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// Get a specific business from 2025
+// Get a specific business from 2029
 router.get("/account/:accountNo", async (req, res) => {
   try {
-    const business = await Business2025.findOne({
+    const business = await Business2029.findOne({
       "ACCOUNT NO": req.params.accountNo,
     });
     if (!business) {
@@ -217,7 +217,7 @@ router.get("/account/:accountNo", async (req, res) => {
     }
     res.json(business);
   } catch (error) {
-    console.error("Error fetching 2025 business:", error);
+    console.error("Error fetching 2029 business:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -226,7 +226,7 @@ router.get("/account/:accountNo", async (req, res) => {
 router.get("/map", async (req, res) => {
   try {
     // Group businesses by barangay
-    const businessesByBarangay = await Business2025.aggregate([
+    const businessesByBarangay = await Business2029.aggregate([
       {
         $group: {
           _id: "$BARANGAY",
@@ -264,10 +264,10 @@ router.get("/map", async (req, res) => {
   }
 });
 
-// Add a new business to 2025
+// Add a new business to 2029
 router.post("/", verifyToken, async (req, res) => {
   try {
-    console.log("Received data for 2025 business:", req.body);
+    console.log("Received data for 2029 business:", req.body);
     // Convert string fields to uppercase
     const processedBody = convertStringsToUppercase(req.body);
     console.log("Processed data (uppercase):", processedBody);
@@ -275,32 +275,32 @@ router.post("/", verifyToken, async (req, res) => {
     const dbData = transformToDatabaseFormat(processedBody);
     console.log("Transformed data for database:", dbData);
     // Check if account number already exists
-    const existingBusiness = await Business2025.findOne({
+    const existingBusiness = await Business2029.findOne({
       "ACCOUNT NO": dbData["ACCOUNT NO"],
     });
     if (existingBusiness) {
       return res.status(400).json({ message: "Account number already exists" });
     }
     // Create and save the new business
-    const newBusiness = new Business2025(dbData);
+    const newBusiness = new Business2029(dbData);
     const savedBusiness = await newBusiness.save();
-    console.log("Business added to 2025:", savedBusiness);
+    console.log("Business added to 2029:", savedBusiness);
     // Extract account number explicitly
     const accountNo = savedBusiness["ACCOUNT NO"];
     console.log("Account number for CREATE audit log:", accountNo);
     // Log the CREATE action with account number
     await logAction(
       "CREATE",
-      "business2025",
+      "business2029",
       savedBusiness._id,
       req.user.userId,
       savedBusiness.toObject(),
       req,
       accountNo
     );
-    // Sync to all future years (2026, 2027, 2028, 2029, 2030)
+    // Sync to all future years (2030)
     try {
-      await syncBusinessToAllFutureYears("2025", savedBusiness.toObject());
+      await syncBusinessToAllFutureYears("2029", savedBusiness.toObject());
       console.log("Business synced to all future years");
     } catch (syncError) {
       console.error("Error syncing business to future years:", syncError);
@@ -308,16 +308,16 @@ router.post("/", verifyToken, async (req, res) => {
     }
     res.status(201).json(savedBusiness);
   } catch (error) {
-    console.error("Error adding 2025 business:", error);
+    console.error("Error adding 2029 business:", error);
     res.status(500).json({ message: "Server error", details: error.message });
   }
 });
 
-// Update a business in 2025
+// Update a business in 2029
 router.put("/account/:accountNo", verifyToken, async (req, res) => {
   try {
     // Get the current document before update
-    const currentBusiness = await Business2025.findOne({
+    const currentBusiness = await Business2029.findOne({
       "ACCOUNT NO": req.params.accountNo,
     });
     if (!currentBusiness) {
@@ -327,7 +327,7 @@ router.put("/account/:accountNo", verifyToken, async (req, res) => {
     const processedBody = convertStringsToUppercase(req.body);
     // Transform to database format
     const dbData = transformToDatabaseFormat(processedBody);
-    const updatedBusiness = await Business2025.findOneAndUpdate(
+    const updatedBusiness = await Business2029.findOneAndUpdate(
       { "ACCOUNT NO": req.params.accountNo },
       dbData,
       { new: true }
@@ -343,16 +343,16 @@ router.put("/account/:accountNo", verifyToken, async (req, res) => {
     // Log the UPDATE action with account number
     await logAction(
       "UPDATE",
-      "business2025",
+      "business2029",
       updatedBusiness._id,
       req.user.userId,
       changes,
       req,
       accountNo
     );
-    // Sync to all future years (2026, 2027, 2028, 2029, 2030)
+    // Sync to all future years (2030)
     try {
-      await syncBusinessToAllFutureYears("2025", updatedBusiness.toObject());
+      await syncBusinessToAllFutureYears("2029", updatedBusiness.toObject());
       console.log("Business changes synced to all future years");
     } catch (syncError) {
       console.error(
@@ -363,22 +363,22 @@ router.put("/account/:accountNo", verifyToken, async (req, res) => {
     }
     res.json(updatedBusiness);
   } catch (error) {
-    console.error("Error updating 2025 business:", error);
+    console.error("Error updating 2029 business:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// Delete a business from 2025
+// Delete a business from 2029
 router.delete("/account/:accountNo", verifyToken, async (req, res) => {
   try {
     // Get the document before deletion
-    const businessToDelete = await Business2025.findOne({
+    const businessToDelete = await Business2029.findOne({
       "ACCOUNT NO": req.params.accountNo,
     });
     if (!businessToDelete) {
       return res.status(404).json({ message: "Business not found" });
     }
-    const result = await Business2025.deleteOne({
+    const result = await Business2029.deleteOne({
       "ACCOUNT NO": req.params.accountNo,
     });
     // Extract account number explicitly
@@ -387,16 +387,16 @@ router.delete("/account/:accountNo", verifyToken, async (req, res) => {
     // Log the DELETE action with account number
     await logAction(
       "DELETE",
-      "business2025",
+      "business2029",
       businessToDelete._id,
       req.user.userId,
       businessToDelete.toObject(),
       req,
       accountNo
     );
-    // Delete from all future years (2026, 2027, 2028, 2029, 2030)
+    // Delete from all future years (2030)
     try {
-      await deleteBusinessFromAllFutureYears("2025", req.params.accountNo);
+      await deleteBusinessFromAllFutureYears("2029", req.params.accountNo);
       console.log("Business deleted from all future years");
     } catch (syncError) {
       console.error("Error deleting business from future years:", syncError);
@@ -404,7 +404,7 @@ router.delete("/account/:accountNo", verifyToken, async (req, res) => {
     }
     res.json({ message: "Business deleted successfully" });
   } catch (error) {
-    console.error("Error deleting 2025 business:", error);
+    console.error("Error deleting 2029 business:", error);
     res.status(500).json({ message: "Server error" });
   }
 });

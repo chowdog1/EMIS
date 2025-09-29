@@ -2,7 +2,7 @@
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = "your_jwt_secret_key";
+const JWT_SECRET = process.env.JWT_SECRET || "8a001b05f4cba9b638169f9836c7ff09";
 // Debug: Log when the controller is loaded
 console.log("AuthController loaded");
 

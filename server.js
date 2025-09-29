@@ -58,6 +58,14 @@ mongoose
 const business2025Routes = require("./routes/business2025Routes.js");
 // connection for 2026
 const business2026Routes = require("./routes/business2026Routes.js");
+// connection for 2027
+const business2027Routes = require("./routes/business2027Routes.js");
+// connection for 2028
+const business2028Routes = require("./routes/business2028Routes.js");
+// connection for 2029
+const business2029Routes = require("./routes/business2029Routes.js");
+// connection for 2030
+const business2030Routes = require("./routes/business2030Routes.js");
 // seminar2025
 const seminar2025Routes = require("./routes/seminar2025Routes.js");
 // seminar2026
@@ -129,6 +137,10 @@ io.on("connection", (socket) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/business2025", business2025Routes);
 app.use("/api/business2026", business2026Routes);
+app.use("/api/business2027", business2027Routes);
+app.use("/api/business2028", business2028Routes);
+app.use("/api/business2029", business2029Routes);
+app.use("/api/business2030", business2030Routes);
 app.use("/api/seminar2025", seminar2025Routes);
 app.use("/api/seminar2026", seminar2026Routes);
 app.use("/api/messages", messageRoutes);

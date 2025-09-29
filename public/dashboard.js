@@ -1,13 +1,23 @@
-// dashboard.js - Refactored to use shared utilities
+// dashboard.js - Updated to support all years from 2025 to 2030
 class DashboardManager {
   constructor() {
-    this.currentYear = "2025"; // Default year
+    // Automatically detect current year and set as default (within supported range 2025-2030)
+    const currentYear = new Date().getFullYear().toString();
+    if (currentYear < "2025") {
+      this.currentYear = "2025";
+    } else if (currentYear > "2030") {
+      this.currentYear = "2030";
+    } else {
+      this.currentYear = currentYear;
+    }
+
     this.barangayChartInstance = null;
     this.monthlyChartInstance = null;
     this.init();
   }
+
   init() {
-    console.log("Initializing dashboard manager");
+    console.log("Initializing dashboard manager with year:", this.currentYear);
     // Check if user is logged in using shared utility
     checkAuthentication();
     // Setup dropdown functionality using shared utility
@@ -24,6 +34,7 @@ class DashboardManager {
     updateDateTime();
     setInterval(updateDateTime, 1000);
   }
+
   // Setup year selector
   setupYearSelector() {
     const yearSelect = document.getElementById("yearSelect");
@@ -51,6 +62,7 @@ class DashboardManager {
       console.error("Year selector element not found");
     }
   }
+
   // Setup map link functionality
   setupMapLink() {
     const mapLink = document.getElementById("viewBusinessesMapLink");
@@ -75,6 +87,7 @@ class DashboardManager {
       }
     });
   }
+
   // Open business map modal
   async openBusinessMap() {
     const modal = document.getElementById("mapModal");
@@ -96,6 +109,7 @@ class DashboardManager {
     // Fetch businesses by barangay and add markers
     await this.fetchBusinessesForMap();
   }
+
   // Fetch businesses by barangay and display on map
   async fetchBusinessesForMap() {
     try {
@@ -104,12 +118,10 @@ class DashboardManager {
         console.error("No auth token found");
         return;
       }
-      let apiUrl;
-      if (this.currentYear === "2026") {
-        apiUrl = "/api/business2026/map";
-      } else {
-        apiUrl = "/api/business2025/map";
-      }
+
+      // Use dynamic API endpoint based on current year
+      const apiUrl = `/api/business${this.currentYear}/map`;
+
       const response = await fetch(apiUrl, {
         method: "GET",
         headers: {
@@ -117,9 +129,11 @@ class DashboardManager {
           Authorization: `Bearer ${token}`,
         },
       });
+
       if (!response.ok) {
         throw new Error("Failed to fetch businesses for map");
       }
+
       const barangayData = await response.json();
       // Clear existing markers
       if (window.barangayMarkers) {
@@ -174,18 +188,16 @@ class DashboardManager {
       alert("Error loading businesses on the map");
     }
   }
+
   // Function to fetch dashboard data
   async fetchDashboardData() {
     try {
       console.log(`Fetching dashboard data for year: ${this.currentYear}`);
       const token = getAuthToken();
-      // Determine the API endpoint based on the current year
-      let apiUrl;
-      if (this.currentYear === "2026") {
-        apiUrl = "/api/business2026/stats";
-      } else {
-        apiUrl = "/api/business2025/stats";
-      }
+
+      // Use dynamic API endpoint based on current year
+      const apiUrl = `/api/business${this.currentYear}/stats`;
+
       const response = await fetch(apiUrl, {
         method: "GET",
         headers: {
@@ -193,11 +205,14 @@ class DashboardManager {
           Authorization: `Bearer ${token}`,
         },
       });
+
       if (!response.ok) {
         throw new Error("Failed to fetch dashboard data");
       }
+
       const data = await response.json();
       console.log("Dashboard data:", data);
+
       // Update dashboard cards
       this.updateDashboardCards(data);
       // Create barangay chart
@@ -210,9 +225,11 @@ class DashboardManager {
       this.loadBusinessData();
     }
   }
+
   // Function to update dashboard cards
   updateDashboardCards(data) {
     console.log("Updating dashboard cards with data:", data);
+
     // Update total businesses
     const totalBusinessesElement = document.getElementById("totalBusinesses");
     if (totalBusinessesElement) {
@@ -221,6 +238,7 @@ class DashboardManager {
     } else {
       console.error("Total businesses element not found");
     }
+
     // Update active businesses
     const activeBusinessesElement = document.getElementById(
       "activeBusinessesCount"
@@ -231,6 +249,7 @@ class DashboardManager {
     } else {
       console.error("Active businesses element not found");
     }
+
     // Update high risk count
     const highRiskElement = document.getElementById("highRiskCount");
     if (highRiskElement) {
@@ -239,6 +258,7 @@ class DashboardManager {
     } else {
       console.error("High risk element not found");
     }
+
     // Update low risk count
     const lowRiskElement = document.getElementById("lowRiskCount");
     if (lowRiskElement) {
@@ -247,6 +267,7 @@ class DashboardManager {
     } else {
       console.error("Low risk element not found");
     }
+
     // Update renewal pending count
     const renewalElement = document.getElementById("renewalCount");
     if (renewalElement) {
@@ -258,6 +279,7 @@ class DashboardManager {
     } else {
       console.error("Renewal element not found");
     }
+
     // Update total amount paid
     const totalAmountPaidElement = document.getElementById("totalAmountPaid");
     if (totalAmountPaidElement) {
@@ -274,6 +296,7 @@ class DashboardManager {
       console.error("Total amount paid element not found");
     }
   }
+
   // Function to create barangay chart
   createBarangayChart(barangayStats) {
     console.log("Creating barangay chart with data:", barangayStats);
@@ -350,6 +373,7 @@ class DashboardManager {
       console.error("Error creating chart:", error);
     }
   }
+
   // Function to create monthly payment chart
   createMonthlyChart(monthlyData) {
     console.log("Creating monthly chart with data:", monthlyData);
@@ -458,11 +482,13 @@ class DashboardManager {
       console.error("Error creating monthly chart:", error);
     }
   }
+
   // Load business data (fallback method)
   loadBusinessData() {
     console.log("Loading business data as fallback");
     // This is a placeholder - implement as needed
   }
+
   // Update current page for user tracking
   updateCurrentPage(pageName) {
     console.log(`Current page updated to: ${pageName}`);

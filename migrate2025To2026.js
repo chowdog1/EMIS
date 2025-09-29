@@ -1,4 +1,4 @@
-// scripts/migrate2025To2026.js
+// migrate2025To2026.js
 const mongoose = require("mongoose");
 const { establishmentsDB } = require("./db.js");
 const Business2025 = require("./models/business2025.js");

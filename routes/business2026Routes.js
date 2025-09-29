@@ -4,6 +4,10 @@ const Business2026 = require("../models/business2026");
 const { verifyToken } = require("../middleware/authMiddleware");
 const { logAction } = require("../services/auditService");
 const barangayCoordinates = require("../public/js/barangayCoordinates");
+const {
+  syncBusinessToAllFutureYears,
+  deleteBusinessFromAllFutureYears,
+} = require("../services/businessSyncService");
 
 // Helper function to convert string values to uppercase
 function convertStringsToUppercase(data) {
@@ -218,7 +222,7 @@ router.get("/account/:accountNo", async (req, res) => {
   }
 });
 
-// NEW: Get businesses grouped by barangay for map
+// Get businesses grouped by barangay for map
 router.get("/map", async (req, res) => {
   try {
     // Group businesses by barangay
@@ -292,8 +296,16 @@ router.post("/", verifyToken, async (req, res) => {
       req.user.userId,
       savedBusiness.toObject(),
       req,
-      accountNo // Add account number
+      accountNo
     );
+    // Sync to all future years (2027, 2028, 2029, 2030)
+    try {
+      await syncBusinessToAllFutureYears("2026", savedBusiness.toObject());
+      console.log("Business synced to all future years");
+    } catch (syncError) {
+      console.error("Error syncing business to future years:", syncError);
+      // Don't fail the request if sync fails
+    }
     res.status(201).json(savedBusiness);
   } catch (error) {
     console.error("Error adding 2026 business:", error);
@@ -336,8 +348,19 @@ router.put("/account/:accountNo", verifyToken, async (req, res) => {
       req.user.userId,
       changes,
       req,
-      accountNo // Add account number
+      accountNo
     );
+    // Sync to all future years (2027, 2028, 2029, 2030)
+    try {
+      await syncBusinessToAllFutureYears("2026", updatedBusiness.toObject());
+      console.log("Business changes synced to all future years");
+    } catch (syncError) {
+      console.error(
+        "Error syncing business changes to future years:",
+        syncError
+      );
+      // Don't fail the request if sync fails
+    }
     res.json(updatedBusiness);
   } catch (error) {
     console.error("Error updating 2026 business:", error);
@@ -369,8 +392,16 @@ router.delete("/account/:accountNo", verifyToken, async (req, res) => {
       req.user.userId,
       businessToDelete.toObject(),
       req,
-      accountNo // Add account number
+      accountNo
     );
+    // Delete from all future years (2027, 2028, 2029, 2030)
+    try {
+      await deleteBusinessFromAllFutureYears("2026", req.params.accountNo);
+      console.log("Business deleted from all future years");
+    } catch (syncError) {
+      console.error("Error deleting business from future years:", syncError);
+      // Don't fail the request if sync fails
+    }
     res.json({ message: "Business deleted successfully" });
   } catch (error) {
     console.error("Error deleting 2026 business:", error);
