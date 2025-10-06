@@ -1,5 +1,10 @@
-// seminars.js - Fixed to use paginationUtils.js
-let currentYear = "2025"; // Default to 2025
+// seminars.js - Updated to support years 2025-2030 and auto-select current year
+let currentYear = new Date().getFullYear().toString(); // Default to current year
+// Ensure currentYear is within valid range (2025-2030)
+if (currentYear < "2025" || currentYear > "2030") {
+  currentYear = "2025"; // Fallback to 2025 if outside range
+}
+
 let allSeminars = []; // Store all seminars for client-side operations
 let currentPage = 1;
 let pageSize = 10;
@@ -66,8 +71,7 @@ async function loadSeminarData() {
       `;
     }
     // Use the appropriate API endpoint based on the current year
-    const apiUrl =
-      currentYear === "2026" ? "/api/seminar2026" : "/api/seminar2025";
+    const apiUrl = `/api/seminar${currentYear}`;
     const token = getAuthToken();
     const response = await fetch(apiUrl, {
       headers: {
@@ -835,11 +839,8 @@ function setupResendInvitationModal() {
       }, 100);
       try {
         const token = getAuthToken();
-        // Try to use the resend-invitation endpoint first
-        let apiUrl =
-          currentYear === "2026"
-            ? "/api/seminar2026/resend-invitation"
-            : "/api/seminar2025/resend-invitation";
+        // Use dynamic year for API endpoint
+        let apiUrl = `/api/seminar${currentYear}/resend-invitation`;
         let response = await fetch(apiUrl, {
           method: "POST",
           headers: {
@@ -866,10 +867,7 @@ function setupResendInvitationModal() {
           console.log(
             "Resend invitation endpoint not found, falling back to send invitations endpoint"
           );
-          apiUrl =
-            currentYear === "2026"
-              ? "/api/seminar2026/send-invitations"
-              : "/api/seminar2025/send-invitations";
+          apiUrl = `/api/seminar${currentYear}/send-invitations`;
           response = await fetch(apiUrl, {
             method: "POST",
             headers: {
@@ -987,7 +985,7 @@ function setupResendInvitationModal() {
 function setupYearSelection() {
   const yearSelect = document.getElementById("yearSelect");
   if (yearSelect) {
-    // Set the current value
+    // Set the current value to the current year
     yearSelect.value = currentYear;
     // Add change event listener
     yearSelect.addEventListener("change", function () {
@@ -1073,10 +1071,8 @@ function setupUploadButton() {
       formData.append("csvFile", fileInput.files[0]);
       try {
         const token = getAuthToken();
-        const apiUrl =
-          currentYear === "2026"
-            ? "/api/seminar2026/upload"
-            : "/api/seminar2025/upload";
+        // Use dynamic year for API endpoint
+        const apiUrl = `/api/seminar${currentYear}/upload`;
         const response = await fetch(apiUrl, {
           method: "POST",
           headers: {
@@ -1453,10 +1449,8 @@ function setupSendInvitationsButton() {
       }, 100);
       try {
         const token = getAuthToken();
-        const apiUrl =
-          currentYear === "2026"
-            ? "/api/seminar2026/send-invitations"
-            : "/api/seminar2025/send-invitations";
+        // Use dynamic year for API endpoint
+        const apiUrl = `/api/seminar${currentYear}/send-invitations`;
         const response = await fetch(apiUrl, {
           method: "POST",
           headers: {

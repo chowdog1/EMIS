@@ -70,6 +70,14 @@ const business2030Routes = require("./routes/business2030Routes.js");
 const seminar2025Routes = require("./routes/seminar2025Routes.js");
 // seminar2026
 const seminar2026Routes = require("./routes/seminar2026Routes.js");
+// seminar2027
+const seminar2027Routes = require("./routes/seminar2027Routes.js");
+// seminar2028
+const seminar2028Routes = require("./routes/seminar2028Routes.js");
+// seminar2029
+const seminar2029Routes = require("./routes/seminar2029Routes.js");
+// seminar2030
+const seminar2030Routes = require("./routes/seminar2030Routes.js");
 
 // Create HTTP server and attach Socket.IO
 const server = http.createServer(app);
@@ -143,6 +151,10 @@ app.use("/api/business2029", business2029Routes);
 app.use("/api/business2030", business2030Routes);
 app.use("/api/seminar2025", seminar2025Routes);
 app.use("/api/seminar2026", seminar2026Routes);
+app.use("/api/seminar2027", seminar2027Routes);
+app.use("/api/seminar2028", seminar2028Routes);
+app.use("/api/seminar2029", seminar2029Routes);
+app.use("/api/seminar2030", seminar2030Routes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/audit", auditRoutes);
 app.use("/api/certificates", certificateRoutes);
