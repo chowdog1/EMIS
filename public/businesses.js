@@ -1247,6 +1247,10 @@ async function addNewBusiness() {
     }
     // Close the add modal
     document.getElementById("businessAddModal").style.display = "none";
+
+    // Reset the form after successful submission
+    document.getElementById("businessAddForm").reset();
+
     // Show success message
     showSuccessMessage("Business added successfully!");
     // Refresh the business table
@@ -1360,6 +1364,10 @@ async function saveBusinessChanges() {
     }
     // Close the edit modal
     document.getElementById("businessEditModal").style.display = "none";
+
+    // Reset the form after successful submission
+    document.getElementById("businessEditForm").reset();
+
     // Show success message
     showSuccessMessage("Business details updated successfully!");
     // Refresh the business table

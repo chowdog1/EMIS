@@ -59,6 +59,33 @@ const syncBusinessToAllFutureYears = async (sourceYear, businessData) => {
       targetData[`${targetYear}_STATUS`] = "";
       targetData[`${targetYear}_NOTES`] = "";
 
+      // For all syncs, preserve specific fields in target year
+      // Find existing document to preserve fields
+      const existingDoc = await TargetModel.findOne({
+        "ACCOUNT NO": targetData["ACCOUNT NO"],
+      });
+
+      if (existingDoc) {
+        // Preserve existing values for these specific fields
+        targetData["DATE OF APPLICATION"] = existingDoc["DATE OF APPLICATION"];
+        targetData["AMOUNT PAID"] = existingDoc["AMOUNT PAID"];
+        targetData["DATE OF PAYMENT"] = existingDoc["DATE OF PAYMENT"];
+        targetData["OR NO"] = existingDoc["OR NO"];
+        targetData["REMARKS"] = existingDoc["REMARKS"];
+        console.log(
+          `Preserved protected fields for ${targetData["ACCOUNT NO"]} in ${targetYear}`
+        );
+      } else {
+        // For new documents, set these fields to empty values
+        targetData["DATE OF APPLICATION"] = "";
+        targetData["AMOUNT PAID"] = "";
+        targetData["DATE OF PAYMENT"] = "";
+        targetData["OR NO"] = "";
+        console.log(
+          `Set empty protected fields for new document ${targetData["ACCOUNT NO"]} in ${targetYear}`
+        );
+      }
+
       // Use findOneAndUpdate with upsert to either update or create
       const result = await TargetModel.findOneAndUpdate(
         { "ACCOUNT NO": targetData["ACCOUNT NO"] },
