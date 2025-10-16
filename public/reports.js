@@ -15,9 +15,6 @@ window.addEventListener("load", function () {
   // Populate year dropdown with available years
   populateYearDropdown();
 
-  // Initialize inactivity manager
-  window.inactivityManager = new InactivityManager();
-
   // Initialize account lock notifier
   if (typeof initAccountLockNotifier === "function") {
     console.log("Initializing account lock notifier");
@@ -148,19 +145,3 @@ function setupReportGeneration() {
     }
   });
 }
-
-// Add page visibility handling
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-    console.log("Page hidden - pausing session check");
-    if (window.inactivityManager) {
-      window.inactivityManager.stopSessionCheck();
-    }
-  } else {
-    console.log("Page visible - resuming session check");
-    if (window.inactivityManager) {
-      window.inactivityManager.startSessionCheck();
-      window.inactivityManager.resetInactivityTimer();
-    }
-  }
-});

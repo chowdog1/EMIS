@@ -16,9 +16,6 @@ window.addEventListener("load", function () {
   // Setup change password modal
   setupChangePasswordModal();
 
-  // Initialize inactivity manager
-  window.inactivityManager = new InactivityManager();
-
   // Start updating the datetime
   updateDateTime();
   setInterval(updateDateTime, 1000);
@@ -462,19 +459,3 @@ async function fetchProfilePicture(userId) {
     throw error;
   }
 }
-
-// Add page visibility handling
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-    console.log("Page hidden - pausing session check");
-    if (window.inactivityManager) {
-      window.inactivityManager.stopSessionCheck();
-    }
-  } else {
-    console.log("Page visible - resuming session check");
-    if (window.inactivityManager) {
-      window.inactivityManager.startSessionCheck();
-      window.inactivityManager.resetInactivityTimer();
-    }
-  }
-});

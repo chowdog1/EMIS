@@ -751,6 +751,43 @@ function setupResendInvitationModal() {
   // Handle resend invitation
   if (resendBtn) {
     resendBtn.addEventListener("click", async function () {
+      // Get form values for confirmation dialog
+      const dateValue = seminarDate.value;
+      const timeValue = seminarTime.value;
+      const zoomLinkValue = zoomLink.value;
+      const zoomMeetingIdValue = zoomMeetingId.value;
+      const zoomPasswordValue = zoomPassword.value;
+
+      // Format date for better readability
+      const formattedDate = new Date(dateValue).toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+
+      // Format time for better readability
+      const formattedTime = new Date(
+        `2000-01-01T${timeValue}`
+      ).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      // Create confirmation message
+      const confirmationMessage =
+        `Are you sure you want to resend this invitation with the following details?\n\n` +
+        `Seminar Date: ${formattedDate}\n` +
+        `Seminar Time: ${formattedTime}\n` +
+        `Zoom Link: ${zoomLinkValue || "Not provided"}\n` +
+        `Zoom Meeting ID: ${zoomMeetingIdValue || "Not provided"}\n` +
+        `Zoom Password: ${zoomPasswordValue || "Not provided"}`;
+
+      // Show confirmation dialog
+      if (!window.confirm(confirmationMessage)) {
+        return; // Exit if user cancels
+      }
+
       const email = document.getElementById("resendEmail").value;
       const subject = document.getElementById("resendSubject").value.trim();
       const body = generateResendEmailBody();
@@ -1362,6 +1399,43 @@ function setupSendInvitationsButton() {
   // Handle send invitations
   if (sendInvitationsBtn) {
     sendInvitationsBtn.addEventListener("click", async function () {
+      // Get form values for confirmation dialog
+      const dateValue = seminarDate.value;
+      const timeValue = seminarTime.value;
+      const zoomLinkValue = zoomLink.value;
+      const zoomMeetingIdValue = zoomMeetingId.value;
+      const zoomPasswordValue = zoomPassword.value;
+
+      // Format date for better readability
+      const formattedDate = new Date(dateValue).toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+
+      // Format time for better readability
+      const formattedTime = new Date(
+        `2000-01-01T${timeValue}`
+      ).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      // Create confirmation message
+      const confirmationMessage =
+        `Are you sure you want to send invitations with the following details?\n\n` +
+        `Seminar Date: ${formattedDate}\n` +
+        `Seminar Time: ${formattedTime}\n` +
+        `Zoom Link: ${zoomLinkValue || "Not provided"}\n` +
+        `Zoom Meeting ID: ${zoomMeetingIdValue || "Not provided"}\n` +
+        `Zoom Password: ${zoomPasswordValue || "Not provided"}`;
+
+      // Show confirmation dialog
+      if (!window.confirm(confirmationMessage)) {
+        return; // Exit if user cancels
+      }
+
       const subject = document.getElementById("emailSubject").value.trim();
       const body = window.generateEmailBody();
       if (!subject || !body) {
@@ -1628,9 +1702,6 @@ window.addEventListener("load", function () {
   // Setup resend invitation modal
   setupResendInvitationModal();
 
-  // Initialize inactivity manager
-  window.inactivityManager = new InactivityManager();
-
   // Initialize account lock notifier
   if (typeof initAccountLockNotifier === "function") {
     console.log("Initializing account lock notifier");
@@ -1642,20 +1713,4 @@ window.addEventListener("load", function () {
   // Start updating the datetime
   updateDateTime();
   setInterval(updateDateTime, 1000);
-});
-
-// Add page visibility handling
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-    console.log("Page hidden - pausing session check");
-    if (window.inactivityManager) {
-      window.inactivityManager.stopSessionCheck();
-    }
-  } else {
-    console.log("Page visible - resuming session check");
-    if (window.inactivityManager) {
-      window.inactivityManager.startSessionCheck();
-      window.inactivityManager.resetInactivityTimer();
-    }
-  }
 });

@@ -2161,24 +2161,6 @@ window.addEventListener("load", function () {
     }
   );
 
-  // Initialize inactivity manager
-  window.inactivityManager = new InactivityManager();
   updateDateTime();
   setInterval(updateDateTime, 1000);
-});
-
-// Add page visibility handling
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-    console.log("Page hidden - pausing session check");
-    if (window.inactivityManager) {
-      window.inactivityManager.stopSessionCheck();
-    }
-  } else {
-    console.log("Page visible - resuming session check");
-    if (window.inactivityManager) {
-      window.inactivityManager.startSessionCheck();
-      window.inactivityManager.resetInactivityTimer();
-    }
-  }
 });

@@ -28,8 +28,6 @@ class DashboardManager {
     this.setupYearSelector();
     // Fetch dashboard data
     this.fetchDashboardData();
-    // Initialize inactivity manager
-    window.inactivityManager = new InactivityManager();
     // Start updating the datetime using shared utility
     updateDateTime();
     setInterval(updateDateTime, 1000);
@@ -514,19 +512,3 @@ if (typeof initAccountLockNotifier === "function") {
 } else {
   console.error("Account lock notifier function not found");
 }
-
-// Add page visibility handling
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-    console.log("Page hidden - pausing session check");
-    if (window.inactivityManager) {
-      window.inactivityManager.stopSessionCheck();
-    }
-  } else {
-    console.log("Page visible - resuming session check");
-    if (window.inactivityManager) {
-      window.inactivityManager.startSessionCheck();
-      window.inactivityManager.resetInactivityTimer();
-    }
-  }
-});
