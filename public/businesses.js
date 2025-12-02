@@ -245,11 +245,11 @@ function updateBusinessTable(businesses) {
       switch (status) {
         case "HIGHRISK":
           color = "#dc3545";
-          text = "High Risk";
+          text = "HIGHRISK";
           break;
         case "LOWRISK":
           color = "#28a745";
-          text = "Low Risk";
+          text = "LOWRISK";
           break;
         default:
           color = "#6c757d";
