@@ -721,18 +721,6 @@ function setupModalEventListeners() {
       addModal.style.display = "none";
     });
   });
-  // Close modals when clicking outside of them
-  window.addEventListener("click", function (event) {
-    if (event.target === detailsModal) {
-      detailsModal.style.display = "none";
-    }
-    if (event.target === editModal) {
-      editModal.style.display = "none";
-    }
-    if (event.target === addModal) {
-      addModal.style.display = "none";
-    }
-  });
   // Add click event to Print AEC button
   const printAecBtn = document.getElementById("printAecBtn");
   if (printAecBtn) {
@@ -1058,9 +1046,13 @@ function handleAddBusiness() {
   console.log("Add Business button clicked");
   // Clear the form
   document.getElementById("businessAddForm").reset();
-  // Set today's date as default for date of application
-  const today = new Date().toISOString().split("T")[0];
-  document.getElementById("addDateOfApplication").value = today;
+  // Set today's date as default for date of application using local timezone
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  const formattedDate = `${year}-${month}-${day}`;
+  document.getElementById("addDateOfApplication").value = formattedDate;
   // Show the add modal
   document.getElementById("businessAddModal").style.display = "block";
 }
@@ -1283,27 +1275,62 @@ function handleModify() {
   document.getElementById("editNatureOfBusiness").value = natureOfBusiness;
   document.getElementById("editStatus").value = status;
   document.getElementById("editApplicationStatus").value = applicationStatus;
-  // Format dates for input fields
+
+  // Handle Date of Application
   if (dateOfApplication && dateOfApplication !== "N/A") {
-    const appDate = new Date(dateOfApplication);
-    document.getElementById("editDateOfApplication").value = appDate
-      .toISOString()
-      .split("T")[0];
+    // Manually parse the "MM/DD/YYYY" string to avoid timezone issues
+    const parts = dateOfApplication.split("/");
+    if (parts.length === 3) {
+      const year = parts[2];
+      const month = parts[0].padStart(2, "0");
+      const day = parts[1].padStart(2, "0");
+      const formattedDate = `${year}-${month}-${day}`;
+      document.getElementById("editDateOfApplication").value = formattedDate;
+    } else {
+      document.getElementById("editDateOfApplication").value = "";
+    }
+  } else {
+    // If the date is blank or "N/A", set it to today's date using local timezone
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0"); // getMonth() is 0-indexed
+    const day = String(today.getDate()).padStart(2, "0");
+    const formattedDate = `${year}-${month}-${day}`;
+    document.getElementById("editDateOfApplication").value = formattedDate;
   }
+
   document.getElementById("editOrNo").value = orNo;
   document.getElementById("editAmountPaid").value = amountPaid;
+
+  // Handle Date of Payment with the same robust logic
   if (dateOfPayment && dateOfPayment !== "N/A") {
-    const payDate = new Date(dateOfPayment);
-    document.getElementById("editDateOfPayment").value = payDate
-      .toISOString()
-      .split("T")[0];
+    const parts = dateOfPayment.split("/");
+    if (parts.length === 3) {
+      const year = parts[2];
+      const month = parts[0].padStart(2, "0");
+      const day = parts[1].padStart(2, "0");
+      const formattedDate = `${year}-${month}-${day}`;
+      document.getElementById("editDateOfPayment").value = formattedDate;
+    } else {
+      document.getElementById("editDateOfPayment").value = "";
+    }
   }
+
+  document.getElementById("editRemarks").value = remarks;
   // Show the edit modal
   document.getElementById("businessEditModal").style.display = "block";
 }
 
 // Function to save business changes
 async function saveBusinessChanges() {
+  // Show browser warning popup
+  const isConfirmed = window.confirm(
+    "Are you sure the modified details is correct?"
+  );
+  // If user clicked Cancel, stop here
+  if (!isConfirmed) {
+    return;
+  }
   try {
     // Get form data
     const accountNo = document.getElementById("editAccountNo").value;
@@ -1351,6 +1378,55 @@ async function saveBusinessChanges() {
 
     // Show success message
     showSuccessMessage("Business details updated successfully!");
+
+    // Ask if user wants to print AEC
+    const printAecConfirmed = window.confirm(
+      "You want now to print AEC or not for now?"
+    );
+
+    // If user confirms, proceed to print AEC
+    if (printAecConfirmed) {
+      // Populate the modal with the data that was just saved.
+      // This ensures the AEC has the latest information without an extra API call.
+      document.getElementById("modalAccountNo").textContent = accountNo;
+      document.getElementById("modalBusinessName").textContent =
+        businessData.businessName;
+      document.getElementById("modalOwnerName").textContent =
+        businessData.ownerName;
+      document.getElementById("modalAddress").textContent =
+        businessData.address;
+      document.getElementById("modalBarangay").textContent =
+        businessData.barangay;
+      document.getElementById("modalNatureOfBusiness").textContent =
+        businessData.natureOfBusiness;
+      document.getElementById("modalStatus").textContent = businessData.status;
+      document.getElementById("modalApplicationStatus").textContent =
+        businessData.applicationStatus;
+
+      // Format dates for display in the AEC
+      const dateOfApplication = businessData.dateOfApplication;
+      document.getElementById("modalDateOfApplication").textContent =
+        dateOfApplication
+          ? new Date(dateOfApplication).toLocaleDateString()
+          : "N/A";
+
+      document.getElementById("modalOrNo").textContent =
+        businessData.orNo || "N/A";
+      document.getElementById("modalAmountPaid").textContent =
+        businessData.amountPaid || "N/A";
+
+      const dateOfPayment = businessData.dateOfPayment;
+      document.getElementById("modalDateOfPayment").textContent = dateOfPayment
+        ? new Date(dateOfPayment).toLocaleDateString()
+        : "N/A";
+
+      document.getElementById("modalRemarks").textContent =
+        businessData.remarks || "N/A";
+
+      // Now call the printAEC function. It will read the data we just populated.
+      printAEC();
+    }
+
     // Refresh the business table
     loadBusinessData();
   } catch (error) {
