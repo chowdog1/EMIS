@@ -1,9 +1,10 @@
+require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
 const authRoutes = require("./routes/authRoutes");
-const { establishmentsDB } = require("./db.js");
+const { authDB, establishmentsDB } = require("./config/database");
 const reportRoutes = require("./routes/reportRoutes");
 const auditRoutes = require("./routes/auditRoutes.js");
 const {
@@ -15,7 +16,7 @@ const socketIo = require("socket.io");
 const messageRoutes = require("./routes/messageRoutes");
 const cron = require("node-cron");
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT;
 
 // Enhanced CORS configuration for the same subnet
 app.use(
@@ -35,7 +36,7 @@ app.use(
     },
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
-  })
+  }),
 );
 
 app.use(express.json());
@@ -44,15 +45,6 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/certificates", express.static(path.join(__dirname, "certificates")));
 app.use("/signatures", express.static(path.join(__dirname, "signatures")));
-
-// Connect to MongoDB for auth
-mongoose
-  .connect("mongodb://localhost:27017/logindb")
-  .then(() => console.log("✅ Auth MongoDB connected"))
-  .catch((err) => {
-    console.error("❌ Auth MongoDB connection error:", err);
-    process.exit(1); // Exit if auth DB fails
-  });
 
 // Now require businessRoutes AFTER establishing the connection
 const business2025Routes = require("./routes/business2025Routes.js");
@@ -228,30 +220,30 @@ cron.schedule(
   async () => {
     try {
       console.log(
-        "🧹 Running weekday certificate cleanup job at:",
-        new Date().toLocaleString()
+        "Running weekday certificate cleanup job at:",
+        new Date().toLocaleString(),
       );
       await cleanupOldCertificates();
       console.log(
-        "✅ Weekday certificate cleanup job completed successfully at:",
-        new Date().toLocaleString()
+        "Weekday certificate cleanup job completed successfully at:",
+        new Date().toLocaleString(),
       );
     } catch (error) {
-      console.error("❌ Error running weekday certificate cleanup job:", error);
+      console.error("Error running weekday certificate cleanup job:", error);
     }
   },
   {
     scheduled: true,
     timezone: "Asia/Manila", // Philippines timezone
-  }
+  },
 );
 
 // Start server - listen on all interfaces (0.0.0.0) to allow network access
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
-  console.log(`🌐 CENRO Network: http://192.168.55.38:${PORT}`);
-  console.log(`🏢 CGSJ_OSS Network: http://192.168.55.229:${PORT}`);
-  console.log(`📡 Any device on 192.168.55.x subnet can access the server`);
-  console.log(`🕒 Server Hours: 7:00 AM - 4:00 PM Weekdays`);
-  console.log(`🧹 Certificate cleanup scheduled: 3:45 PM Monday-Friday`);
+  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`CENRO Network: http://192.168.55.38:${PORT}`);
+  console.log(`CGSJ_OSS Network: http://192.168.55.229:${PORT}`);
+  console.log(`Any device on 192.168.55.x subnet can access the server`);
+  console.log(`Server Hours: 7:00 AM - 4:00 PM Weekdays`);
+  console.log(`Certificate cleanup scheduled: 3:45 PM Monday-Friday`);
 });

@@ -100,7 +100,7 @@ async function loadAuditData() {
     });
     if (!response.ok) {
       throw new Error(
-        `Failed to load audit data: ${response.status} ${response.statusText}`
+        `Failed to load audit data: ${response.status} ${response.statusText}`,
       );
     }
     const data = await response.json();
@@ -336,16 +336,30 @@ async function performSearch() {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
+
+    // 1. Check if the server responded with an error status (e.g., 500, 400)
     if (!response.ok) {
+      // Try to parse the error message from the server's response
+      const errorData = await response.json().catch(() => ({})); // Catch if response isn't JSON
       throw new Error(
-        `Search failed: ${response.status} ${response.statusText}`
+        errorData.message || `Server error: ${response.statusText}`,
       );
     }
+
+    // 2. Parse the successful response
     const results = await response.json();
+
+    // 3. CRITICAL: Verify that the results are actually an array
+    if (!Array.isArray(results)) {
+      console.error("Search did not return an array:", results);
+      throw new Error("Server returned an unexpected data format.");
+    }
+
+    // 4. If everything is okay, update the UI
     allAuditLogs = results;
-    totalRecords = results.length;
+    totalRecords = allAuditLogs.length;
     currentPage = 1;
     updateAuditTable(allAuditLogs);
     updatePaginationControls();

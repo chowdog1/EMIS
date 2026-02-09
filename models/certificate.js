@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { establishmentsDB } = require("../db.js");
+const { establishmentsDB } = require("../config/database.js");
 
 const certificateSchema = new mongoose.Schema(
   {
@@ -41,7 +41,7 @@ const certificateSchema = new mongoose.Schema(
   {
     collection: "certificates",
     timestamps: true,
-  }
+  },
 );
 
 let Certificate;
@@ -49,7 +49,7 @@ if (establishmentsDB) {
   Certificate = establishmentsDB.model("Certificate", certificateSchema);
 } else {
   console.error(
-    "❌ Cannot create Certificate model - database connection not available"
+    "❌ Cannot create Certificate model - database connection not available",
   );
 }
 

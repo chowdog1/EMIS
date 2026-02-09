@@ -2,7 +2,7 @@
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = process.env.JWT_SECRET || "8a001b05f4cba9b638169f9836c7ff09";
+const JWT_SECRET = process.env.JWT_SECRET;
 // Debug: Log when the controller is loaded
 console.log("AuthController loaded");
 
@@ -10,24 +10,24 @@ console.log("AuthController loaded");
 const login = async (req, res) => {
   const { email, password } = req.body;
   try {
-    console.log(`🔐 Login attempt for: ${email}`);
+    console.log(`Login attempt for: ${email}`);
     const user = await User.findOne({ email: new RegExp(`^${email}$`, "i") });
     if (!user) {
-      console.log("❌ User not found");
+      console.log("User not found");
       return res.status(401).json({ message: "User not found" });
     }
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      console.log("❌ Incorrect password");
+      console.log("Incorrect password");
       return res.status(401).json({ message: "Incorrect password" });
     }
     if (user.isActive === false) {
-      console.log("❌ Account inactive");
+      console.log("Account inactive");
       return res.status(403).json({ message: "Account is inactive" });
     }
     // Check if account is locked
     if (user.isLocked === true) {
-      console.log("❌ Account locked");
+      console.log("Account locked");
       return res.status(403).json({
         message: "This account is locked. Contact the administrator.",
       });
@@ -38,12 +38,12 @@ const login = async (req, res) => {
       const sessionThreshold = 30 * 60 * 1000; // 30 minutes
       // If session is older than threshold, clear it and allow login
       if (sessionAge > sessionThreshold) {
-        console.log("🔄 Clearing stale session");
+        console.log("Clearing stale session");
         user.currentSessionId = null;
         user.lastLoginAt = null;
         await user.save();
       } else {
-        console.log("❌ User already logged in");
+        console.log("User already logged in");
         return res.status(409).json({
           message:
             "This account is currently being used in another session. Please try again later.",
@@ -55,14 +55,14 @@ const login = async (req, res) => {
     const token = jwt.sign(
       { userId: user._id, email: user.email, role: user.role, sessionId },
       JWT_SECRET,
-      { expiresIn: "24h" }
+      { expiresIn: "24h" },
     );
     // Update user session info
     user.currentSessionId = sessionId;
     user.lastLoginAt = new Date();
     user.isOnline = true;
     await user.save();
-    console.log("✅ Login successful");
+    console.log("Login successful");
     // Return the token and user information
     res.json({
       message: "Login successful",
@@ -78,7 +78,7 @@ const login = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ Login error:", error);
+    console.error("Login error:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -102,7 +102,7 @@ const logout = async (req, res) => {
     }
     res.json({ message: "Logout successful" });
   } catch (error) {
-    console.error("❌ Logout error:", error);
+    console.error("Logout error:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -115,18 +115,18 @@ const checkEmail = async (req, res) => {
     if (!email) {
       return res.status(400).json({ message: "Email is required" });
     }
-    console.log(`🔍 Checking if email exists: ${email}`);
+    console.log(`Checking if email exists: ${email}`);
     // Check if email exists in database (case insensitive)
     const user = await User.findOne({ email: new RegExp(`^${email}$`, "i") });
     if (user) {
-      console.log(`✅ Email exists: ${email}`);
+      console.log(`Email exists: ${email}`);
       return res.json({ exists: true });
     } else {
-      console.log(`❌ Email does not exist: ${email}`);
+      console.log(`Email does not exist: ${email}`);
       return res.json({ exists: false });
     }
   } catch (error) {
-    console.error("❌ Error checking email:", error);
+    console.error("Error checking email:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -155,7 +155,7 @@ const register = async (req, res) => {
     await newUser.save();
     res.status(201).json({ message: "User registered successfully" });
   } catch (error) {
-    console.error("❌ Registration error:", error);
+    console.error("Registration error:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -234,7 +234,7 @@ const updateProfile = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ Error updating profile:", error);
+    console.error("Error updating profile:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -262,7 +262,7 @@ const uploadProfilePicture = async (req, res) => {
       hasProfilePicture: true,
     });
   } catch (error) {
-    console.error("❌ Error uploading profile picture:", error);
+    console.error("Error uploading profile picture:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -278,7 +278,7 @@ const getProfilePicture = async (req, res) => {
     res.set("Content-Type", user.profilePicture.contentType);
     res.send(user.profilePicture.data);
   } catch (error) {
-    console.error("❌ Error getting profile picture:", error);
+    console.error("Error getting profile picture:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -305,7 +305,7 @@ const changePassword = async (req, res) => {
     await user.save();
     res.json({ message: "Password updated successfully" });
   } catch (error) {
-    console.error("❌ Error changing password:", error);
+    console.error("Error changing password:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -406,7 +406,7 @@ const lockUserAccount = async (req, res, io) => {
     await user.save();
 
     console.log(
-      `User ${user.email} account locked by admin ${requestingUser.email}`
+      `User ${user.email} account locked by admin ${requestingUser.email}`,
     );
 
     // Emit socket event to the user's room
@@ -446,7 +446,7 @@ const unlockUserAccount = async (req, res) => {
     await user.save();
 
     console.log(
-      `User ${user.email} account unlocked by admin ${requestingUser.email}`
+      `User ${user.email} account unlocked by admin ${requestingUser.email}`,
     );
     res.json({ message: "User account unlocked successfully" });
   } catch (error) {

@@ -1,6 +1,6 @@
 // models/business2025.js
 const mongoose = require("mongoose");
-const { establishmentsDB } = require("../db.js");
+const { establishmentsDB } = require("../config/database.js");
 
 const businessSchema = new mongoose.Schema(
   {
@@ -18,7 +18,7 @@ const businessSchema = new mongoose.Schema(
     "NATURE OF BUSINESS": String,
     REMARKS: String,
   },
-  { collection: "business2025" }
+  { collection: "business2025" },
 );
 
 let Business2025;
@@ -26,7 +26,7 @@ if (establishmentsDB) {
   Business2025 = establishmentsDB.model("Business2025", businessSchema);
 } else {
   console.error(
-    "❌ Cannot create Business2025 model - database connection not available"
+    "❌ Cannot create Business2025 model - database connection not available",
   );
 }
 

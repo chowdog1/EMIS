@@ -86,7 +86,7 @@ function initializeBusinessTable() {
     currentPage,
     pageSize,
     totalRecords,
-    updateTableWithPagination
+    updateTableWithPagination,
   );
   // Setup refresh button
   setupRefreshButton();
@@ -111,14 +111,14 @@ function updateTableWithPagination(page, size) {
     currentPage,
     pageSize,
     totalRecords,
-    updateTableWithPagination
+    updateTableWithPagination,
   );
   // Re-setup pagination button event listeners to ensure they have the latest state
   setupPaginationButtonListeners(
     currentPage,
     pageSize,
     totalRecords,
-    updateTableWithPagination
+    updateTableWithPagination,
   );
 }
 
@@ -156,7 +156,7 @@ async function loadBusinessData() {
       const errorText = await response.text();
       console.error("Error response:", errorText);
       throw new Error(
-        `Failed to load business data: ${response.status} ${response.statusText}`
+        `Failed to load business data: ${response.status} ${response.statusText}`,
       );
     }
     const businesses = await response.json();
@@ -171,7 +171,7 @@ async function loadBusinessData() {
     const paginatedData = getPaginatedData(
       allBusinesses,
       currentPage,
-      pageSize
+      pageSize,
     );
     updateBusinessTable(paginatedData);
     // Update pagination controls
@@ -179,7 +179,7 @@ async function loadBusinessData() {
       currentPage,
       pageSize,
       totalRecords,
-      updateTableWithPagination
+      updateTableWithPagination,
     );
   } catch (error) {
     console.error("Error loading business data:", error);
@@ -267,7 +267,7 @@ function updateBusinessTable(businesses) {
             fontWeight: "500",
           },
         },
-        text
+        text,
       );
     };
     // Clickable Account Number component
@@ -288,7 +288,7 @@ function updateBusinessTable(businesses) {
             onClick(accountNo);
           },
         },
-        accountNo
+        accountNo,
       );
     };
     // Table component with clickable account numbers
@@ -321,7 +321,7 @@ function updateBusinessTable(businesses) {
                     borderBottom: "1px solid #e9ecef",
                   },
                 },
-                "Account No"
+                "Account No",
               ),
               React.createElement(
                 "th",
@@ -333,7 +333,7 @@ function updateBusinessTable(businesses) {
                     borderBottom: "1px solid #e9ecef",
                   },
                 },
-                "Business Name"
+                "Business Name",
               ),
               React.createElement(
                 "th",
@@ -345,7 +345,7 @@ function updateBusinessTable(businesses) {
                     borderBottom: "1px solid #e9ecef",
                   },
                 },
-                "Owner"
+                "Owner",
               ),
               React.createElement(
                 "th",
@@ -357,7 +357,7 @@ function updateBusinessTable(businesses) {
                     borderBottom: "1px solid #e9ecef",
                   },
                 },
-                "Barangay"
+                "Barangay",
               ),
               React.createElement(
                 "th",
@@ -369,7 +369,7 @@ function updateBusinessTable(businesses) {
                     borderBottom: "1px solid #e9ecef",
                   },
                 },
-                "Nature of Business"
+                "Nature of Business",
               ),
               React.createElement(
                 "th",
@@ -381,7 +381,7 @@ function updateBusinessTable(businesses) {
                     borderBottom: "1px solid #e9ecef",
                   },
                 },
-                "Status"
+                "Status",
               ),
               React.createElement(
                 "th",
@@ -393,9 +393,9 @@ function updateBusinessTable(businesses) {
                     borderBottom: "1px solid #e9ecef",
                   },
                 },
-                "Application Status"
-              )
-            )
+                "Application Status",
+              ),
+            ),
           ),
           React.createElement(
             "tbody",
@@ -433,42 +433,42 @@ function updateBusinessTable(businesses) {
                   React.createElement(ClickableAccountNo, {
                     accountNo: accountNo,
                     onClick: showBusinessDetails,
-                  })
+                  }),
                 ),
                 React.createElement(
                   "td",
                   { style: { padding: "12px 15px" } },
-                  businessName
+                  businessName,
                 ),
                 React.createElement(
                   "td",
                   { style: { padding: "12px 15px" } },
-                  ownerName
+                  ownerName,
                 ),
                 React.createElement(
                   "td",
                   { style: { padding: "12px 15px" } },
-                  barangay
+                  barangay,
                 ),
                 React.createElement(
                   "td",
                   { style: { padding: "12px 15px" } },
-                  natureOfBusiness
+                  natureOfBusiness,
                 ),
                 React.createElement(
                   "td",
                   { style: { padding: "12px 15px" } },
-                  React.createElement(StatusBadge, { status: status })
+                  React.createElement(StatusBadge, { status: status }),
                 ),
                 React.createElement(
                   "td",
                   { style: { padding: "12px 15px" } },
-                  applicationStatus
-                )
+                  applicationStatus,
+                ),
               );
-            })
-          )
-        )
+            }),
+          ),
+        ),
       );
     };
     // Clear the existing content
@@ -575,8 +575,8 @@ function renderSimpleTable(businesses) {
       status === "HIGHRISK"
         ? "High Risk"
         : status === "LOWRISK"
-        ? "Low Risk"
-        : status;
+          ? "Low Risk"
+          : status;
     statusBadge.style.display = "inline-block";
     statusBadge.style.padding = "0.25rem 0.5rem";
     statusBadge.style.borderRadius = "0.25rem";
@@ -611,7 +611,7 @@ function renderSimpleTable(businesses) {
 async function showBusinessDetails(accountNo) {
   try {
     console.log(
-      `Fetching details for account number: ${accountNo} from ${currentYear}`
+      `Fetching details for account number: ${accountNo} from ${currentYear}`,
     );
     const token = getAuthToken();
     const response = await fetch(
@@ -620,7 +620,7 @@ async function showBusinessDetails(accountNo) {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
     if (!response.ok) {
       if (response.status === 401) {
@@ -691,7 +691,7 @@ function setupModalEventListeners() {
   // Get business details modal elements
   const detailsModal = document.getElementById("businessDetailsModal");
   const detailsCloseBtns = detailsModal.querySelectorAll(
-    ".modal-close, .modal-close-btn"
+    ".modal-close, .modal-close-btn",
   );
   // Add click event to close buttons for details modal
   detailsCloseBtns.forEach((btn) => {
@@ -702,7 +702,7 @@ function setupModalEventListeners() {
   // Get business edit modal elements
   const editModal = document.getElementById("businessEditModal");
   const editCloseBtns = editModal.querySelectorAll(
-    ".modal-close, .modal-close-btn"
+    ".modal-close, .modal-close-btn",
   );
   // Add click event to close buttons for edit modal
   editCloseBtns.forEach((btn) => {
@@ -713,7 +713,7 @@ function setupModalEventListeners() {
   // Get business add modal elements
   const addModal = document.getElementById("businessAddModal");
   const addCloseBtns = addModal.querySelectorAll(
-    ".modal-close, .modal-close-btn"
+    ".modal-close, .modal-close-btn",
   );
   // Add click event to close buttons for add modal
   addCloseBtns.forEach((btn) => {
@@ -738,7 +738,7 @@ function setupModalEventListeners() {
   }
   // Add click event to Add Business button in the modal
   const modalAddBusinessBtn = document.querySelector(
-    "#businessAddModal #addBusinessBtn"
+    "#businessAddModal #addBusinessBtn",
   );
   if (modalAddBusinessBtn) {
     modalAddBusinessBtn.addEventListener("click", addNewBusiness);
@@ -996,7 +996,7 @@ async function handleDelete() {
   const accountNo = document.getElementById("modalAccountNo").textContent;
   // Show browser warning popup
   const isConfirmed = window.confirm(
-    "Are you sure you want to delete this data? This cannot be undone. Proceed with caution."
+    "Are you sure you want to delete this data? This cannot be undone. Proceed with caution.",
   );
   // If user clicked Cancel, return without deleting
   if (!isConfirmed) {
@@ -1017,7 +1017,7 @@ async function handleDelete() {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
     // Restore button state
     deleteBtn.innerHTML = originalText;
@@ -1079,115 +1079,88 @@ async function addNewBusiness() {
       dateOfPayment: document.getElementById("addDateOfPayment").value || null,
       remarks: document.getElementById("addRemarks").value.trim(),
     };
-    // Validate required fields
+
+    // Check for unfilled fields (except remarks)
     const requiredFields = [
-      { id: "addAccountNo", name: "Account No" },
-      { id: "addBusinessName", name: "Business Name" },
-      { id: "addOwnerName", name: "Owner Name" },
-      { id: "addAddress", name: "Address" },
-      { id: "addBarangay", name: "Barangay" },
-      { id: "addNatureOfBusiness", name: "Nature of Business" },
-      { id: "addStatus", name: "Status" },
-      { id: "addApplicationStatus", name: "Application Status" },
-      { id: "addDateOfApplication", name: "Date of Application" },
+      { id: "addAccountNo", name: "Account No", value: businessData.accountNo },
+      {
+        id: "addBusinessName",
+        name: "Business Name",
+        value: businessData.businessName,
+      },
+      { id: "addOwnerName", name: "Owner Name", value: businessData.ownerName },
+      { id: "addAddress", name: "Address", value: businessData.address },
+      { id: "addBarangay", name: "Barangay", value: businessData.barangay },
+      {
+        id: "addNatureOfBusiness",
+        name: "Nature of Business",
+        value: businessData.natureOfBusiness,
+      },
+      { id: "addStatus", name: "Status", value: businessData.status },
+      {
+        id: "addApplicationStatus",
+        name: "Application Status",
+        value: businessData.applicationStatus,
+      },
+      {
+        id: "addDateOfApplication",
+        name: "Date of Application",
+        value: businessData.dateOfApplication,
+      },
     ];
-    // Check if all required fields are filled
-    for (const field of requiredFields) {
-      const element = document.getElementById(field.id);
-      const value = element.value.trim();
-      if (!value) {
-        element.classList.add("is-invalid");
-        // Add error message if it doesn't exist
-        let errorElement = element.nextElementSibling;
-        if (
-          !errorElement ||
-          !errorElement.classList.contains("invalid-feedback")
-        ) {
-          errorElement = document.createElement("div");
-          errorElement.className = "invalid-feedback";
-          errorElement.textContent = `${field.name} is required`;
-          element.parentNode.insertBefore(errorElement, element.nextSibling);
-        }
-        // Focus on the first invalid field
-        element.focus();
-        return;
-      } else {
-        element.classList.remove("is-invalid");
-        // Remove error message if it exists
-        const errorElement = element.nextElementSibling;
-        if (
-          errorElement &&
-          errorElement.classList.contains("invalid-feedback")
-        ) {
-          errorElement.remove();
-        }
-      }
+
+    // Find all unfilled fields
+    const unfilledFields = requiredFields.filter((field) => !field.value);
+
+    // If there are unfilled fields, show warning and prevent submission
+    if (unfilledFields.length > 0) {
+      const fieldNames = unfilledFields.map((field) => field.name).join(", ");
+      window.alert(
+        `Please fill in the following required fields:\n\n${fieldNames}`,
+      );
+      return;
     }
+
     // Validate amount paid is a positive number if provided
     const amountPaid = document.getElementById("addAmountPaid").value;
     if (amountPaid && (isNaN(amountPaid) || parseFloat(amountPaid) < 0)) {
-      const amountField = document.getElementById("addAmountPaid");
-      amountField.classList.add("is-invalid");
-      let errorElement = amountField.nextElementSibling;
-      if (
-        !errorElement ||
-        !errorElement.classList.contains("invalid-feedback")
-      ) {
-        errorElement = document.createElement("div");
-        errorElement.className = "invalid-feedback";
-        errorElement.textContent = "Amount Paid must be a positive number";
-        amountField.parentNode.insertBefore(
-          errorElement,
-          amountField.nextSibling
-        );
-      }
-      amountField.focus();
+      window.alert("Amount Paid must be a positive number");
+      document.getElementById("addAmountPaid").focus();
       return;
     }
+
     // Check if account number already exists
     console.log(
       "Checking if account number already exists:",
-      businessData.accountNo
+      businessData.accountNo,
     );
     const token = getAuthToken();
     const accountCheckResponse = await fetch(
       `/api/business${currentYear}/account/${encodeURIComponent(
-        businessData.accountNo
+        businessData.accountNo,
       )}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
     if (accountCheckResponse.ok) {
       // Account number already exists
-      const accountField = document.getElementById("addAccountNo");
-      accountField.classList.add("is-invalid");
-      let errorElement = accountField.nextElementSibling;
-      if (
-        !errorElement ||
-        !errorElement.classList.contains("invalid-feedback")
-      ) {
-        errorElement = document.createElement("div");
-        errorElement.className = "invalid-feedback";
-        errorElement.textContent = "Account number already exists";
-        accountField.parentNode.insertBefore(
-          errorElement,
-          accountField.nextSibling
-        );
-      }
-      accountField.focus();
+      window.alert("Account number already exists");
+      document.getElementById("addAccountNo").focus();
       return;
     }
+
     // Show browser warning popup
     const isConfirmed = window.confirm(
-      "Are you sure the data that are filled is correct?"
+      "Are you sure the data that are filled is correct?",
     );
     // If user clicked Cancel, return without adding
     if (!isConfirmed) {
       return;
     }
+
     // Show loading state
     const addBtn = document.getElementById("addBusinessBtn");
     const originalText = addBtn.innerHTML;
@@ -1207,9 +1180,11 @@ async function addNewBusiness() {
       },
       body: JSON.stringify(businessData),
     });
+
     // Restore button state
     addBtn.innerHTML = originalText;
     addBtn.disabled = false;
+
     if (!response.ok) {
       if (response.status === 401) {
         handleUnauthorizedError();
@@ -1218,6 +1193,7 @@ async function addNewBusiness() {
       const errorData = await response.json();
       throw new Error(errorData.message || "Failed to add business");
     }
+
     // Close the add modal
     document.getElementById("businessAddModal").style.display = "none";
 
@@ -1243,14 +1219,14 @@ function handleModify() {
   const address = document.getElementById("modalAddress").textContent;
   const barangay = document.getElementById("modalBarangay").textContent;
   const natureOfBusiness = document.getElementById(
-    "modalNatureOfBusiness"
+    "modalNatureOfBusiness",
   ).textContent;
   const status = document.getElementById("modalStatus").textContent;
   const applicationStatus = document.getElementById(
-    "modalApplicationStatus"
+    "modalApplicationStatus",
   ).textContent;
   const dateOfApplication = document.getElementById(
-    "modalDateOfApplication"
+    "modalDateOfApplication",
   ).textContent;
   const orNo = document.getElementById("modalOrNo").textContent;
   const amountPaid = document.getElementById("modalAmountPaid").textContent;
@@ -1323,34 +1299,126 @@ function handleModify() {
 
 // Function to save business changes
 async function saveBusinessChanges() {
-  // Show browser warning popup
-  const isConfirmed = window.confirm(
-    "Are you sure the modified details is correct?"
-  );
-  // If user clicked Cancel, stop here
-  if (!isConfirmed) {
-    return;
-  }
   try {
     // Get form data
     const accountNo = document.getElementById("editAccountNo").value;
     const businessData = {
-      businessName: document.getElementById("editBusinessName").value,
-      ownerName: document.getElementById("editOwnerName").value,
-      address: document.getElementById("editAddress").value,
-      barangay: document.getElementById("editBarangay").value,
-      natureOfBusiness: document.getElementById("editNatureOfBusiness").value,
+      businessName: document.getElementById("editBusinessName").value.trim(),
+      ownerName: document.getElementById("editOwnerName").value.trim(),
+      address: document.getElementById("editAddress").value.trim(),
+      barangay: document.getElementById("editBarangay").value.trim(),
+      natureOfBusiness: document
+        .getElementById("editNatureOfBusiness")
+        .value.trim(),
       status: document.getElementById("editStatus").value,
       applicationStatus: document.getElementById("editApplicationStatus").value,
       dateOfApplication: document.getElementById("editDateOfApplication").value,
-      orNo: document.getElementById("editOrNo").value,
+      orNo: document.getElementById("editOrNo").value.trim(),
       amountPaid:
         parseFloat(document.getElementById("editAmountPaid").value) || 0,
       dateOfPayment: document.getElementById("editDateOfPayment").value,
-      remarks: document.getElementById("editRemarks").value,
+      remarks: document.getElementById("editRemarks").value.trim(),
     };
+
+    // Check for unfilled fields (except remarks)
+    const requiredFields = [
+      {
+        id: "editBusinessName",
+        name: "Business Name",
+        value: businessData.businessName,
+      },
+      {
+        id: "editOwnerName",
+        name: "Owner Name",
+        value: businessData.ownerName,
+      },
+      { id: "editAddress", name: "Address", value: businessData.address },
+      { id: "editBarangay", name: "Barangay", value: businessData.barangay },
+      {
+        id: "editNatureOfBusiness",
+        name: "Nature of Business",
+        value: businessData.natureOfBusiness,
+      },
+      { id: "editStatus", name: "Status", value: businessData.status },
+      {
+        id: "editApplicationStatus",
+        name: "Application Status",
+        value: businessData.applicationStatus,
+      },
+      {
+        id: "editDateOfApplication",
+        name: "Date of Application",
+        value: businessData.dateOfApplication,
+      },
+      {
+        id: "editOrNo",
+        name: "OR No",
+        value: businessData.orNo,
+      },
+      {
+        id: "editAmountPaid",
+        name: "Amount Paid",
+        value: document.getElementById("editAmountPaid").value,
+      },
+      {
+        id: "editDateOfPayment",
+        name: "Date of Payment",
+        value: businessData.dateOfPayment,
+      },
+    ];
+
+    // Find all unfilled fields
+    const unfilledFields = requiredFields.filter((field) => {
+      // For OR No, check if it's blank or "N/A"
+      if (field.id === "editOrNo") {
+        return !field.value || field.value === "N/A";
+      }
+      // For Amount Paid, check if it's blank or "N/A"
+      if (field.id === "editAmountPaid") {
+        return !field.value || field.value === "N/A";
+      }
+      // For other fields, check if blank
+      return !field.value;
+    });
+
+    // If there are unfilled fields, show warning and prevent submission
+    if (unfilledFields.length > 0) {
+      const fieldNames = unfilledFields.map((field) => field.name).join(", ");
+      window.alert(
+        `Please fill in the following required fields:\n\n${fieldNames}`,
+      );
+      return;
+    }
+
+    // Validate amount paid is a positive number if provided
+    if (
+      businessData.amountPaid &&
+      (isNaN(businessData.amountPaid) ||
+        parseFloat(businessData.amountPaid) < 0)
+    ) {
+      window.alert("Amount Paid must be a positive number");
+      document.getElementById("editAmountPaid").focus();
+      return;
+    }
+
+    // Show browser warning popup
+    const isConfirmed = window.confirm(
+      "Are you sure the modified details is correct?",
+    );
+    // If user clicked Cancel, stop here
+    if (!isConfirmed) {
+      return;
+    }
+
     // Get authentication token
     const token = getAuthToken();
+
+    // Show loading state
+    const saveBtn = document.getElementById("saveBusinessBtn");
+    const originalText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    saveBtn.disabled = true;
+
     // Send update request to server
     const response = await fetch(
       `/api/business${currentYear}/account/${encodeURIComponent(accountNo)}`,
@@ -1361,8 +1429,13 @@ async function saveBusinessChanges() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(businessData),
-      }
+      },
     );
+
+    // Restore button state
+    saveBtn.innerHTML = originalText;
+    saveBtn.disabled = false;
+
     if (!response.ok) {
       if (response.status === 401) {
         handleUnauthorizedError();
@@ -1370,6 +1443,7 @@ async function saveBusinessChanges() {
       }
       throw new Error("Failed to update business details");
     }
+
     // Close the edit modal
     document.getElementById("businessEditModal").style.display = "none";
 
@@ -1381,7 +1455,7 @@ async function saveBusinessChanges() {
 
     // Ask if user wants to print AEC
     const printAecConfirmed = window.confirm(
-      "You want now to print AEC or not for now?"
+      "You want now to print AEC or not for now?",
     );
 
     // If user confirms, proceed to print AEC
@@ -1507,26 +1581,55 @@ async function performSearch() {
     return;
   }
   try {
-    console.log(`Searching for account number: ${query} in ${currentYear}`);
+    console.log(`Searching for "${query}" in ${currentYear}`);
     const token = getAuthToken();
-    const response = await fetch(
+
+    // First, try to search by account number
+    const accountResponse = await fetch(
       `/api/business${currentYear}/search?query=${encodeURIComponent(
-        query
+        query,
       )}&field=accountNo`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
-    if (!response.ok) {
-      if (response.status === 401) {
-        handleUnauthorizedError();
-        return;
-      }
-      throw new Error("Search failed");
+
+    let businesses = [];
+
+    if (accountResponse.ok) {
+      const accountResults = await accountResponse.json();
+      businesses = businesses.concat(accountResults);
     }
-    const businesses = await response.json();
+
+    // Search by business name
+    const nameResponse = await fetch(
+      `/api/business${currentYear}/search?query=${encodeURIComponent(
+        query,
+      )}&field=businessName`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (nameResponse.ok) {
+      const nameResults = await nameResponse.json();
+      // Combine results, avoiding duplicates
+      nameResults.forEach((nameResult) => {
+        const isDuplicate = businesses.some(
+          (business) =>
+            (business.accountNo || business["ACCOUNT NO"]) ===
+            (nameResult.accountNo || nameResult["ACCOUNT NO"]),
+        );
+        if (!isDuplicate) {
+          businesses.push(nameResult);
+        }
+      });
+    }
+
     console.log("Search results:", businesses);
     // Store search results for pagination
     allBusinesses = businesses;
@@ -1536,7 +1639,7 @@ async function performSearch() {
     const paginatedData = getPaginatedData(
       allBusinesses,
       currentPage,
-      pageSize
+      pageSize,
     );
     updateBusinessTable(paginatedData);
     // Update pagination controls
@@ -1544,7 +1647,7 @@ async function performSearch() {
       currentPage,
       pageSize,
       totalRecords,
-      updateTableWithPagination
+      updateTableWithPagination,
     );
   } catch (error) {
     console.error("Error searching businesses:", error);

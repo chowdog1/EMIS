@@ -19,7 +19,7 @@ module.exports = function (establishmentsDB) {
     return establishmentsDB.model(
       `business${year}`,
       businessSchema,
-      `business${year}`
+      `business${year}`,
     );
   }
 
@@ -29,7 +29,22 @@ module.exports = function (establishmentsDB) {
       return "";
     }
     // Get headers from the first object
-    const headers = Object.keys(data[0]);
+    const headers = [
+      "accountNo",
+      "dateOfApplication",
+      "orNo",
+      "amountPaid",
+      "dateOfPayment",
+      "status",
+      "applicationStatus",
+      "businessName",
+      "ownerName",
+      "address",
+      "barangay",
+      "natureOfBusiness",
+      "remarks",
+    ];
+
     // Create CSV header row
     const csvHeader = headers.join(",");
     // Create CSV data rows
@@ -130,7 +145,7 @@ module.exports = function (establishmentsDB) {
       res.setHeader("Content-Type", "text/csv");
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename="environmental_clearance_report_${year}.csv"`
+        `attachment; filename="environmental_clearance_report_${year}.csv"`,
       );
 
       // Send the CSV
@@ -146,7 +161,7 @@ module.exports = function (establishmentsDB) {
     try {
       const { year } = req.params;
       console.log(
-        `Generating CSV report for businesses without payments in year: ${year}`
+        `Generating CSV report for businesses without payments in year: ${year}`,
       );
 
       // Get the appropriate business model based on the year
@@ -169,7 +184,7 @@ module.exports = function (establishmentsDB) {
       });
 
       console.log(
-        `Found ${businesses.length} businesses without payments in ${year}`
+        `Found ${businesses.length} businesses without payments in ${year}`,
       );
 
       // Normalize the property names
@@ -198,7 +213,7 @@ module.exports = function (establishmentsDB) {
       res.setHeader("Content-Type", "text/csv");
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename="environmental_clearance_no_payments_report_${year}.csv"`
+        `attachment; filename="environmental_clearance_no_payments_report_${year}.csv"`,
       );
 
       // Send the CSV

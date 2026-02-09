@@ -1,6 +1,6 @@
 // models/seminar2028.js
 const mongoose = require("mongoose");
-const { establishmentsDB } = require("../db.js");
+const { establishmentsDB } = require("../config/database.js");
 
 const seminarSchema = new mongoose.Schema(
   {
@@ -9,7 +9,7 @@ const seminarSchema = new mongoose.Schema(
     address: String,
     status: { type: String, default: "uploaded" }, // uploaded, invitation sent
   },
-  { collection: "seminar2028" }
+  { collection: "seminar2028" },
 );
 
 let Seminar2028;
@@ -17,7 +17,7 @@ if (establishmentsDB) {
   Seminar2028 = establishmentsDB.model("Seminar2028", seminarSchema);
 } else {
   console.error(
-    "❌ Cannot create Seminar2028 model - database connection not available"
+    "❌ Cannot create Seminar2028 model - database connection not available",
   );
 }
 
