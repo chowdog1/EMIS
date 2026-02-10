@@ -33,15 +33,20 @@ const createEmailTransporter = () => {
 // Cleanup function to remove old certificates data
 async function cleanupOldCertificates() {
   try {
-    const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
     const result = await Certificate.deleteMany({
-      generatedAt: { $lt: oneYearAgo },
+      createdAt: { $lt: oneWeekAgo },
     });
+
     console.log(
-      `Deleted ${result.deletedCount} certificates that reached 1-year retention period`
+      `Cleaned up ${result.deletedCount} certificates older than 1 week`,
     );
+    return result.deletedCount;
   } catch (error) {
-    console.error("Error cleaning up certificates:", error);
+    console.error("Error cleaning up old certificates:", error);
+    return 0;
   }
 }
 
@@ -134,7 +139,7 @@ router.post("/upload", verifyToken, upload.single("csvFile"), (req, res) => {
     .pipe(csv())
     .on("headers", (headers) => {
       const normalizedHeaders = headers.map((header) =>
-        header.toLowerCase().replace(/[^a-z0-9]/g, "")
+        header.toLowerCase().replace(/[^a-z0-9]/g, ""),
       );
 
       for (const [field, possibleNames] of Object.entries(fieldPossibleNames)) {
@@ -258,7 +263,7 @@ router.post("/upload", verifyToken, upload.single("csvFile"), (req, res) => {
       } else {
         console.log(
           "Skipping row with missing email, business name, or date:",
-          data
+          data,
         );
       }
     })
@@ -267,7 +272,7 @@ router.post("/upload", verifyToken, upload.single("csvFile"), (req, res) => {
         console.log(
           "Finished processing CSV. Found",
           results.length,
-          "valid records"
+          "valid records",
         );
 
         if (results.length === 0) {
@@ -280,7 +285,7 @@ router.post("/upload", verifyToken, upload.single("csvFile"), (req, res) => {
         const savedCertificates = await Certificate.insertMany(results);
         console.log(
           "Saved certificates to database:",
-          savedCertificates.length
+          savedCertificates.length,
         );
 
         fs.unlinkSync(req.file.path);
@@ -495,7 +500,7 @@ router.post("/preview", verifyToken, async (req, res) => {
     ) {
       const fileName = `Certificate_${certificate.businessName.replace(
         /\s+/g,
-        "_"
+        "_",
       )}.pdf`;
       return res.status(200).json({
         message: "Existing certificate preview retrieved successfully",
@@ -536,7 +541,7 @@ async function fillCertificateTemplate(certificateData) {
     const templatePath = path.join(__dirname, "../certificate_template.pdf");
     if (!fs.existsSync(templatePath)) {
       throw new Error(
-        "Certificate template not found. Please ensure 'certificate_template.pdf' is in the root directory."
+        "Certificate template not found. Please ensure 'certificate_template.pdf' is in the root directory.",
       );
     }
 
@@ -550,7 +555,7 @@ async function fillCertificateTemplate(certificateData) {
     const fontPath = path.join(__dirname, "../fonts/Rubik-Bold.ttf");
     if (!fs.existsSync(fontPath)) {
       throw new Error(
-        "Rubik Bold font not found. Please ensure 'Rubik-Bold.ttf' is in the fonts directory."
+        "Rubik Bold font not found. Please ensure 'Rubik-Bold.ttf' is in the fonts directory.",
       );
     }
 
@@ -564,7 +569,7 @@ async function fillCertificateTemplate(certificateData) {
     console.log("=== ALL FIELDS IN TEMPLATE ===");
     fields.forEach((field) => {
       console.log(
-        `Field: "${field.getName()}", Type: ${field.constructor.name}`
+        `Field: "${field.getName()}", Type: ${field.constructor.name}`,
       );
     });
     console.log("=== END FIELDS ===");
@@ -606,7 +611,7 @@ async function fillCertificateTemplate(certificateData) {
           field.updateAppearances(rubikBoldFont);
           fieldsFilled++;
           console.log(
-            `✓ Filled field '${fieldName}' with value: ${value} using Rubik Bold font`
+            `✓ Filled field '${fieldName}' with value: ${value} using Rubik Bold font`,
           );
         } else {
           console.warn(`✗ Field '${fieldName}' not found in template`);
@@ -673,14 +678,14 @@ async function fillCertificateTemplate(certificateData) {
           };
           widget.setRectangle(adjustedRect);
           console.log(
-            `Address field moved upward by ${upwardAdjustment} points to accommodate ${lines.length} lines`
+            `Address field moved upward by ${upwardAdjustment} points to accommodate ${lines.length} lines`,
           );
         }
 
         addressField.updateAppearances(rubikBoldFont);
         fieldsFilled++;
         console.log(
-          `✓ Filled address field with word boundary breaks and upward adjustment`
+          `✓ Filled address field with word boundary breaks and upward adjustment`,
         );
       } else {
         console.warn("✗ Address field not found in template");
@@ -695,7 +700,7 @@ async function fillCertificateTemplate(certificateData) {
         console.log("Embedding base64 signature...");
         const signatureImageBytes = Buffer.from(
           certificateData.signatureBase64,
-          "base64"
+          "base64",
         );
         const signatureImage = await pdfDoc.embedPng(signatureImageBytes);
 
@@ -748,7 +753,7 @@ async function fillCertificateTemplate(certificateData) {
               if (field) {
                 field.remove();
                 console.log(
-                  `✓ Removed existing signature field: "${fieldName}"`
+                  `✓ Removed existing signature field: "${fieldName}"`,
                 );
               }
             } catch (e) {
@@ -760,7 +765,7 @@ async function fillCertificateTemplate(certificateData) {
               if (field) {
                 field.remove();
                 console.log(
-                  `✓ Removed existing signature button field: "${fieldName}"`
+                  `✓ Removed existing signature button field: "${fieldName}"`,
                 );
               }
             } catch (e) {
@@ -772,7 +777,7 @@ async function fillCertificateTemplate(certificateData) {
               if (field) {
                 field.remove();
                 console.log(
-                  `✓ Removed existing signature field: "${fieldName}"`
+                  `✓ Removed existing signature field: "${fieldName}"`,
                 );
               }
             } catch (e) {
@@ -791,11 +796,11 @@ async function fillCertificateTemplate(certificateData) {
 
     if (fieldsFilled === 0) {
       console.warn(
-        "✗ No form fields were filled. Please check your PDF template field names."
+        "✗ No form fields were filled. Please check your PDF template field names.",
       );
       console.log(
         "Available fields:",
-        fields.map((field) => field.getName())
+        fields.map((field) => field.getName()),
       );
     }
 
@@ -808,7 +813,7 @@ async function fillCertificateTemplate(certificateData) {
     const pdfBase64 = Buffer.from(pdfBytes).toString("base64");
     const fileName = `Certificate_of_Participation_${certificateData.businessName.replace(
       /\s+/g,
-      "_"
+      "_",
     )}.pdf`;
 
     console.log(`✓ Certificate generated as base64: ${fileName}`);
@@ -921,7 +926,7 @@ router.post("/send", verifyToken, async (req, res) => {
     // Check if ordinance file exists
     const ordinancePath = path.join(
       __dirname,
-      "../City Ordinance No. 57 Series of 2024.pdf"
+      "../City Ordinance No. 57 Series of 2024.pdf",
     );
     console.log("Checking ordinance at:", ordinancePath);
 
@@ -943,7 +948,7 @@ router.post("/send", verifyToken, async (req, res) => {
         {
           filename: `Certificate_${certificate.businessName.replace(
             /\s+/g,
-            "_"
+            "_",
           )}.pdf`,
           content: Buffer.from(certificate.pdfBase64, "base64"),
         },
@@ -955,7 +960,7 @@ router.post("/send", verifyToken, async (req, res) => {
     };
 
     console.log(
-      `Sending certificate to ${certificate.email} (${certificate.businessName})`
+      `Sending certificate to ${certificate.email} (${certificate.businessName})`,
     );
 
     await transporter.sendMail(mailOptions);
@@ -997,7 +1002,7 @@ router.post("/resend", verifyToken, async (req, res) => {
       certificate.generatedAt < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
     ) {
       console.log(
-        "Certificate PDF not found or expired, generating new one..."
+        "Certificate PDF not found or expired, generating new one...",
       );
       const pdfInfo = await fillCertificateTemplate(certificate);
       certificate.pdfBase64 = pdfInfo.pdfBase64;
@@ -1061,7 +1066,7 @@ router.post("/resend", verifyToken, async (req, res) => {
     // Check if ordinance file exists
     const ordinancePath = path.join(
       __dirname,
-      "../City Ordinance No. 57 Series of 2024.pdf"
+      "../City Ordinance No. 57 Series of 2024.pdf",
     );
     console.log("Checking ordinance at:", ordinancePath);
 
@@ -1083,7 +1088,7 @@ router.post("/resend", verifyToken, async (req, res) => {
         {
           filename: `Certificate_${certificate.businessName.replace(
             /\s+/g,
-            "_"
+            "_",
           )}.pdf`,
           content: Buffer.from(certificate.pdfBase64, "base64"),
         },
@@ -1095,7 +1100,7 @@ router.post("/resend", verifyToken, async (req, res) => {
     };
 
     console.log(
-      `Resending certificate to ${certificate.email} (${certificate.businessName})`
+      `Resending certificate to ${certificate.email} (${certificate.businessName})`,
     );
 
     await transporter.sendMail(mailOptions);
