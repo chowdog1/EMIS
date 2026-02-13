@@ -36,14 +36,26 @@ async function cleanupOldCertificates() {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-    const result = await Certificate.deleteMany({
-      createdAt: { $lt: oneWeekAgo },
-    });
+    const result = await Certificate.updateMany(
+      {
+        createdAt: { $lt: oneWeekAgo },
+        $or: [
+          { pdfBase64: { $exists: true, $ne: "" } },
+          { signatureBase64: { $exists: true, $ne: "" } },
+        ],
+      },
+      {
+        $unset: {
+          pdfBase64: "", // Remove the encoded PDF
+          signatureBase64: "", // Remove the encoded signature
+        },
+      },
+    );
 
     console.log(
-      `Cleaned up ${result.deletedCount} certificates older than 1 week`,
+      `Cleared encoded files from ${result.modifiedCount} certificates older than 1 week`,
     );
-    return result.deletedCount;
+    return result.modifiedCount;
   } catch (error) {
     console.error("Error cleaning up old certificates:", error);
     return 0;
