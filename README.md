@@ -16,18 +16,41 @@ This project was developed to:
 - Assist the office in seminar coordination and documentation
 - Improve accountability through audit trails
 - Support internal communication via an internal chat tool
+- Implement role-based access for system control and security
 
 ---
 
 ## Features
-- Automated generation of Assessment Certificates
-- Business Establishment Database Management (Add / Update / Delete)
-- Audit Trail for business record modifications
+
+### Role-Based Access Control
+The system uses **role-based users** with two main roles:
+
+#### **Admin**
+- Add employee accounts
+- Suspend or reactivate employee accounts
+- Approve Certificates of Participation
+- Digitally sign Certificates of Participation
+
+#### **Regular Staff**
+- Manage assigned business establishment records
+- Generate assessment certificates
+- Send seminar invitations
+- Send certificates of participation (after admin approval)
+- Use internal chat system
+
+---
+
+### System Features
+- Automated generation of Assessment Certificates  
+- Business Establishment Database Management (Add / Update / Delete)  
+- Audit Trail for business record modifications  
 - Email sending for:
   - Seminar Invitations
-  - Certificates of Participation
-- Internal Chat Tool for office use
-- User access and internal system controls
+  - Certificates of Participation  
+- Internal Chat Tool for office use  
+- User authentication and role-based access control  
+- **Single active session enforcement** (accounts cannot be logged in on multiple devices simultaneously)  
+- **24-hour authentication token validity** for enhanced security and controlled access 
 
 ---
 
@@ -81,8 +104,8 @@ EMAIL_USER=your_gmail_address
 EMAIL_PASS=your_google_app_password
 ```
 
-Note:  
-Email features use Gmail’s free service via Google App Password, which has limitations.
+**Note:**  
+Email features use Gmail’s free service via **Google App Password**, which has limitations.
 
 ---
 
@@ -99,11 +122,12 @@ Despite this, the system is functional and continuously evolving based on actual
 
 ## Planned Improvements / Roadmap
 - UI/UX improvements
-- Role-based access control
+- Enhanced role permissions and access policies
 - Better error handling and logging
 - Deployment to a proper hosting environment
 - Code refactoring and optimization
 - Improved email handling (non-Gmail API)
+- System backup and recovery features
 
 ---
 
@@ -111,6 +135,7 @@ Despite this, the system is functional and continuously evolving based on actual
 - No paid hosting yet
 - Email service limited by free Gmail API
 - Limited development time due to work responsibilities
+- No dedicated DevOps or QA support
 
 ---
 
@@ -123,7 +148,7 @@ Suggestions and constructive feedback are welcome.
 ## Author
 **Edzel Van Idos**  
 City Environment and Natural Resources Office  
-San Juan City Government  
+City Government of San Juan  
 
 This project is a personal initiative to help improve internal processes and workflow efficiency.
 
