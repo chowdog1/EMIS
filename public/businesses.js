@@ -68,6 +68,8 @@ window.addEventListener("load", function () {
   // Start updating the datetime
   updateDateTime();
   setInterval(updateDateTime, 1000);
+  // Pressing esc key to close modal
+  setupEscapeKeyToCloseModals();
 });
 
 // Initialize account lock notifier
@@ -120,6 +122,26 @@ function updateTableWithPagination(page, size) {
     totalRecords,
     updateTableWithPagination,
   );
+}
+
+function setupEscapeKeyToCloseModals() {
+  // Add a keydown event listener to the entire document
+  document.addEventListener("keydown", function (event) {
+    // Check if the pressed key is 'Escape'
+    if (event.key === "Escape") {
+      // Find all elements that have the class 'modal'
+      const modals = document.querySelectorAll(".modal");
+
+      for (const modal of modals) {
+        if (window.getComputedStyle(modal).display === "block") {
+          // Close the modal by setting its display to 'none'
+          modal.style.display = "none";
+          // Stop searching after finding and closing the first open modal
+          break;
+        }
+      }
+    }
+  });
 }
 
 // Function to load business data
