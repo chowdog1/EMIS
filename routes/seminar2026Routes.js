@@ -80,7 +80,7 @@ router.post("/upload", verifyToken, upload.single("csvFile"), (req, res) => {
     .on("headers", (headers) => {
       // Normalize headers (lowercase, remove special characters)
       const normalizedHeaders = headers.map((header) =>
-        header.toLowerCase().replace(/[^a-z0-9]/g, "")
+        header.toLowerCase().replace(/[^a-z0-9]/g, ""),
       );
 
       // Create mapping from our field names to actual CSV headers
@@ -190,7 +190,7 @@ router.post("/upload", verifyToken, upload.single("csvFile"), (req, res) => {
         console.log(
           "Finished processing CSV. Found",
           results.length,
-          "valid records"
+          "valid records",
         );
         console.log("Results array:", results);
 
@@ -281,11 +281,11 @@ router.post("/send-invitations", verifyToken, async (req, res) => {
         let personalizedBody = body;
         personalizedBody = personalizedBody.replace(
           /{{businessName}}/g,
-          seminar.businessName
+          seminar.businessName,
         );
         personalizedBody = personalizedBody.replace(
           /{{address}}/g,
-          seminar.address
+          seminar.address,
         );
 
         const mailOptions = {
@@ -296,7 +296,7 @@ router.post("/send-invitations", verifyToken, async (req, res) => {
         };
 
         console.log(
-          `Sending email to ${seminar.email} (${seminar.businessName})`
+          `Sending email to ${seminar.email} (${seminar.businessName})`,
         );
 
         await transporter.sendMail(mailOptions);
@@ -324,7 +324,7 @@ router.post("/send-invitations", verifyToken, async (req, res) => {
       errorCount > 0 ? `Failed to send to ${errorCount} businesses` : "";
 
     console.log(
-      `Email sending completed. Success: ${successCount}, Errors: ${errorCount}`
+      `Email sending completed. Success: ${successCount}, Errors: ${errorCount}`,
     );
 
     res.status(200).json({
@@ -391,11 +391,11 @@ router.post("/resend-invitation", verifyToken, async (req, res) => {
     let personalizedBody = body;
     personalizedBody = personalizedBody.replace(
       /{{businessName}}/g,
-      seminar.businessName
+      seminar.businessName,
     );
     personalizedBody = personalizedBody.replace(
       /{{address}}/g,
-      seminar.address
+      seminar.address,
     );
 
     const mailOptions = {
@@ -406,7 +406,7 @@ router.post("/resend-invitation", verifyToken, async (req, res) => {
     };
 
     console.log(
-      `Resending email to ${seminar.email} (${seminar.businessName})`
+      `Resending email to ${seminar.email} (${seminar.businessName})`,
     );
 
     await transporter.sendMail(mailOptions);
