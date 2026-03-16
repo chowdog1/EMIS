@@ -1,0 +1,2696 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Inspections | CENRO San Juan City EMIS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="dashboard.css" />
+    <link
+      rel="icon"
+      type="image/png"
+      href="https://8upload.com/image/68be3f83c9e7e/freepik_br_bb4e2098-1dee-4111-8179-ddc41996d8da.png"
+    />
+    <style>
+      /* ── Inspection ID badge ── */
+      .insp-id-badge {
+        font-family: monospace;
+        font-size: 0.82rem;
+        font-weight: 700;
+        background: var(--primary-green);
+        color: #fff;
+        padding: 3px 9px;
+        border-radius: 5px;
+        white-space: nowrap;
+      }
+      .editing-label {
+        display: none;
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffc107;
+        border-radius: 16px;
+        padding: 3px 12px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        align-items: center;
+        gap: 6px;
+      }
+
+      /* ── Result + status badges ── */
+      .result-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+      .badge-passed {
+        background: #d4edda;
+        color: #155724;
+      }
+      .badge-violated-raw {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .badge-violated {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .badge-notice {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .badge-compliance {
+        background: #cce5ff;
+        color: #004085;
+      }
+      .badge-both {
+        background: #e2d9f3;
+        color: #4a235a;
+      }
+      /* Violation priority badges */
+      .badge-priority {
+        background: #f8d7da;
+        color: #721c24;
+        font-weight: 700;
+      }
+      .badge-low-priority {
+        background: #e2e3e5;
+        color: #383d41;
+      }
+      /* Reinspection badge */
+      .badge-reinspection {
+        background: #cce5ff;
+        color: #004085;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 10px;
+        vertical-align: middle;
+        margin-left: 6px;
+      }
+
+      /* ── Timeline modal ── */
+      .timeline {
+        position: relative;
+        padding-left: 28px;
+        margin-top: 8px;
+      }
+      .timeline::before {
+        content: "";
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--gray-200);
+      }
+      .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+      }
+      .timeline-item:last-child {
+        margin-bottom: 0;
+      }
+      .timeline-dot {
+        position: absolute;
+        left: -22px;
+        top: 4px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 2px var(--gray-300);
+        background: var(--gray-400);
+        flex-shrink: 0;
+      }
+      .timeline-dot.dot-original {
+        background: var(--primary-green);
+        box-shadow: 0 0 0 2px var(--primary-green);
+      }
+      .timeline-dot.dot-reinspect {
+        background: var(--sky-blue);
+        box-shadow: 0 0 0 2px var(--sky-blue);
+      }
+      .timeline-card {
+        background: #fff;
+        border: 1px solid var(--gray-200);
+        border-radius: 8px;
+        padding: 12px 14px;
+        cursor: pointer;
+        transition: box-shadow 0.15s;
+      }
+      .timeline-card:hover {
+        box-shadow: var(--shadow-md);
+        border-color: var(--primary-green);
+      }
+      .timeline-card .tc-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+        flex-wrap: wrap;
+      }
+      .timeline-card .tc-id {
+        font-family: monospace;
+        font-weight: 700;
+        color: var(--primary-green);
+        font-size: 0.88rem;
+      }
+      .timeline-card .tc-date {
+        font-size: 0.78rem;
+        color: var(--gray-600);
+      }
+      .timeline-card .tc-body {
+        font-size: 0.82rem;
+        color: var(--gray-700);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px 16px;
+      }
+      .timeline-card .tc-body span {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .timeline-card .tc-body strong {
+        color: var(--gray-900);
+      }
+
+      /* ── Table ── */
+      .table-loading,
+      .table-error,
+      .table-empty {
+        padding: 40px;
+        text-align: center;
+        color: var(--gray-600);
+      }
+      .table-loading i,
+      .table-error i {
+        font-size: 28px;
+        margin-bottom: 10px;
+        display: block;
+      }
+      .table-error {
+        color: var(--danger);
+      }
+      .table-error button {
+        margin-top: 12px;
+        padding: 8px 18px;
+        background: var(--primary-green);
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .insp-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+      }
+      .insp-table th {
+        background: var(--gray-100);
+        padding: 11px 13px;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid var(--gray-200);
+        white-space: nowrap;
+      }
+      .insp-table td {
+        padding: 10px 13px;
+        border-bottom: 1px solid var(--gray-200);
+        vertical-align: middle;
+      }
+      .insp-table tr:last-child td {
+        border-bottom: none;
+      }
+      .insp-table tr:hover td {
+        background: var(--gray-100);
+      }
+      .acct-link {
+        color: var(--primary-green);
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: underline;
+      }
+      .inspector-cell {
+        font-size: 0.78rem;
+        color: var(--gray-600);
+        max-width: 180px;
+      }
+      .action-cell {
+        white-space: nowrap;
+      }
+      .act-btn {
+        padding: 5px 9px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-right: 3px;
+        font-size: 0.8rem;
+        transition: opacity 0.15s;
+      }
+      .act-btn:hover {
+        opacity: 0.8;
+      }
+      .act-view {
+        background: #cce5ff;
+        color: #004085;
+      }
+      .act-edit {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .act-del {
+        background: #f8d7da;
+        color: #721c24;
+      }
+
+      /* ── Step indicator ── */
+      .step-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        margin-bottom: 20px;
+      }
+      .step-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .step-dot {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.875rem;
+        flex-shrink: 0;
+      }
+      .step-dot.active {
+        background: var(--primary-green);
+        color: #fff;
+      }
+      .step-dot.done {
+        background: var(--accent-green);
+        color: #fff;
+      }
+      .step-dot.pending {
+        background: var(--gray-200);
+        color: var(--gray-600);
+      }
+      .step-line {
+        flex: 1;
+        height: 3px;
+        background: var(--gray-200);
+      }
+      .step-line.done {
+        background: var(--accent-green);
+      }
+      .step-label {
+        font-size: 0.7rem;
+        color: var(--gray-600);
+        margin-top: 3px;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      /* ── Section titles ── */
+      .section-title {
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--primary-green);
+        border-bottom: 2px solid var(--accent-green);
+        padding-bottom: 5px;
+        margin: 22px 0 12px;
+      }
+      .section-title:first-child {
+        margin-top: 0;
+      }
+
+      /* ── Form helpers ── */
+      .form-2col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      .form-full {
+        grid-column: 1/-1;
+      }
+      .form-group label {
+        display: block;
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: var(--gray-700);
+        margin-bottom: 5px;
+      }
+
+      /* ── Radio groups ── */
+      .radio-group {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .radio-group label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 400;
+        cursor: pointer;
+        margin-bottom: 0;
+      }
+      .radio-group input[type="radio"] {
+        accent-color: var(--primary-green);
+        width: 14px;
+        height: 14px;
+      }
+
+      /* ── Checkbox lists ── */
+      .check-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .check-list label {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        font-weight: 400;
+        cursor: pointer;
+        font-size: 0.875rem;
+      }
+      .check-list input[type="checkbox"] {
+        accent-color: var(--primary-green);
+        width: 14px;
+        height: 14px;
+        margin-top: 2px;
+        flex-shrink: 0;
+      }
+      .check-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 20px;
+      }
+
+      /* ── Violation box ── */
+      .violation-box {
+        background: #fff8f8;
+        border: 1px solid #f5c6cb;
+        border-radius: 8px;
+        padding: 14px;
+        margin-top: 10px;
+      }
+
+      .violation-fee {
+        font-size: 0.74rem;
+        font-weight: 600;
+        color: var(--danger);
+        background: #f8d7da;
+        padding: 1px 7px;
+        border-radius: 10px;
+        white-space: nowrap;
+      }
+
+      .fine-total {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 12px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        border-top: 2px solid #f5c6cb;
+        padding-top: 10px;
+      }
+      .fine-total span {
+        color: var(--danger);
+        font-size: 1.05rem;
+      }
+      .ovr-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .ovr-row label {
+        font-size: 0.82rem;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      .ovr-row input {
+        flex: 1;
+        max-width: 220px;
+      }
+
+      /* ── Conditional sub-fields ── */
+      .sub-fields {
+        background: var(--gray-100);
+        border-left: 3px solid var(--accent-green);
+        border-radius: 0 6px 6px 0;
+        padding: 12px 14px;
+        margin-top: 8px;
+        display: none;
+      }
+
+      /* ── New biz badge ── */
+      .new-biz-badge {
+        display: none;
+        align-items: center;
+        gap: 6px;
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+        border-radius: 20px;
+        padding: 3px 12px;
+        font-size: 0.78rem;
+        font-weight: 600;
+      }
+
+      /* ── Disabled input styling ── */
+      input:disabled,
+      textarea:disabled {
+        background-color: #e9ecef !important;
+        cursor: not-allowed;
+        color: var(--gray-700);
+      }
+
+      /* ── Auto-fill indicator ── */
+      .autofill-note {
+        font-size: 0.72rem;
+        color: var(--primary-green);
+        font-style: italic;
+        margin-top: 3px;
+        display: none;
+      }
+      .autofill-note.visible {
+        display: block;
+      }
+
+      /* ── Inspector grid ── */
+      .inspector-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 24px;
+      }
+
+      /* ── Year selector ── */
+      .year-selector-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .year-selector-label {
+        font-weight: 500;
+        color: var(--gray-700);
+        font-size: 0.875rem;
+      }
+      .year-selector {
+        padding: 7px 11px;
+        border-radius: 6px;
+        border: 1px solid var(--gray-300);
+        background: #fff;
+        font-size: 0.875rem;
+      }
+
+      .table-section {
+        background: #fff;
+        border-radius: var(--border-radius-md);
+        box-shadow: var(--shadow-sm);
+        padding: var(--spacing-lg);
+      }
+
+      /* ── View modal ── */
+      .view-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px 24px;
+      }
+      .view-item label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--gray-600);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        display: block;
+        margin-bottom: 3px;
+      }
+      .view-item p {
+        font-size: 0.9rem;
+        color: var(--gray-900);
+        margin: 0;
+        word-break: break-word;
+      }
+
+      /* ── Modal sizes ── */
+      .modal-content.modal-lg {
+        max-width: 900px;
+        width: 92%;
+      }
+      .modal-content.modal-xl {
+        max-width: 1000px;
+        width: 96%;
+      }
+      .modal-body {
+        max-height: 72vh;
+        overflow-y: auto;
+        padding: var(--spacing-lg);
+      }
+
+      /* ── Pagination ── */
+      .pagination-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 16px;
+        padding: 12px;
+        background: var(--gray-100);
+        border-radius: 8px;
+      }
+      .pagination-info {
+        font-size: 0.85rem;
+        color: var(--gray-600);
+      }
+      .pagination-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dashboard-container">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-title">
+            <i class="fas fa-leaf"></i><span>CENRO EMIS</span>
+          </div>
+        </div>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="/dashboard"
+              ><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a
+            >
+          </li>
+          <li>
+            <a href="/businesses"
+              ><i class="fas fa-building"></i><span>Businesses</span></a
+            >
+          </li>
+          <li>
+            <a href="/seminars"
+              ><i class="fas fa-envelope"></i><span>Seminars</span></a
+            >
+          </li>
+          <li>
+            <a href="/certifications"
+              ><i class="fas fa-certificate"></i><span>Certifications</span></a
+            >
+          </li>
+          <li>
+            <a href="/inspections" class="active"
+              ><i class="fas fa-clipboard-check"></i><span>Inspections</span></a
+            >
+          </li>
+          <li>
+            <a href="/violations"
+              ><i class="fas fa-exclamation-triangle"></i
+              ><span>Violations and Compliances</span></a
+            >
+          </li>
+          <li>
+            <a href="/reports"
+              ><i class="fas fa-file-alt"></i><span>Reports</span></a
+            >
+          </li>
+          <li>
+            <a href="/users"><i class="fas fa-users"></i><span>Users</span></a>
+          </li>
+          <li>
+            <a href="/audit"
+              ><i class="fas fa-history"></i><span>Audit Trail</span></a
+            >
+          </li>
+          <div class="sidebar-datetime" id="datetime"></div>
+        </ul>
+      </aside>
+
+      <main class="main-content">
+        <header class="header">
+          <h1 class="header-title">Inspection Reports</h1>
+          <div class="user-info">
+            <div class="user-avatar" id="userAvatar">
+              <img
+                id="userAvatarImage"
+                src="https://via.placeholder.com/40"
+                alt="User Avatar"
+              />
+              <div id="userAvatarFallback" class="avatar-fallback">U</div>
+            </div>
+            <div class="user-dropdown">
+              <button class="dropdown-toggle" id="userDropdown">
+                <span id="userEmail">Loading...</span
+                ><i class="fas fa-chevron-down"></i>
+              </button>
+              <div class="dropdown-menu" id="userDropdownMenu">
+                <a href="profile.html" class="dropdown-item">Profile</a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item" id="logoutBtn">Logout</a>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div class="table-section">
+          <div class="table-header">
+            <h2 class="table-title">Inspection Records</h2>
+            <div class="table-actions">
+              <div class="year-selector-container">
+                <label class="year-selector-label" for="yearSelect"
+                  >Year:</label
+                >
+                <select id="yearSelect" class="year-selector">
+                  <option value="2025">2025</option>
+                  <option value="2026">2026</option>
+                  <option value="2027">2027</option>
+                  <option value="2028">2028</option>
+                  <option value="2029">2029</option>
+                  <option value="2030">2030</option>
+                </select>
+              </div>
+              <div class="search-container">
+                <input
+                  type="text"
+                  id="searchInput"
+                  class="search-input"
+                  placeholder="Search Insp. ID, Acct. No., Business Name..."
+                />
+                <button id="searchBtn" class="search-button">
+                  <i class="fas fa-search"></i>
+                </button>
+              </div>
+              <button class="btn btn-primary" id="refreshBtn">
+                <i class="fas fa-sync-alt"></i> Refresh
+              </button>
+              <button class="btn btn-primary" id="newInspectionBtn">
+                <i class="fas fa-plus"></i> New Inspection
+              </button>
+            </div>
+          </div>
+          <div class="table-container">
+            <div id="inspectionsTable">
+              <div class="table-loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading...</p>
+              </div>
+            </div>
+          </div>
+          <div class="pagination-container">
+            <div class="pagination-info">
+              <span id="paginationInfo">Showing 0–0 of 0 records</span>
+            </div>
+            <div class="pagination-controls">
+              <button id="prevPageBtn" class="pagination-btn" disabled>
+                <i class="fas fa-angle-left"></i>
+              </button>
+              <select id="pageSizeSelect" class="page-size-select">
+                <option value="10">10 per page</option>
+                <option value="25">25 per page</option>
+                <option value="50">50 per page</option>
+                <option value="100">100 per page</option>
+              </select>
+              <button id="nextPageBtn" class="pagination-btn" disabled>
+                <i class="fas fa-angle-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- ════════════════════════════════════════════════
+     MODAL 1 — Notice of Inspection
+     ════════════════════════════════════════════════ -->
+    <div id="modal1" class="modal">
+      <div class="modal-content modal-lg">
+        <div class="modal-header">
+          <div style="display: flex; align-items: center; gap: 12px">
+            <h2 class="modal-title">
+              <i class="fas fa-file-alt" style="margin-right: 6px"></i>Notice of
+              Inspection
+            </h2>
+            <span class="editing-label" id="modal1InspectionId"
+              ><i class="fas fa-pencil-alt"></i
+            ></span>
+          </div>
+          <span class="modal-close">&times;</span>
+        </div>
+        <div style="padding: 14px 24px 0">
+          <div class="step-indicator">
+            <div class="step-wrap">
+              <div class="step-dot active">1</div>
+              <div class="step-label">Notice</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step-wrap">
+              <div class="step-dot pending">2</div>
+              <div class="step-label">Checklist</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step-wrap">
+              <div class="step-dot pending">3</div>
+              <div class="step-label">After Inspection</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-body">
+          <form id="part1Form" autocomplete="off">
+            <!-- Business Information -->
+            <div class="section-title">Business Information</div>
+            <div class="form-2col">
+              <div class="form-group">
+                <label
+                  >Account No.
+                  <span style="color: var(--danger)">*</span></label
+                >
+                <div style="display: flex; gap: 8px; align-items: center">
+                  <input
+                    type="text"
+                    id="p1_accountNo"
+                    class="form-control text-uppercase"
+                    placeholder="e.g. 2026-00123"
+                    style="flex: 1"
+                  />
+                  <span class="new-biz-badge" id="newBizBadge"
+                    ><i class="fas fa-certificate"></i> NEW</span
+                  >
+                </div>
+                <div class="autofill-note" id="autofillNote">
+                  <i class="fas fa-check-circle"></i> Business info auto-filled
+                  and locked
+                </div>
+              </div>
+              <div class="form-group">
+                <label
+                  >Date / Time of Inspection
+                  <span style="color: var(--danger)">*</span></label
+                >
+                <input
+                  type="datetime-local"
+                  id="p1_dateOfInspection"
+                  class="form-control"
+                />
+              </div>
+              <div class="form-group">
+                <label>Business Name</label>
+                <input
+                  type="text"
+                  id="p1_businessName"
+                  class="form-control text-uppercase"
+                  placeholder="Auto-filled after Account No."
+                />
+              </div>
+              <div class="form-group">
+                <label>Address</label>
+                <input
+                  type="text"
+                  id="p1_address"
+                  class="form-control text-uppercase"
+                  placeholder="Auto-filled after Account No."
+                />
+              </div>
+              <div class="form-group">
+                <label>Barangay</label>
+                <input
+                  type="text"
+                  id="p1_barangay"
+                  class="form-control text-uppercase"
+                  placeholder="Auto-filled after Account No."
+                />
+              </div>
+            </div>
+
+            <!-- Inspection Result -->
+            <div class="section-title">
+              Inspection Result <span style="color: var(--danger)">*</span>
+            </div>
+            <div class="radio-group">
+              <label
+                ><input type="radio" name="inspectionResult" value="PASSED" />
+                <span style="color: #155724; font-weight: 500"
+                  >Passed CENRO Standards</span
+                >
+              </label>
+              <label
+                ><input type="radio" name="inspectionResult" value="VIOLATED" />
+                <span style="color: #721c24; font-weight: 500"
+                  >Violated City Ordinances</span
+                >
+              </label>
+              <label
+                ><input
+                  type="radio"
+                  name="inspectionResult"
+                  value="NOTICE_WARNING"
+                />
+                <span style="color: #856404; font-weight: 500"
+                  >Notice / Warning</span
+                >
+              </label>
+            </div>
+            <!-- Violation checkboxes — original clean layout, N/A pills shown in Notice/Warning mode -->
+            <div class="violation-box">
+              <p
+                style="
+                  font-size: 0.78rem;
+                  color: var(--gray-500);
+                  margin-bottom: 10px;
+                  font-style: italic;
+                "
+              >
+                Enabled when "Violated" or "Notice/Warning" is selected. N/A
+                appears per item for Notice/Warning.
+              </p>
+              <div class="check-list">
+                <label
+                  ><input
+                    type="checkbox"
+                    class="violation-cb"
+                    id="viol_ordinance35_2004_sec2a"
+                    data-key="ordinance35_2004_sec2a"
+                    disabled
+                  />City Ordinance No. 35-2004 sec.2a — Failure to segregate
+                  wastes <span class="violation-fee">₱1,000</span></label
+                >
+                <label
+                  ><input
+                    type="checkbox"
+                    class="violation-cb"
+                    id="viol_ordinance30_1999_sec5c"
+                    data-key="ordinance30_1999_sec5c"
+                    disabled
+                  />City Ordinance No. 30-1999 sec.5c — Failure to specify
+                  appropriate garbage bin label
+                  <span class="violation-fee">₱500</span></label
+                >
+                <label
+                  ><input
+                    type="checkbox"
+                    class="violation-cb"
+                    id="viol_ordinance94_1994_sec1"
+                    data-key="ordinance94_1994_sec1"
+                    disabled
+                  />City Ordinance No. 94-1994 sec.1 — Failure to cover trash
+                  receptacle <span class="violation-fee">₱500</span></label
+                >
+                <label
+                  ><input
+                    type="checkbox"
+                    class="violation-cb"
+                    id="viol_ordinance91_2013_sec5F03d"
+                    data-key="ordinance91_2013_sec5F03d"
+                    disabled
+                  />City Ordinance No. 91-2013 sec.5F-03d — Failure to install
+                  adequate anti-pollution devices
+                  <span class="violation-fee">₱5,000</span></label
+                >
+                <label
+                  ><input
+                    type="checkbox"
+                    class="violation-cb"
+                    id="viol_ordinance21_11_sec14_2"
+                    data-key="ordinance21_11_sec14_2"
+                    disabled
+                  />City Ordinance No. 21-11 sec 14.2 — Failure to desludge
+                  septic tank <span class="violation-fee">₱3,000</span></label
+                >
+                <label
+                  ><input
+                    type="checkbox"
+                    class="violation-cb"
+                    id="viol_ordinance91_2013_sec5F03e"
+                    data-key="ordinance91_2013_sec5F03e"
+                    disabled
+                  />City Ordinance No. 91-2013 sec.5F-03e — Failure to
+                  present/provide a true copy of all clearances, permits and
+                  certifications
+                  <span class="violation-fee">₱5,000</span></label
+                >
+                <label
+                  ><input
+                    type="checkbox"
+                    class="violation-cb"
+                    id="viol_ordinance10_2011"
+                    data-key="ordinance10_2011"
+                    disabled
+                  />City Ordinance No. 10-2011 — Dumping of solid waste in any
+                  form into canals, drainage &amp; water systems
+                  <span class="violation-fee">₱5,000</span></label
+                >
+                <label
+                  ><input
+                    type="checkbox"
+                    class="violation-cb"
+                    id="viol_ordinance09_2011_sec3_1"
+                    data-key="ordinance09_2011_sec3_1"
+                    disabled
+                  />City Ordinance No. 09-2011 sec.3-1 — Littering and illegally
+                  dumping of solid wastes in any public/private places
+                  <span class="violation-fee">₱500</span></label
+                >
+                <label
+                  ><input
+                    type="checkbox"
+                    class="violation-cb"
+                    id="viol_ordinance91_2013_sec5F03a"
+                    data-key="ordinance91_2013_sec5F03a"
+                    disabled
+                  />City Ordinance No. 91-2013 sec.5F-03a — Failure to pay
+                  Environmental Protection and Preservation Fee
+                  <span class="violation-fee">₱2,500</span></label
+                >
+                <label
+                  ><input
+                    type="checkbox"
+                    class="violation-cb"
+                    id="viol_ordinance91_2013_sec5F03b"
+                    data-key="ordinance91_2013_sec5F03b"
+                    disabled
+                  />City Ordinance No. 91-2013 sec.5F-03b — Failure to
+                  appoint/designate Pollution Control Officer (PCO)
+                  <span class="violation-fee">₱2,500</span></label
+                >
+                <label
+                  ><input
+                    type="checkbox"
+                    class="violation-cb"
+                    id="viol_ordinance91_2013_sec5F03c"
+                    data-key="ordinance91_2013_sec5F03c"
+                    disabled
+                  />City Ordinance No. 91-2013 sec.5F-03c — Refuse to allow
+                  inspectors to enter and inspect the premises
+                  <span class="violation-fee">₱2,500</span></label
+                >
+                <label
+                  ><input
+                    type="checkbox"
+                    class="violation-cb"
+                    id="viol_ordinance15_11_sec1b"
+                    data-key="ordinance15_11_sec1b"
+                    disabled
+                  />City Ordinance No. 15-11 sec.1b — Improper disposal of used
+                  cooking oil <span class="violation-fee">₱5,000</span></label
+                >
+                <label
+                  ><input
+                    type="checkbox"
+                    class="violation-cb"
+                    id="viol_ordinance14_2024_sec5w"
+                    data-key="ordinance14_2024_sec5w"
+                    disabled
+                  />City Ordinance No. 14-2024 sec.5w — Tobacco Advertisement
+                  <span class="violation-fee">₱5,000</span></label
+                >
+                <label
+                  ><input
+                    type="checkbox"
+                    class="violation-na-cb"
+                    id="viol_na"
+                    disabled
+                  />N/A</label
+                >
+              </div>
+              <div class="ovr-row">
+                <label for="p1_ovrNo">OVR No.:</label>
+                <input
+                  type="text"
+                  id="p1_ovrNo"
+                  class="form-control text-uppercase"
+                  placeholder="OVR Number"
+                  disabled
+                />
+              </div>
+              <div class="fine-total">
+                Total Fine: <span id="totalFineDisplay">₱0</span>
+              </div>
+            </div>
+
+            <!-- Compliance Deadline -->
+            <div class="section-title">Compliance Deadline</div>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex-wrap: wrap;
+              "
+            >
+              <span style="font-size: 0.875rem; color: var(--gray-700)"
+                >The establishment must comply within:</span
+              >
+              <select
+                id="p1_complianceDeadline"
+                class="form-control"
+                style="max-width: 180px"
+              >
+                <option value="">Select period</option>
+                <option value="7 days">7 days</option>
+                <option value="1 month">1 month</option>
+                <option value="2 months">2 months</option>
+              </select>
+              <span style="font-size: 0.875rem; color: var(--gray-600)"
+                >from the date of inspection.</span
+              >
+            </div>
+
+            <!-- Recommendations -->
+            <div class="section-title">
+              Recommendations
+              <span
+                style="
+                  font-size: 0.72rem;
+                  font-weight: 400;
+                  color: var(--gray-500);
+                  text-transform: none;
+                "
+                >(DENR/Environmental — triggers Compliance record)</span
+              >
+            </div>
+            <div class="check-list check-grid">
+              <label
+                ><input
+                  type="checkbox"
+                  class="rec-cb"
+                  data-key="environmentalComplianceCertificate"
+                />Environmental Compliance Certificate</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  class="rec-cb"
+                  data-key="certificateOfNonCoverage"
+                />Certificate of Non-Coverage</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  class="rec-cb"
+                  data-key="wastewaterDischargePerm"
+                />Wastewater Discharge Permit</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  class="rec-cb"
+                  data-key="hazardousWasteGeneratorId"
+                />Hazardous Waste Generator ID</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  class="rec-cb"
+                  data-key="permitToOperateAirPollution"
+                />Permit to Operate for Air Pollution Source
+                Installation/Equipment</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  class="rec-cb"
+                  data-key="pcoAccreditationCertificate"
+                />Pollution Control Officer Accreditation Certificate</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  class="rec-cb"
+                  data-key="tsdCertificate"
+                />Transport, Storage and Disposal Certificate</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  class="rec-cb"
+                  data-key="environmentalProtectionFee"
+                />Environmental Protection and Preservation Fee / Environmental
+                Compliance Fee</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  class="rec-cb"
+                  data-key="appointPCO"
+                />Appoint an accredited Pollution Control Officer</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  class="rec-cb"
+                  data-key="provideSegregationBins"
+                />Provide waste segregation bins with properly labeled
+                markings</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  class="rec-cb"
+                  data-key="properWasteSegregation"
+                />Proper waste segregation in accordance with the
+                markings</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  class="rec-cb"
+                  data-key="installGreaseTrap"
+                />Installation of grease trap</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  class="rec-cb"
+                  data-key="installExhaustSystem"
+                />Installation of exhaust system</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  class="rec-cb"
+                  data-key="installSepticTank"
+                />Installation of septic tank / desludging certificate issued by
+                DENR-EMB accredited hauler</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  class="rec-cb"
+                  data-key="attendSeminar"
+                />Attend business establishment environmental seminar</label
+              >
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary modal-close-btn">Cancel</button>
+          <button class="btn btn-primary" id="next1Btn">
+            Next: Inspection Checklist <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════
+     MODAL 2 — Inspection Checklist
+     ════════════════════════════════════════════════ -->
+    <div id="modal2" class="modal">
+      <div class="modal-content modal-xl">
+        <div class="modal-header">
+          <h2 class="modal-title">
+            <i class="fas fa-clipboard-list" style="margin-right: 6px"></i
+            >Inspection Checklist
+          </h2>
+          <span class="modal-close">&times;</span>
+        </div>
+        <div style="padding: 14px 24px 0">
+          <div class="step-indicator">
+            <div class="step-wrap">
+              <div class="step-dot done">
+                <i class="fas fa-check" style="font-size: 0.7rem"></i>
+              </div>
+              <div class="step-label">Notice</div>
+            </div>
+            <div class="step-line done"></div>
+            <div class="step-wrap">
+              <div class="step-dot active">2</div>
+              <div class="step-label">Checklist</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step-wrap">
+              <div class="step-dot pending">3</div>
+              <div class="step-label">After Inspection</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-body">
+          <form id="part2Form" autocomplete="off">
+            <div class="section-title">Permits &amp; Certifications</div>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 1fr auto;
+                gap: 10px 20px;
+                align-items: start;
+              "
+            >
+              <div
+                style="font-size: 0.875rem; font-weight: 500; padding-top: 4px"
+              >
+                Mayor's Permit to Operate
+              </div>
+              <div class="radio-group">
+                <label
+                  ><input
+                    type="radio"
+                    name="permit_mayors"
+                    value="YES"
+                    class="permit-radio"
+                  />Yes</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="permit_mayors"
+                    value="NO"
+                    class="permit-radio"
+                  />No</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="permit_mayors"
+                    value="NA"
+                    class="permit-radio"
+                    checked
+                  />N/A</label
+                >
+              </div>
+
+              <div
+                style="font-size: 0.875rem; font-weight: 500; padding-top: 4px"
+              >
+                Environmental Protection and Preservation Fee
+              </div>
+              <div class="radio-group">
+                <label
+                  ><input
+                    type="radio"
+                    name="permit_epf"
+                    value="YES"
+                    class="permit-radio"
+                  />Yes</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="permit_epf"
+                    value="NO"
+                    class="permit-radio"
+                  />No</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="permit_epf"
+                    value="NA"
+                    class="permit-radio"
+                    checked
+                  />N/A</label
+                >
+              </div>
+
+              <div>
+                <div style="font-size: 0.875rem; font-weight: 500">
+                  Environmental Compliance Certificate
+                </div>
+                <div id="eccFields" class="sub-fields">
+                  <div class="form-2col">
+                    <div class="form-group">
+                      <label>ECC Number</label
+                      ><input
+                        type="text"
+                        id="p2_eccNumber"
+                        class="form-control text-uppercase"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label>Date Issued</label
+                      ><input
+                        type="date"
+                        id="p2_eccDate"
+                        class="form-control"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="radio-group">
+                <label
+                  ><input
+                    type="radio"
+                    name="permit_ecc"
+                    value="YES"
+                    class="permit-radio"
+                  />Yes</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="permit_ecc"
+                    value="NO"
+                    class="permit-radio"
+                  />No</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="permit_ecc"
+                    value="NA"
+                    class="permit-radio"
+                    checked
+                  />N/A</label
+                >
+              </div>
+
+              <div>
+                <div style="font-size: 0.875rem; font-weight: 500">
+                  Certificate of Non-Coverage
+                </div>
+                <div id="cncFields" class="sub-fields">
+                  <div class="form-2col">
+                    <div class="form-group">
+                      <label>CNC Number</label
+                      ><input
+                        type="text"
+                        id="p2_cncNumber"
+                        class="form-control text-uppercase"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label>Date Issued</label
+                      ><input
+                        type="date"
+                        id="p2_cncDate"
+                        class="form-control"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="radio-group">
+                <label
+                  ><input
+                    type="radio"
+                    name="permit_cnc"
+                    value="YES"
+                    class="permit-radio"
+                  />Yes</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="permit_cnc"
+                    value="NO"
+                    class="permit-radio"
+                  />No</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="permit_cnc"
+                    value="NA"
+                    class="permit-radio"
+                    checked
+                  />N/A</label
+                >
+              </div>
+
+              <div>
+                <div style="font-size: 0.875rem; font-weight: 500">
+                  Wastewater Discharge Permit
+                </div>
+                <div id="wdpFields" class="sub-fields">
+                  <div class="form-2col">
+                    <div class="form-group">
+                      <label>WDP Number</label
+                      ><input
+                        type="text"
+                        id="p2_wdpNumber"
+                        class="form-control text-uppercase"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label>Validity</label
+                      ><input
+                        type="text"
+                        id="p2_wdpValidity"
+                        class="form-control text-uppercase"
+                        placeholder="E.G. DEC 31, 2026"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="radio-group">
+                <label
+                  ><input
+                    type="radio"
+                    name="permit_wdp"
+                    value="YES"
+                    class="permit-radio"
+                  />Yes</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="permit_wdp"
+                    value="NO"
+                    class="permit-radio"
+                  />No</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="permit_wdp"
+                    value="NA"
+                    class="permit-radio"
+                    checked
+                  />N/A</label
+                >
+              </div>
+
+              <div>
+                <div style="font-size: 0.875rem; font-weight: 500">
+                  Permit to Operate for Air Pollution Source
+                  Installation/Equipment
+                </div>
+                <div id="ptoFields" class="sub-fields">
+                  <div class="form-2col">
+                    <div class="form-group">
+                      <label>PTO Number</label
+                      ><input
+                        type="text"
+                        id="p2_ptoNumber"
+                        class="form-control text-uppercase"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label>Validity</label
+                      ><input
+                        type="text"
+                        id="p2_ptoValidity"
+                        class="form-control text-uppercase"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="radio-group">
+                <label
+                  ><input
+                    type="radio"
+                    name="permit_pto"
+                    value="YES"
+                    class="permit-radio"
+                  />Yes</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="permit_pto"
+                    value="NO"
+                    class="permit-radio"
+                  />No</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="permit_pto"
+                    value="NA"
+                    class="permit-radio"
+                    checked
+                  />N/A</label
+                >
+              </div>
+
+              <div>
+                <div style="font-size: 0.875rem; font-weight: 500">
+                  Hazardous Waste Generator ID
+                </div>
+                <div id="hwidFields" class="sub-fields">
+                  <div class="form-2col">
+                    <div class="form-group">
+                      <label>HWID Number</label
+                      ><input
+                        type="text"
+                        id="p2_hwidNumber"
+                        class="form-control text-uppercase"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label>Date Issued</label
+                      ><input
+                        type="date"
+                        id="p2_hwidDate"
+                        class="form-control"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="radio-group">
+                <label
+                  ><input
+                    type="radio"
+                    name="permit_hwid"
+                    value="YES"
+                    class="permit-radio"
+                  />Yes</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="permit_hwid"
+                    value="NO"
+                    class="permit-radio"
+                  />No</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="permit_hwid"
+                    value="NA"
+                    class="permit-radio"
+                    checked
+                  />N/A</label
+                >
+              </div>
+            </div>
+
+            <div class="section-title">Pollution Control Officer</div>
+            <div class="form-2col">
+              <div class="form-group">
+                <label>Name</label
+                ><input
+                  type="text"
+                  id="p2_pcoName"
+                  class="form-control text-uppercase"
+                />
+              </div>
+              <div class="form-group">
+                <label>Accreditation No.</label
+                ><input
+                  type="text"
+                  id="p2_pcoAccred"
+                  class="form-control text-uppercase"
+                />
+              </div>
+              <div class="form-group">
+                <label>Contact No.</label
+                ><input type="text" id="p2_pcoContact" class="form-control" />
+              </div>
+              <div class="form-group">
+                <label>Email</label
+                ><input
+                  type="email"
+                  id="p2_pcoEmail"
+                  class="form-control text-uppercase"
+                />
+              </div>
+            </div>
+
+            <div class="section-title">Waste Management — 1. Solid Waste</div>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 1fr auto;
+                gap: 8px 20px;
+                align-items: center;
+              "
+            >
+              <span style="font-size: 0.875rem"
+                >a. Waste bins were provided</span
+              >
+              <div class="radio-group">
+                <label
+                  ><input
+                    type="radio"
+                    name="sw_bins"
+                    value="YES"
+                    class="waste-radio"
+                  />Yes</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="sw_bins"
+                    value="NO"
+                    class="waste-radio"
+                    checked
+                  />No</label
+                >
+              </div>
+              <span style="font-size: 0.875rem"
+                >b. Bins were properly labelled</span
+              >
+              <div class="radio-group">
+                <label
+                  ><input
+                    type="radio"
+                    name="sw_labels"
+                    value="YES"
+                    class="waste-radio"
+                  />Yes</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="sw_labels"
+                    value="NO"
+                    class="waste-radio"
+                    checked
+                  />No</label
+                >
+              </div>
+              <span style="font-size: 0.875rem"
+                >c. Bins were appropriately covered</span
+              >
+              <div class="radio-group">
+                <label
+                  ><input
+                    type="radio"
+                    name="sw_covered"
+                    value="YES"
+                    class="waste-radio"
+                  />Yes</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="sw_covered"
+                    value="NO"
+                    class="waste-radio"
+                    checked
+                  />No</label
+                >
+              </div>
+              <span style="font-size: 0.875rem"
+                >d. Proper waste segregation was practiced</span
+              >
+              <div class="radio-group">
+                <label
+                  ><input
+                    type="radio"
+                    name="sw_segregation"
+                    value="YES"
+                    class="waste-radio"
+                  />Yes</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="sw_segregation"
+                    value="NO"
+                    class="waste-radio"
+                    checked
+                  />No</label
+                >
+              </div>
+              <span style="font-size: 0.875rem">e. Provision of MRF</span>
+              <div class="radio-group">
+                <label
+                  ><input
+                    type="radio"
+                    name="sw_mrf"
+                    value="YES"
+                    class="waste-radio"
+                  />Yes</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="sw_mrf"
+                    value="NO"
+                    class="waste-radio"
+                    checked
+                  />No</label
+                >
+              </div>
+              <span style="font-size: 0.875rem">f. Wastes were collected</span>
+              <div class="radio-group">
+                <label
+                  ><input
+                    type="radio"
+                    name="sw_collected"
+                    value="YES"
+                    class="waste-radio"
+                  />Yes</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="sw_collected"
+                    value="NO"
+                    class="waste-radio"
+                    checked
+                  />No</label
+                >
+              </div>
+            </div>
+            <div class="form-2col" style="margin-top: 10px">
+              <div class="form-group">
+                <label>Frequency of Hauling</label
+                ><input
+                  type="text"
+                  id="sw_frequency"
+                  class="form-control text-uppercase"
+                />
+              </div>
+              <div class="form-group">
+                <label>Hauler</label
+                ><input
+                  type="text"
+                  id="sw_hauler"
+                  class="form-control text-uppercase"
+                />
+              </div>
+            </div>
+
+            <div class="section-title">Waste Management — 2. Liquid Waste</div>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 1fr auto;
+                gap: 8px 20px;
+                align-items: start;
+              "
+            >
+              <div>
+                <span style="font-size: 0.875rem; font-weight: 500"
+                  >a. Installed septic tank</span
+                >
+                <div id="septicFields" class="sub-fields">
+                  <div class="form-2col">
+                    <div class="form-group">
+                      <label>Location</label
+                      ><input
+                        type="text"
+                        id="st_location"
+                        class="form-control text-uppercase"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label>Capacity</label
+                      ><input
+                        type="text"
+                        id="st_capacity"
+                        class="form-control text-uppercase"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label>Frequency of Desludging</label
+                      ><input
+                        type="text"
+                        id="st_frequency"
+                        class="form-control text-uppercase"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label>Date of Desludging</label
+                      ><input type="date" id="st_date" class="form-control" />
+                    </div>
+                    <div class="form-group form-full">
+                      <label>Service Provider</label
+                      ><input
+                        type="text"
+                        id="st_provider"
+                        class="form-control text-uppercase"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="radio-group" style="padding-top: 4px">
+                <label
+                  ><input
+                    type="radio"
+                    name="lw_septic"
+                    value="YES"
+                    class="permit-radio waste-radio"
+                  />Yes</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="lw_septic"
+                    value="NO"
+                    class="permit-radio waste-radio"
+                  />No</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="lw_septic"
+                    value="NA"
+                    class="permit-radio waste-radio"
+                    checked
+                  />N/A</label
+                >
+              </div>
+
+              <div>
+                <span style="font-size: 0.875rem; font-weight: 500"
+                  >b. Installed grease trap</span
+                >
+                <div id="greaseFields" class="sub-fields">
+                  <div class="form-2col">
+                    <div class="form-group">
+                      <label>Location</label
+                      ><input
+                        type="text"
+                        id="gt_location"
+                        class="form-control text-uppercase"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label>Capacity</label
+                      ><input
+                        type="text"
+                        id="gt_capacity"
+                        class="form-control text-uppercase"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label>Frequency of Hauling</label
+                      ><input
+                        type="text"
+                        id="gt_frequency"
+                        class="form-control text-uppercase"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label>Hauler</label
+                      ><input
+                        type="text"
+                        id="gt_hauler"
+                        class="form-control text-uppercase"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="radio-group" style="padding-top: 4px">
+                <label
+                  ><input
+                    type="radio"
+                    name="lw_grease"
+                    value="YES"
+                    class="permit-radio waste-radio"
+                  />Yes</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="lw_grease"
+                    value="NO"
+                    class="permit-radio waste-radio"
+                  />No</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="lw_grease"
+                    value="NA"
+                    class="permit-radio waste-radio"
+                    checked
+                  />N/A</label
+                >
+              </div>
+
+              <div>
+                <span style="font-size: 0.875rem; font-weight: 500"
+                  >c. Wastewater / Sewage Treatment Plant</span
+                >
+                <div id="wwtpFields" class="sub-fields">
+                  <div class="form-group">
+                    <label>Result of Laboratory Analysis</label
+                    ><input
+                      type="text"
+                      id="wwtp_result"
+                      class="form-control text-uppercase"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div class="radio-group" style="padding-top: 4px">
+                <label
+                  ><input
+                    type="radio"
+                    name="lw_wwtp"
+                    value="YES"
+                    class="permit-radio waste-radio"
+                  />Yes</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="lw_wwtp"
+                    value="NO"
+                    class="permit-radio waste-radio"
+                  />No</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="lw_wwtp"
+                    value="NA"
+                    class="permit-radio waste-radio"
+                    checked
+                  />N/A</label
+                >
+              </div>
+
+              <div>
+                <span style="font-size: 0.875rem; font-weight: 500"
+                  >d. Used oil were properly disposed</span
+                >
+                <div id="oilFields" class="sub-fields">
+                  <div class="form-2col">
+                    <div class="form-group">
+                      <label>Type of Oil</label
+                      ><input
+                        type="text"
+                        id="oil_type"
+                        class="form-control text-uppercase"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label>Frequency of Hauling</label
+                      ><input
+                        type="text"
+                        id="oil_frequency"
+                        class="form-control text-uppercase"
+                      />
+                    </div>
+                    <div class="form-group form-full">
+                      <label>Hauler</label
+                      ><input
+                        type="text"
+                        id="oil_hauler"
+                        class="form-control text-uppercase"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="radio-group" style="padding-top: 4px">
+                <label
+                  ><input
+                    type="radio"
+                    name="lw_oil"
+                    value="YES"
+                    class="permit-radio waste-radio"
+                  />Yes</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="lw_oil"
+                    value="NO"
+                    class="permit-radio waste-radio"
+                  />No</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="lw_oil"
+                    value="NA"
+                    class="permit-radio waste-radio"
+                    checked
+                  />N/A</label
+                >
+              </div>
+            </div>
+
+            <div class="section-title">
+              Waste Management — 3. Air Pollution Management
+            </div>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 1fr auto;
+                gap: 8px 20px;
+                align-items: start;
+              "
+            >
+              <div>
+                <span style="font-size: 0.875rem; font-weight: 500"
+                  >a. Pollution control devices</span
+                >
+                <div id="airDeviceFields" class="sub-fields">
+                  <div class="form-2col">
+                    <div class="form-group">
+                      <label>Device Type</label
+                      ><input
+                        type="text"
+                        id="air_deviceType"
+                        class="form-control text-uppercase"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label>Maintenance Provider</label
+                      ><input
+                        type="text"
+                        id="air_maintenance"
+                        class="form-control text-uppercase"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="radio-group" style="padding-top: 4px">
+                <label
+                  ><input
+                    type="radio"
+                    name="air_devices"
+                    value="YES"
+                    class="permit-radio waste-radio"
+                  />Yes</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="air_devices"
+                    value="NO"
+                    class="permit-radio waste-radio"
+                  />No</label
+                ><label
+                  ><input
+                    type="radio"
+                    name="air_devices"
+                    value="NA"
+                    class="permit-radio waste-radio"
+                    checked
+                  />N/A</label
+                >
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="back2Btn">
+            <i class="fas fa-arrow-left"></i> Back
+          </button>
+          <button class="btn btn-secondary modal-close-btn">Cancel</button>
+          <button class="btn btn-primary" id="next2Btn">
+            Next: After Inspection Report <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════
+     MODAL 3 — After Inspection Report
+     ════════════════════════════════════════════════ -->
+    <div id="modal3" class="modal">
+      <div class="modal-content modal-lg">
+        <div class="modal-header">
+          <h2 class="modal-title">
+            <i class="fas fa-file-signature" style="margin-right: 6px"></i>After
+            Inspection Report
+          </h2>
+          <span class="modal-close">&times;</span>
+        </div>
+        <div style="padding: 14px 24px 0">
+          <div class="step-indicator">
+            <div class="step-wrap">
+              <div class="step-dot done">
+                <i class="fas fa-check" style="font-size: 0.7rem"></i>
+              </div>
+              <div class="step-label">Notice</div>
+            </div>
+            <div class="step-line done"></div>
+            <div class="step-wrap">
+              <div class="step-dot done">
+                <i class="fas fa-check" style="font-size: 0.7rem"></i>
+              </div>
+              <div class="step-label">Checklist</div>
+            </div>
+            <div class="step-line done"></div>
+            <div class="step-wrap">
+              <div class="step-dot active">3</div>
+              <div class="step-label">After Inspection</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-body">
+          <form id="part3Form" autocomplete="off">
+            <div class="section-title">I. Purpose of Inspection</div>
+            <div class="check-list">
+              <label
+                ><input type="checkbox" id="p3_newEstab" />New
+                establishment</label
+              >
+              <label
+                ><input type="checkbox" id="p3_compliance" />For business
+                establishment's compliance to the required pollution mitigating
+                measures</label
+              >
+            </div>
+
+            <div class="section-title">
+              II. General Description of the Physical Environment
+            </div>
+            <div class="form-2col">
+              <div class="form-group">
+                <label>Land Use</label>
+                <div class="check-list">
+                  <label
+                    ><input
+                      type="checkbox"
+                      id="lu_commercial"
+                    />Commercial</label
+                  ><label
+                    ><input
+                      type="checkbox"
+                      id="lu_residential"
+                    />Residential</label
+                  ><label
+                    ><input
+                      type="checkbox"
+                      id="lu_industrial"
+                    />Industrial</label
+                  ><label
+                    ><input
+                      type="checkbox"
+                      id="lu_institutional"
+                    />Institutional</label
+                  >
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Ownership Terms</label>
+                <div class="check-list">
+                  <label
+                    ><input
+                      type="checkbox"
+                      id="ot_proprietorship"
+                    />Proprietorship</label
+                  ><label
+                    ><input type="checkbox" id="ot_private" />Private
+                    Corporation</label
+                  ><label
+                    ><input
+                      type="checkbox"
+                      id="ot_multinational"
+                    />Multi-National</label
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="form-2col" style="margin-top: 10px">
+              <div class="form-group">
+                <label>Lessee</label>
+                <div class="radio-group">
+                  <label
+                    ><input
+                      type="radio"
+                      name="occ_lessee"
+                      value="YES"
+                    />Yes</label
+                  ><label
+                    ><input
+                      type="radio"
+                      name="occ_lessee"
+                      value="NO"
+                      checked
+                    />No</label
+                  >
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Stand Alone</label>
+                <div class="radio-group">
+                  <label
+                    ><input
+                      type="radio"
+                      name="occ_standalone"
+                      value="YES"
+                    />Yes</label
+                  ><label
+                    ><input
+                      type="radio"
+                      name="occ_standalone"
+                      value="NO"
+                      checked
+                    />No</label
+                  >
+                </div>
+              </div>
+            </div>
+
+            <div class="section-title">III. Findings and Observations</div>
+            <div class="form-group">
+              <label
+                >a. Establishment operation's status during inspection
+                <span style="color: var(--danger)">*</span></label
+              >
+              <!-- RADIO BUTTONS — single choice -->
+              <div
+                class="radio-group"
+                style="margin-top: 8px; flex-wrap: wrap; gap: 10px 24px"
+              >
+                <label
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 0.875rem;
+                    cursor: pointer;
+                  "
+                >
+                  <input
+                    type="radio"
+                    name="operationStatus"
+                    value="OPERATIONAL"
+                  />
+                  <span>Operational</span>
+                </label>
+                <label
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 0.875rem;
+                    cursor: pointer;
+                  "
+                >
+                  <input
+                    type="radio"
+                    name="operationStatus"
+                    value="NO_OPERATION"
+                  />
+                  <span>No Operation</span>
+                </label>
+                <label
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 0.875rem;
+                    cursor: pointer;
+                  "
+                >
+                  <input type="radio" name="operationStatus" value="CLOSED" />
+                  <span>Closed</span>
+                </label>
+                <label
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 0.875rem;
+                    cursor: pointer;
+                  "
+                >
+                  <input
+                    type="radio"
+                    name="operationStatus"
+                    value="UNLOCATED"
+                  />
+                  <span>Unlocated</span>
+                </label>
+                <label
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 0.875rem;
+                    cursor: pointer;
+                  "
+                >
+                  <input
+                    type="radio"
+                    name="operationStatus"
+                    value="NO_PERSON_IN_CHARGE"
+                  />
+                  <span>No Person In-charge</span>
+                </label>
+              </div>
+            </div>
+            <div class="form-group" style="margin-top: 14px">
+              <label>b. Inspector's observation statement</label>
+              <textarea
+                id="p3_observation"
+                class="form-control text-uppercase"
+                rows="4"
+                placeholder="ENTER OBSERVATIONS..."
+              ></textarea>
+            </div>
+
+            <div class="section-title">IV. Directives</div>
+            <textarea
+              id="p3_directives"
+              class="form-control text-uppercase"
+              rows="4"
+              placeholder="ENTER DIRECTIVES..."
+            ></textarea>
+
+            <div class="section-title">V. Recommendations</div>
+            <div class="check-list check-grid">
+              <label
+                ><input type="checkbox" id="ar_reinspection" />For
+                reinspection</label
+              >
+              <label
+                ><input type="checkbox" id="ar_seminar" />For seminar</label
+              >
+              <label
+                ><input type="checkbox" id="ar_compliance" />For compliance to
+                pollution mitigating measures</label
+              >
+              <label
+                ><input type="checkbox" id="ar_cdo" />For endorsement to BPLO
+                for CDO</label
+              >
+              <label
+                ><input type="checkbox" id="ar_cec" />Issuance of Certificate of
+                Environmental Compliance</label
+              >
+              <label
+                ><input type="checkbox" id="ar_conference" />For Case
+                Conference</label
+              >
+              <label
+                ><input type="checkbox" id="ar_termination" />For Case
+                Termination/Dismissal</label
+              >
+            </div>
+
+            <div class="section-title">
+              Inspectors <span style="color: var(--danger)">*</span>
+            </div>
+            <div class="inspector-grid">
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  font-size: 0.875rem;
+                "
+                ><input
+                  type="checkbox"
+                  class="inspector-cb"
+                  data-key="alvinMagbanua"
+                />Alvin Magbanua</label
+              >
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  font-size: 0.875rem;
+                "
+                ><input
+                  type="checkbox"
+                  class="inspector-cb"
+                  data-key="edwinPaderes"
+                />Edwin Paderes</label
+              >
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  font-size: 0.875rem;
+                "
+                ><input
+                  type="checkbox"
+                  class="inspector-cb"
+                  data-key="jaycelEden"
+                />Jaycel Eden</label
+              >
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  font-size: 0.875rem;
+                "
+                ><input
+                  type="checkbox"
+                  class="inspector-cb"
+                  data-key="jeffreyBasco"
+                />Jeffrey Basco</label
+              >
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  font-size: 0.875rem;
+                "
+                ><input
+                  type="checkbox"
+                  class="inspector-cb"
+                  data-key="jennySandrino"
+                />Jenny Sandrino</label
+              >
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  font-size: 0.875rem;
+                "
+                ><input
+                  type="checkbox"
+                  class="inspector-cb"
+                  data-key="jhonIvanMadronal"
+                />Jhon Ivan Madronal</label
+              >
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  font-size: 0.875rem;
+                "
+                ><input
+                  type="checkbox"
+                  class="inspector-cb"
+                  data-key="jovenSantiago"
+                />Joven Santiago</label
+              >
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  font-size: 0.875rem;
+                "
+                ><input
+                  type="checkbox"
+                  class="inspector-cb"
+                  data-key="marcJoelRato"
+                />Marc Joel Rato</label
+              >
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  font-size: 0.875rem;
+                "
+                ><input
+                  type="checkbox"
+                  class="inspector-cb"
+                  data-key="ninaTan"
+                />Niña Tan</label
+              >
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  font-size: 0.875rem;
+                "
+                ><input
+                  type="checkbox"
+                  class="inspector-cb"
+                  data-key="robinRomero"
+                />Robin Romero</label
+              >
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="back3Btn">
+            <i class="fas fa-arrow-left"></i> Back
+          </button>
+          <button class="btn btn-secondary modal-close-btn">Cancel</button>
+          <button class="btn btn-primary" id="submitBtn">
+            <i class="fas fa-save"></i> Submit Report
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ VIEW MODAL ════ -->
+    <div id="viewReportModal" class="modal">
+      <div class="modal-content modal-lg">
+        <div class="modal-header">
+          <h2 class="modal-title">
+            <i class="fas fa-eye" style="margin-right: 6px"></i>Inspection
+            Report Summary
+          </h2>
+          <span class="modal-close">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              margin-bottom: 16px;
+              flex-wrap: wrap;
+            "
+          >
+            <span id="view_status"></span>
+            <span
+              id="view_inspectionId"
+              style="
+                font-family: monospace;
+                font-size: 1rem;
+                font-weight: 700;
+                color: var(--primary-green);
+              "
+            ></span>
+            <span
+              id="view_reinspectionBadge"
+              style="display: none"
+              class="badge-reinspection"
+            ></span>
+          </div>
+          <div class="view-grid">
+            <div class="view-item">
+              <label>Account No.</label>
+              <p id="view_accountNo">—</p>
+            </div>
+            <div class="view-item">
+              <label>Business Name</label>
+              <p id="view_businessName">—</p>
+            </div>
+            <div class="view-item">
+              <label>Address</label>
+              <p id="view_address">—</p>
+            </div>
+            <div class="view-item">
+              <label>Barangay</label>
+              <p id="view_barangay">—</p>
+            </div>
+            <div class="view-item">
+              <label>Application Status</label>
+              <p id="view_appStatus">—</p>
+            </div>
+            <div class="view-item">
+              <label>Date of Inspection</label>
+              <p id="view_dateOfInspection">—</p>
+            </div>
+            <div class="view-item">
+              <label>Result</label>
+              <p id="view_result">—</p>
+            </div>
+            <div class="view-item">
+              <label>OVR No.</label>
+              <p id="view_ovrNo">—</p>
+            </div>
+            <div class="view-item">
+              <label>Total Fine</label>
+              <p id="view_totalFine">—</p>
+            </div>
+            <div class="view-item">
+              <label>Compliance Deadline</label>
+              <p id="view_complianceDeadline">—</p>
+            </div>
+            <div class="view-item">
+              <label>Violation Priority</label>
+              <p id="view_violationPriority">—</p>
+            </div>
+            <div class="view-item">
+              <label>Operation Status</label>
+              <p id="view_operationStatus">—</p>
+            </div>
+            <div class="view-item">
+              <label>Inspectors</label>
+              <p id="view_inspectors">—</p>
+            </div>
+            <div class="view-item">
+              <label>Encoded By</label>
+              <p
+                id="view_encodedBy"
+                style="font-weight: 600; color: var(--primary-green)"
+              >
+                —
+              </p>
+            </div>
+            <div class="view-item">
+              <label>Last Modified By</label>
+              <p id="view_lastUpdatedBy" style="color: var(--gray-700)">—</p>
+            </div>
+            <div class="view-item" style="grid-column: 1/-1">
+              <label>Directives</label>
+              <p id="view_directives" style="white-space: pre-wrap">—</p>
+            </div>
+            <div class="view-item" style="grid-column: 1/-1">
+              <label>Observation Statement</label>
+              <p id="view_observation" style="white-space: pre-wrap">—</p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary modal-close-btn">Close</button>
+          <div style="display: flex; gap: 8px">
+            <button
+              class="btn btn-secondary"
+              id="viewTimelineBtn"
+              title="View full inspection history for this business"
+            >
+              <i class="fas fa-history"></i> Timeline
+            </button>
+            <button class="btn btn-primary" id="createReinspectionBtn">
+              <i class="fas fa-redo"></i> Create Reinspection
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ TIMELINE MODAL ════ -->
+    <div id="timelineModal" class="modal">
+      <div class="modal-content" style="max-width: 680px">
+        <div class="modal-header">
+          <div>
+            <h2 class="modal-title">
+              <i class="fas fa-history" style="margin-right: 6px"></i>Inspection
+              Timeline
+            </h2>
+            <p
+              id="timelineSubtitle"
+              style="
+                font-size: 0.82rem;
+                color: var(--gray-600);
+                margin-top: 3px;
+              "
+            ></p>
+          </div>
+          <span class="modal-close">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div id="timelineContent">
+            <div
+              style="text-align: center; padding: 30px; color: var(--gray-500)"
+            >
+              <i class="fas fa-spinner fa-spin" style="font-size: 22px"></i>
+              <p style="margin-top: 8px">Loading timeline...</p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary modal-close-btn">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.production.min.js"
+    ></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
+    ></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="/js/accountLockNotifier.js"></script>
+    <script src="./js/authUtils.js"></script>
+    <script src="./js/imageUtils.js"></script>
+    <script src="/js/commonUtils.js"></script>
+    <script src="/js/apiUtils.js"></script>
+    <script src="/js/uiUtils.js"></script>
+    <script src="inspections.js"></script>
+    <script src="./js/chatbox.js"></script>
+  </body>
+</html>

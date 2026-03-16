@@ -1,0 +1,868 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Violations & Compliance | CENRO San Juan City EMIS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="dashboard.css" />
+    <link
+      rel="icon"
+      type="image/png"
+      href="https://8upload.com/image/68be3f83c9e7e/freepik_br_bb4e2098-1dee-4111-8179-ddc41996d8da.png"
+    />
+    <style>
+      /* ── Tab system ── */
+      .tab-bar {
+        display: flex;
+        gap: 0;
+        border-bottom: 2px solid var(--gray-200);
+        margin-bottom: 24px;
+      }
+      .tab-btn {
+        padding: 11px 28px;
+        border: none;
+        background: none;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--gray-600);
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .tab-btn.active {
+        color: var(--primary-green);
+        border-bottom-color: var(--primary-green);
+      }
+      .tab-btn:hover:not(.active) {
+        color: var(--gray-800);
+        background: var(--gray-100);
+      }
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+      }
+
+      /* ── Stats row ── */
+      .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      .stat-card {
+        background: #fff;
+        border-radius: 10px;
+        padding: 18px 20px;
+        box-shadow: var(--shadow-sm);
+        border-left: 4px solid transparent;
+      }
+      .stat-card.red {
+        border-color: #dc3545;
+      }
+      .stat-card.green {
+        border-color: #28a745;
+      }
+      .stat-card.amber {
+        border-color: #ffc107;
+      }
+      .stat-card.blue {
+        border-color: #007bff;
+      }
+      .stat-card.gray {
+        border-color: var(--gray-400);
+      }
+      .stat-val {
+        font-size: 1.8rem;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: 4px;
+      }
+      .stat-lbl {
+        font-size: 0.78rem;
+        color: var(--gray-600);
+        font-weight: 500;
+      }
+
+      /* ── Tables ── */
+      .vc-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+      }
+      .vc-table th {
+        background: var(--gray-100);
+        padding: 11px 13px;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid var(--gray-200);
+        white-space: nowrap;
+      }
+      .vc-table td {
+        padding: 10px 13px;
+        border-bottom: 1px solid var(--gray-200);
+        vertical-align: middle;
+      }
+      .vc-table tr:last-child td {
+        border-bottom: none;
+      }
+      .vc-table tr:hover td {
+        background: var(--gray-100);
+      }
+
+      .acct-link {
+        color: var(--primary-green);
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: underline;
+      }
+      .insp-id {
+        font-family: monospace;
+        font-size: 0.82rem;
+        background: var(--gray-100);
+        padding: 2px 7px;
+        border-radius: 4px;
+      }
+
+      /* ── Status badges ── */
+      .badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+      .badge-unpaid {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .badge-paid {
+        background: #d4edda;
+        color: #155724;
+      }
+      .badge-waived {
+        background: #d1ecf1;
+        color: #0c5460;
+      }
+      .badge-pending {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .badge-partial {
+        background: #ffeeba;
+        color: #856404;
+      }
+      .badge-full {
+        background: #d4edda;
+        color: #155724;
+      }
+      .badge-overdue {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .badge-complied {
+        background: #d4edda;
+        color: #155724;
+      }
+      .badge-ordinance {
+        background: #e2e3e5;
+        color: #383d41;
+        font-size: 0.72rem;
+        padding: 2px 7px;
+        border-radius: 4px;
+        margin: 2px;
+        display: inline-block;
+      }
+
+      /* ── Action buttons ── */
+      .action-cell {
+        white-space: nowrap;
+      }
+      .act-btn {
+        padding: 5px 9px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-right: 3px;
+        font-size: 0.8rem;
+        transition: opacity 0.15s;
+      }
+      .act-btn:hover {
+        opacity: 0.8;
+      }
+      .act-view {
+        background: #cce5ff;
+        color: #004085;
+      }
+      .act-pay {
+        background: #d4edda;
+        color: #155724;
+      }
+      .act-edit {
+        background: #fff3cd;
+        color: #856404;
+      }
+
+      /* ── Table wrapper ── */
+      .table-section {
+        background: #fff;
+        border-radius: var(--border-radius-md);
+        box-shadow: var(--shadow-sm);
+        padding: var(--spacing-lg);
+      }
+      .table-loading,
+      .table-error,
+      .table-empty {
+        padding: 40px;
+        text-align: center;
+        color: var(--gray-600);
+      }
+      .table-loading i,
+      .table-error i {
+        font-size: 28px;
+        margin-bottom: 10px;
+        display: block;
+      }
+      .table-error {
+        color: var(--danger);
+      }
+
+      /* ── Search ── */
+      .year-selector-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .year-selector-label {
+        font-weight: 500;
+        color: var(--gray-700);
+        font-size: 0.875rem;
+      }
+      .year-selector {
+        padding: 7px 11px;
+        border-radius: 6px;
+        border: 1px solid var(--gray-300);
+        background: #fff;
+        font-size: 0.875rem;
+      }
+
+      /* ── Detail modal ── */
+      .detail-section {
+        margin-bottom: 20px;
+      }
+      .detail-section-title {
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--primary-green);
+        border-bottom: 2px solid var(--accent-green);
+        padding-bottom: 4px;
+        margin-bottom: 12px;
+      }
+      .detail-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px 24px;
+      }
+      .detail-grid.full {
+        grid-template-columns: 1fr;
+      }
+      .detail-item label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--gray-600);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        display: block;
+        margin-bottom: 3px;
+      }
+      .detail-item p {
+        font-size: 0.9rem;
+        color: var(--gray-900);
+        margin: 0;
+      }
+
+      /* ── Requirement rows ── */
+      .req-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px;
+        border: 1px solid var(--gray-200);
+        border-radius: 8px;
+        margin-bottom: 8px;
+        gap: 12px;
+      }
+      .req-row:hover {
+        background: var(--gray-100);
+      }
+      .req-label {
+        font-size: 0.875rem;
+        flex: 1;
+      }
+      .req-status-select {
+        padding: 5px 9px;
+        border-radius: 6px;
+        border: 1px solid var(--gray-300);
+        font-size: 0.82rem;
+        background: #fff;
+      }
+      .req-date-input {
+        padding: 5px 9px;
+        border-radius: 6px;
+        border: 1px solid var(--gray-300);
+        font-size: 0.82rem;
+      }
+
+      /* ── Payment form ── */
+      .pay-form {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .pay-form .form-group {
+        margin-bottom: 0;
+      }
+      .pay-form .form-group.full {
+        grid-column: 1/-1;
+      }
+
+      /* ── Ordinance list in violation detail ── */
+      .ord-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .ord-list li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        border: 1px solid var(--gray-200);
+        border-radius: 6px;
+        margin-bottom: 6px;
+        font-size: 0.85rem;
+      }
+      .ord-fee {
+        font-weight: 700;
+        color: var(--danger);
+        white-space: nowrap;
+        margin-left: 12px;
+      }
+
+      /* ── Total fine row ── */
+      .fine-total-row {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+        font-weight: 700;
+        font-size: 1rem;
+        border-top: 2px solid var(--gray-200);
+        padding-top: 10px;
+      }
+      .fine-total-row span {
+        color: var(--danger);
+        font-size: 1.2rem;
+      }
+
+      /* ── Pagination ── */
+      .pagination-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 16px;
+        padding: 12px;
+        background: var(--gray-100);
+        border-radius: 8px;
+      }
+      .pagination-info {
+        font-size: 0.85rem;
+        color: var(--gray-600);
+      }
+      .pagination-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .pagination-btn {
+        background: #fff;
+        border: 1px solid var(--gray-300);
+        color: var(--gray-600);
+        padding: 7px 11px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .pagination-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .page-size-select {
+        padding: 7px;
+        border: 1px solid var(--gray-300);
+        border-radius: 4px;
+        background: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dashboard-container">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-title">
+            <i class="fas fa-leaf"></i><span>CENRO EMIS</span>
+          </div>
+        </div>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="/dashboard"
+              ><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a
+            >
+          </li>
+          <li>
+            <a href="/businesses"
+              ><i class="fas fa-building"></i><span>Businesses</span></a
+            >
+          </li>
+          <li>
+            <a href="/seminars"
+              ><i class="fas fa-envelope"></i><span>Seminars</span></a
+            >
+          </li>
+          <li>
+            <a href="/certifications"
+              ><i class="fas fa-certificate"></i><span>Certifications</span></a
+            >
+          </li>
+          <li>
+            <a href="/inspections"
+              ><i class="fas fa-clipboard-check"></i><span>Inspections</span></a
+            >
+          </li>
+          <li>
+            <a href="/violations" class="active"
+              ><i class="fas fa-exclamation-triangle"></i
+              ><span>Violations and Compliances</span></a
+            >
+          </li>
+          <li>
+            <a href="/reports"
+              ><i class="fas fa-file-alt"></i><span>Reports</span></a
+            >
+          </li>
+          <li>
+            <a href="/users"><i class="fas fa-users"></i><span>Users</span></a>
+          </li>
+          <li>
+            <a href="/audit"
+              ><i class="fas fa-history"></i><span>Audit Trail</span></a
+            >
+          </li>
+          <div class="sidebar-datetime" id="datetime"></div>
+        </ul>
+      </aside>
+
+      <!-- Main -->
+      <main class="main-content">
+        <header class="header">
+          <h1 class="header-title">Violations &amp; Compliance</h1>
+          <div class="user-info">
+            <div class="user-avatar" id="userAvatar">
+              <img
+                id="userAvatarImage"
+                src="https://via.placeholder.com/40"
+                alt="User Avatar"
+              />
+              <div id="userAvatarFallback" class="avatar-fallback">U</div>
+            </div>
+            <div class="user-dropdown">
+              <button class="dropdown-toggle" id="userDropdown">
+                <span id="userEmail">Loading...</span
+                ><i class="fas fa-chevron-down"></i>
+              </button>
+              <div class="dropdown-menu" id="userDropdownMenu">
+                <a href="profile.html" class="dropdown-item">Profile</a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item" id="logoutBtn">Logout</a>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div class="table-section">
+          <!-- Controls -->
+          <div class="table-header">
+            <h2 class="table-title" id="pageTitle">
+              Violations &amp; Compliance
+            </h2>
+            <div class="table-actions">
+              <div class="year-selector-container">
+                <label class="year-selector-label" for="yearSelect"
+                  >Year:</label
+                >
+                <select id="yearSelect" class="year-selector">
+                  <option value="2025">2025</option>
+                  <option value="2026">2026</option>
+                  <option value="2027">2027</option>
+                  <option value="2028">2028</option>
+                  <option value="2029">2029</option>
+                  <option value="2030">2030</option>
+                </select>
+              </div>
+              <div class="search-container">
+                <input
+                  type="text"
+                  id="searchInput"
+                  class="search-input"
+                  placeholder="Search Acct. No., Business, Insp. ID..."
+                />
+                <button id="searchBtn" class="search-button">
+                  <i class="fas fa-search"></i>
+                </button>
+              </div>
+              <button class="btn btn-primary" id="refreshBtn">
+                <i class="fas fa-sync-alt"></i> Refresh
+              </button>
+            </div>
+          </div>
+
+          <!-- Tabs -->
+          <div class="tab-bar">
+            <button class="tab-btn active" data-tab="violations">
+              <i class="fas fa-gavel"></i> Violations (OVR)
+              <span
+                id="violationsCount"
+                style="
+                  background: #dc3545;
+                  color: #fff;
+                  border-radius: 10px;
+                  padding: 1px 7px;
+                  font-size: 0.72rem;
+                  margin-left: 4px;
+                "
+                >0</span
+              >
+            </button>
+            <button class="tab-btn" data-tab="compliance">
+              <i class="fas fa-tasks"></i> Compliance (DENR/Env.)
+              <span
+                id="complianceCount"
+                style="
+                  background: var(--primary-green);
+                  color: #fff;
+                  border-radius: 10px;
+                  padding: 1px 7px;
+                  font-size: 0.72rem;
+                  margin-left: 4px;
+                "
+                >0</span
+              >
+            </button>
+          </div>
+
+          <!-- VIOLATIONS TAB -->
+          <div class="tab-content active" id="tab-violations">
+            <!-- Stats -->
+            <div class="stats-row" id="violationStats">
+              <div class="stat-card red">
+                <div class="stat-val" id="vs_total">—</div>
+                <div class="stat-lbl">Total Violations</div>
+              </div>
+              <div class="stat-card amber">
+                <div class="stat-val" id="vs_unpaid">—</div>
+                <div class="stat-lbl">Unpaid</div>
+              </div>
+              <div class="stat-card green">
+                <div class="stat-val" id="vs_paid">—</div>
+                <div class="stat-lbl">Paid</div>
+              </div>
+              <div class="stat-card blue">
+                <div class="stat-val" id="vs_waived">—</div>
+                <div class="stat-lbl">Waived</div>
+              </div>
+              <div class="stat-card gray">
+                <div class="stat-val" id="vs_fines">—</div>
+                <div class="stat-lbl">Total Fines</div>
+              </div>
+            </div>
+            <div id="violationsTable">
+              <div class="table-loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading violations...</p>
+              </div>
+            </div>
+            <div class="pagination-container">
+              <div class="pagination-info">
+                <span id="vPaginationInfo">Showing 0–0 of 0 records</span>
+              </div>
+              <div class="pagination-controls">
+                <button id="vPrevBtn" class="pagination-btn" disabled>
+                  <i class="fas fa-angle-left"></i>
+                </button>
+                <select id="vPageSizeSelect" class="page-size-select">
+                  <option value="10">10 per page</option>
+                  <option value="25">25 per page</option>
+                  <option value="50">50 per page</option>
+                </select>
+                <button id="vNextBtn" class="pagination-btn" disabled>
+                  <i class="fas fa-angle-right"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- COMPLIANCE TAB -->
+          <div class="tab-content" id="tab-compliance">
+            <div class="stats-row" id="complianceStats">
+              <div class="stat-card blue">
+                <div class="stat-val" id="cs_total">—</div>
+                <div class="stat-lbl">Total Records</div>
+              </div>
+              <div class="stat-card amber">
+                <div class="stat-val" id="cs_pending">—</div>
+                <div class="stat-lbl">Pending</div>
+              </div>
+              <div class="stat-card gray">
+                <div class="stat-val" id="cs_partial">—</div>
+                <div class="stat-lbl">Partially Complied</div>
+              </div>
+              <div class="stat-card green">
+                <div class="stat-val" id="cs_full">—</div>
+                <div class="stat-lbl">Fully Complied</div>
+              </div>
+              <div class="stat-card red">
+                <div class="stat-val" id="cs_overdue">—</div>
+                <div class="stat-lbl">Overdue</div>
+              </div>
+            </div>
+            <div id="complianceTable">
+              <div class="table-loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading compliance records...</p>
+              </div>
+            </div>
+            <div class="pagination-container">
+              <div class="pagination-info">
+                <span id="cPaginationInfo">Showing 0–0 of 0 records</span>
+              </div>
+              <div class="pagination-controls">
+                <button id="cPrevBtn" class="pagination-btn" disabled>
+                  <i class="fas fa-angle-left"></i>
+                </button>
+                <select id="cPageSizeSelect" class="page-size-select">
+                  <option value="10">10 per page</option>
+                  <option value="25">25 per page</option>
+                  <option value="50">50 per page</option>
+                </select>
+                <button id="cNextBtn" class="pagination-btn" disabled>
+                  <i class="fas fa-angle-right"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- ── VIOLATION DETAIL MODAL ── -->
+    <div id="violationDetailModal" class="modal">
+      <div class="modal-content" style="max-width: 700px">
+        <div class="modal-header">
+          <h2 class="modal-title">
+            <i class="fas fa-gavel" style="margin-right: 8px"></i>Violation
+            Record
+          </h2>
+          <span class="modal-close">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="detail-section">
+            <div class="detail-section-title">Inspection & Business</div>
+            <div class="detail-grid">
+              <div class="detail-item">
+                <label>Inspection ID</label>
+                <p id="vd_inspectionId">—</p>
+              </div>
+              <div class="detail-item">
+                <label>OVR No.</label>
+                <p id="vd_ovrNo">—</p>
+              </div>
+              <div class="detail-item">
+                <label>Account No.</label>
+                <p id="vd_accountNo">—</p>
+              </div>
+              <div class="detail-item">
+                <label>Business Name</label>
+                <p id="vd_businessName">—</p>
+              </div>
+              <div class="detail-item">
+                <label>Date of Violation</label>
+                <p id="vd_dateOfViolation">—</p>
+              </div>
+              <div class="detail-item">
+                <label>Payment Status</label>
+                <p id="vd_paymentStatus">—</p>
+              </div>
+              <div class="detail-item">
+                <label>OR No.</label>
+                <p id="vd_orNo">—</p>
+              </div>
+              <div class="detail-item">
+                <label>Payment Date</label>
+                <p id="vd_paymentDate">—</p>
+              </div>
+            </div>
+          </div>
+          <div class="detail-section">
+            <div class="detail-section-title">Violated Ordinances</div>
+            <ul class="ord-list" id="vd_ordinanceList"></ul>
+            <div class="fine-total-row">
+              Total Fine: <span id="vd_totalFine">₱0</span>
+            </div>
+          </div>
+          <div class="detail-section" id="paymentFormSection">
+            <div class="detail-section-title">Update Payment</div>
+            <div class="pay-form">
+              <div class="form-group">
+                <label>Payment Status</label>
+                <select id="pay_status" class="form-control">
+                  <option value="UNPAID">Unpaid</option>
+                  <option value="PAID">Paid</option>
+                  <option value="WAIVED">Waived</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Payment Date</label>
+                <input type="date" id="pay_date" class="form-control" />
+              </div>
+              <div class="form-group">
+                <label>OR No.</label>
+                <input
+                  type="text"
+                  id="pay_orNo"
+                  class="form-control"
+                  placeholder="Official Receipt No."
+                />
+              </div>
+              <div class="form-group full">
+                <label>Remarks</label>
+                <textarea
+                  id="pay_remarks"
+                  class="form-control"
+                  rows="2"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary modal-close-btn">Close</button>
+          <button class="btn btn-primary" id="savePaymentBtn">
+            <i class="fas fa-save"></i> Save Payment
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── COMPLIANCE DETAIL MODAL ── -->
+    <div id="complianceDetailModal" class="modal">
+      <div class="modal-content" style="max-width: 750px">
+        <div class="modal-header">
+          <h2 class="modal-title">
+            <i class="fas fa-tasks" style="margin-right: 8px"></i>Compliance
+            Record
+          </h2>
+          <span class="modal-close">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="detail-section">
+            <div class="detail-section-title">Inspection & Business</div>
+            <div class="detail-grid">
+              <div class="detail-item">
+                <label>Inspection ID</label>
+                <p id="cd_inspectionId">—</p>
+              </div>
+              <div class="detail-item">
+                <label>Account No.</label>
+                <p id="cd_accountNo">—</p>
+              </div>
+              <div class="detail-item">
+                <label>Business Name</label>
+                <p id="cd_businessName">—</p>
+              </div>
+              <div class="detail-item">
+                <label>Compliance Deadline</label>
+                <p id="cd_deadline">—</p>
+              </div>
+              <div class="detail-item">
+                <label>Deadline Date</label>
+                <p id="cd_deadlineDate">—</p>
+              </div>
+              <div class="detail-item">
+                <label>Overall Status</label>
+                <p id="cd_overallStatus">—</p>
+              </div>
+            </div>
+          </div>
+          <div class="detail-section">
+            <div class="detail-section-title">
+              Requirements — Update Each Item
+            </div>
+            <div id="cd_requirementsList"></div>
+          </div>
+          <div class="detail-section">
+            <div class="form-group">
+              <label style="font-weight: 600">Overall Remarks</label>
+              <textarea
+                id="cd_remarks"
+                class="form-control"
+                rows="2"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary modal-close-btn">Close</button>
+          <button class="btn btn-primary" id="saveComplianceBtn">
+            <i class="fas fa-save"></i> Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.production.min.js"
+    ></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
+    ></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="/js/accountLockNotifier.js"></script>
+    <script src="./js/authUtils.js"></script>
+    <script src="./js/imageUtils.js"></script>
+    <script src="/js/commonUtils.js"></script>
+    <script src="/js/apiUtils.js"></script>
+    <script src="/js/uiUtils.js"></script>
+    <script src="violations.js"></script>
+    <script src="./js/chatbox.js"></script>
+  </body>
+</html>

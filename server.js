@@ -5,6 +5,9 @@ const cors = require("cors");
 const path = require("path");
 const authRoutes = require("./routes/authRoutes");
 const { authDB, establishmentsDB } = require("./config/database");
+const inspectionRoutes = require("./routes/inspectionRoutes");
+const violationRoutes = require("./routes/violationRoutes");
+const complianceRoutes = require("./routes/complianceRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const auditRoutes = require("./routes/auditRoutes.js");
 const {
@@ -147,6 +150,9 @@ app.use("/api/seminar2027", seminar2027Routes);
 app.use("/api/seminar2028", seminar2028Routes);
 app.use("/api/seminar2029", seminar2029Routes);
 app.use("/api/seminar2030", seminar2030Routes);
+app.use("/api/inspections", inspectionRoutes);
+app.use("/api/violations", violationRoutes);
+app.use("/api/compliance", complianceRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/audit", auditRoutes);
 app.use("/api/certificates", certificateRoutes);
@@ -183,6 +189,16 @@ app.get("/seminars", (req, res) => {
 app.get("/certifications", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "certifications.html"));
 });
+
+// Inspection Route
+app.get("/inspections", (req, res) =>
+  res.sendFile(path.join(__dirname, "public", "inspections.html")),
+);
+
+// Violations Route
+app.get("/violations", (req, res) =>
+  res.sendFile(path.join(__dirname, "public", "violations.html")),
+);
 
 // Reports route
 app.get("/reports", (req, res) => {
