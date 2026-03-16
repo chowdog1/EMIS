@@ -87,19 +87,82 @@
         background: #e2e3e5;
         color: #383d41;
       }
-      /* Reinspection badge */
-      .badge-reinspection {
-        background: #cce5ff;
-        color: #004085;
+      /* ── View modal tabs ── */
+      .view-tab-btn {
+        padding: 10px 18px;
+        border: none;
+        background: none;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--gray-600);
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+      }
+      .view-tab-btn.active {
+        color: var(--primary-green);
+        border-bottom-color: var(--primary-green);
+      }
+      .view-tab-btn:hover:not(.active) {
+        color: var(--gray-800);
+        background: var(--gray-100);
+      }
+      .view-tab-content {
+        display: none;
+      }
+      .view-tab-content.active {
+        display: block;
+      }
+      .view-section-title {
         font-size: 0.72rem;
         font-weight: 700;
-        padding: 2px 8px;
-        border-radius: 10px;
-        vertical-align: middle;
-        margin-left: 6px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--primary-green);
+        border-bottom: 2px solid var(--accent-green);
+        padding-bottom: 4px;
+        margin: 18px 0 10px;
       }
+      .view-section-title:first-child {
+        margin-top: 0;
+      }
+      /* Tag list for violations/recs */
+      .view-tag-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .view-tag {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 0.78rem;
+        font-weight: 500;
+      }
+      .view-tag-viol {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .view-tag-rec {
+        background: #d4edda;
+        color: #155724;
+      }
+      .view-tag-na {
+        background: var(--gray-200);
+        color: var(--gray-700);
+      }
+      .view-tag-rec2 {
+        background: #cce5ff;
+        color: #004085;
+      }
+      /* Reinspection badge *
+    .badge-reinspection  { background:#cce5ff; color:#004085; font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:10px; vertical-align:middle; margin-left:6px; }
 
-      /* ── Timeline modal ── */
+    /* ── Timeline modal ── */
       .timeline {
         position: relative;
         padding-left: 28px;
@@ -628,7 +691,7 @@
           <li>
             <a href="/violations"
               ><i class="fas fa-exclamation-triangle"></i
-              ><span>Violations and Compliances</span></a
+              ><span>Violations</span></a
             >
           </li>
           <li>
@@ -2511,116 +2574,378 @@
 
     <!-- ════ VIEW MODAL ════ -->
     <div id="viewReportModal" class="modal">
-      <div class="modal-content modal-lg">
+      <div class="modal-content modal-xl" style="max-width: 960px">
         <div class="modal-header">
-          <h2 class="modal-title">
-            <i class="fas fa-eye" style="margin-right: 6px"></i>Inspection
-            Report Summary
-          </h2>
+          <div>
+            <h2 class="modal-title">
+              <i class="fas fa-eye" style="margin-right: 6px"></i>Inspection
+              Report
+            </h2>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-top: 6px;
+                flex-wrap: wrap;
+              "
+            >
+              <span id="view_status"></span>
+              <span
+                id="view_inspectionId"
+                style="
+                  font-family: monospace;
+                  font-size: 0.95rem;
+                  font-weight: 700;
+                  color: var(--primary-green);
+                "
+              ></span>
+              <span
+                id="view_reinspectionBadge"
+                style="display: none"
+                class="badge-reinspection"
+              ></span>
+              <span id="view_priorityBadge"></span>
+            </div>
+          </div>
           <span class="modal-close">&times;</span>
         </div>
+
+        <!-- View tabs -->
+        <div
+          style="
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid var(--gray-200);
+            padding: 0 24px;
+          "
+        >
+          <button class="view-tab-btn active" data-vtab="vt1">
+            <i class="fas fa-file-alt"></i> Notice
+          </button>
+          <button class="view-tab-btn" data-vtab="vt2">
+            <i class="fas fa-clipboard-list"></i> Checklist
+          </button>
+          <button class="view-tab-btn" data-vtab="vt3">
+            <i class="fas fa-file-signature"></i> After Inspection
+          </button>
+        </div>
+
         <div class="modal-body">
-          <div
-            style="
-              display: flex;
-              align-items: center;
-              gap: 12px;
-              margin-bottom: 16px;
-              flex-wrap: wrap;
-            "
-          >
-            <span id="view_status"></span>
-            <span
-              id="view_inspectionId"
-              style="
-                font-family: monospace;
-                font-size: 1rem;
-                font-weight: 700;
-                color: var(--primary-green);
-              "
-            ></span>
-            <span
-              id="view_reinspectionBadge"
-              style="display: none"
-              class="badge-reinspection"
-            ></span>
+          <!-- ── TAB 1: Notice of Inspection ── -->
+          <div class="view-tab-content active" id="vt1">
+            <div class="view-section-title">Business Information</div>
+            <div class="view-grid">
+              <div class="view-item">
+                <label>Account No.</label>
+                <p id="view_accountNo">—</p>
+              </div>
+              <div class="view-item">
+                <label>Business Name</label>
+                <p id="view_businessName">—</p>
+              </div>
+              <div class="view-item">
+                <label>Address</label>
+                <p id="view_address">—</p>
+              </div>
+              <div class="view-item">
+                <label>Barangay</label>
+                <p id="view_barangay">—</p>
+              </div>
+              <div class="view-item">
+                <label>Application Status</label>
+                <p id="view_appStatus">—</p>
+              </div>
+              <div class="view-item">
+                <label>Date of Inspection</label>
+                <p id="view_dateOfInspection">—</p>
+              </div>
+            </div>
+
+            <div class="view-section-title">Inspection Result</div>
+            <div class="view-grid">
+              <div class="view-item">
+                <label>Result</label>
+                <p id="view_result">—</p>
+              </div>
+              <div class="view-item">
+                <label>OVR No.</label>
+                <p id="view_ovrNo">—</p>
+              </div>
+              <div class="view-item">
+                <label>Total Fine</label>
+                <p id="view_totalFine">—</p>
+              </div>
+              <div class="view-item">
+                <label>Compliance Deadline</label>
+                <p id="view_complianceDeadline">—</p>
+              </div>
+            </div>
+
+            <div class="view-section-title">Violations Checked</div>
+            <div
+              id="view_violationsList"
+              style="font-size: 0.875rem; color: var(--gray-700)"
+            >
+              —
+            </div>
+
+            <div class="view-section-title" style="margin-top: 16px">
+              Recommendations
+            </div>
+            <div
+              id="view_recommendationsList"
+              style="font-size: 0.875rem; color: var(--gray-700)"
+            >
+              —
+            </div>
+
+            <div class="view-section-title" style="margin-top: 16px">
+              Encoded By
+            </div>
+            <div class="view-grid">
+              <div class="view-item">
+                <label>Encoded By</label>
+                <p
+                  id="view_encodedBy"
+                  style="font-weight: 600; color: var(--primary-green)"
+                >
+                  —
+                </p>
+              </div>
+              <div class="view-item">
+                <label>Last Modified By</label>
+                <p id="view_lastUpdatedBy">—</p>
+              </div>
+            </div>
           </div>
-          <div class="view-grid">
-            <div class="view-item">
-              <label>Account No.</label>
-              <p id="view_accountNo">—</p>
+
+          <!-- ── TAB 2: Inspection Checklist ── -->
+          <div class="view-tab-content" id="vt2">
+            <div class="view-section-title">Permits &amp; Certifications</div>
+            <div class="view-grid">
+              <div class="view-item">
+                <label>Mayor's Permit</label>
+                <p id="vp_mayors">—</p>
+              </div>
+              <div class="view-item">
+                <label>Environmental Protection Fee</label>
+                <p id="vp_epf">—</p>
+              </div>
+              <div class="view-item">
+                <label>ECC</label>
+                <p id="vp_ecc">—</p>
+              </div>
+              <div class="view-item">
+                <label>CNC</label>
+                <p id="vp_cnc">—</p>
+              </div>
+              <div class="view-item">
+                <label>WDP</label>
+                <p id="vp_wdp">—</p>
+              </div>
+              <div class="view-item">
+                <label>PTO</label>
+                <p id="vp_pto">—</p>
+              </div>
+              <div class="view-item">
+                <label>HWID</label>
+                <p id="vp_hwid">—</p>
+              </div>
             </div>
-            <div class="view-item">
-              <label>Business Name</label>
-              <p id="view_businessName">—</p>
+
+            <div class="view-section-title">Pollution Control Officer</div>
+            <div class="view-grid">
+              <div class="view-item">
+                <label>Name</label>
+                <p id="vp_pcoName">—</p>
+              </div>
+              <div class="view-item">
+                <label>Accreditation No.</label>
+                <p id="vp_pcoAccred">—</p>
+              </div>
+              <div class="view-item">
+                <label>Contact No.</label>
+                <p id="vp_pcoContact">—</p>
+              </div>
+              <div class="view-item">
+                <label>Email</label>
+                <p id="vp_pcoEmail">—</p>
+              </div>
             </div>
-            <div class="view-item">
-              <label>Address</label>
-              <p id="view_address">—</p>
+
+            <div class="view-section-title">Solid Waste Management</div>
+            <div class="view-grid">
+              <div class="view-item">
+                <label>Bins Provided</label>
+                <p id="vw_bins">—</p>
+              </div>
+              <div class="view-item">
+                <label>Bins Labelled</label>
+                <p id="vw_labels">—</p>
+              </div>
+              <div class="view-item">
+                <label>Bins Covered</label>
+                <p id="vw_covered">—</p>
+              </div>
+              <div class="view-item">
+                <label>Proper Segregation</label>
+                <p id="vw_segregation">—</p>
+              </div>
+              <div class="view-item">
+                <label>MRF</label>
+                <p id="vw_mrf">—</p>
+              </div>
+              <div class="view-item">
+                <label>Wastes Collected</label>
+                <p id="vw_collected">—</p>
+              </div>
+              <div class="view-item">
+                <label>Hauling Frequency</label>
+                <p id="vw_frequency">—</p>
+              </div>
+              <div class="view-item">
+                <label>Hauler</label>
+                <p id="vw_hauler">—</p>
+              </div>
             </div>
-            <div class="view-item">
-              <label>Barangay</label>
-              <p id="view_barangay">—</p>
+
+            <div class="view-section-title">Liquid Waste Management</div>
+            <div class="view-grid">
+              <div class="view-item">
+                <label>Septic Tank</label>
+                <p id="vw_septic">—</p>
+              </div>
+              <div class="view-item">
+                <label>Septic Location / Capacity</label>
+                <p id="vw_septicDetail">—</p>
+              </div>
+              <div class="view-item">
+                <label>Desludging Frequency / Date</label>
+                <p id="vw_septicDesludge">—</p>
+              </div>
+              <div class="view-item">
+                <label>Septic Service Provider</label>
+                <p id="vw_septicProvider">—</p>
+              </div>
+              <div class="view-item">
+                <label>Grease Trap</label>
+                <p id="vw_grease">—</p>
+              </div>
+              <div class="view-item">
+                <label>Grease Location / Capacity</label>
+                <p id="vw_greaseDetail">—</p>
+              </div>
+              <div class="view-item">
+                <label>WWTP</label>
+                <p id="vw_wwtp">—</p>
+              </div>
+              <div class="view-item">
+                <label>Lab Analysis Result</label>
+                <p id="vw_wwtpResult">—</p>
+              </div>
+              <div class="view-item">
+                <label>Used Oil Disposal</label>
+                <p id="vw_oil">—</p>
+              </div>
+              <div class="view-item">
+                <label>Oil Type / Frequency / Hauler</label>
+                <p id="vw_oilDetail">—</p>
+              </div>
             </div>
-            <div class="view-item">
-              <label>Application Status</label>
-              <p id="view_appStatus">—</p>
+
+            <div class="view-section-title">Air Pollution Management</div>
+            <div class="view-grid">
+              <div class="view-item">
+                <label>Pollution Control Devices</label>
+                <p id="vw_airDevices">—</p>
+              </div>
+              <div class="view-item">
+                <label>Device Type / Maintenance</label>
+                <p id="vw_airDetail">—</p>
+              </div>
             </div>
-            <div class="view-item">
-              <label>Date of Inspection</label>
-              <p id="view_dateOfInspection">—</p>
+          </div>
+
+          <!-- ── TAB 3: After Inspection Report ── -->
+          <div class="view-tab-content" id="vt3">
+            <div class="view-section-title">Purpose of Inspection</div>
+            <div
+              id="view_purpose"
+              style="font-size: 0.875rem; color: var(--gray-700)"
+            >
+              —
             </div>
-            <div class="view-item">
-              <label>Result</label>
-              <p id="view_result">—</p>
+
+            <div class="view-section-title" style="margin-top: 14px">
+              Physical Environment
             </div>
-            <div class="view-item">
-              <label>OVR No.</label>
-              <p id="view_ovrNo">—</p>
+            <div class="view-grid">
+              <div class="view-item">
+                <label>Land Use</label>
+                <p id="view_landUse">—</p>
+              </div>
+              <div class="view-item">
+                <label>Ownership Terms</label>
+                <p id="view_ownership">—</p>
+              </div>
+              <div class="view-item">
+                <label>Lessee</label>
+                <p id="view_lessee">—</p>
+              </div>
+              <div class="view-item">
+                <label>Stand Alone</label>
+                <p id="view_standalone">—</p>
+              </div>
             </div>
-            <div class="view-item">
-              <label>Total Fine</label>
-              <p id="view_totalFine">—</p>
+
+            <div class="view-section-title">Findings &amp; Observations</div>
+            <div class="view-grid">
+              <div class="view-item">
+                <label>Operation Status</label>
+                <p id="view_operationStatus">—</p>
+              </div>
+              <div class="view-item" style="grid-column: 1/-1">
+                <label>Observation Statement</label>
+                <p id="view_observation" style="white-space: pre-wrap">—</p>
+              </div>
             </div>
-            <div class="view-item">
-              <label>Compliance Deadline</label>
-              <p id="view_complianceDeadline">—</p>
+
+            <div class="view-section-title">Directives</div>
+            <p
+              id="view_directives"
+              style="
+                white-space: pre-wrap;
+                font-size: 0.875rem;
+                color: var(--gray-700);
+              "
+            >
+              —
+            </p>
+
+            <div class="view-section-title" style="margin-top: 14px">
+              Recommendations
             </div>
-            <div class="view-item">
-              <label>Violation Priority</label>
-              <p id="view_violationPriority">—</p>
+            <div
+              id="view_afterRecs"
+              style="font-size: 0.875rem; color: var(--gray-700)"
+            >
+              —
             </div>
-            <div class="view-item">
-              <label>Operation Status</label>
-              <p id="view_operationStatus">—</p>
+
+            <div class="view-section-title" style="margin-top: 14px">
+              Inspectors
             </div>
-            <div class="view-item">
-              <label>Inspectors</label>
-              <p id="view_inspectors">—</p>
-            </div>
-            <div class="view-item">
-              <label>Encoded By</label>
-              <p
-                id="view_encodedBy"
-                style="font-weight: 600; color: var(--primary-green)"
-              >
-                —
-              </p>
-            </div>
-            <div class="view-item">
-              <label>Last Modified By</label>
-              <p id="view_lastUpdatedBy" style="color: var(--gray-700)">—</p>
-            </div>
-            <div class="view-item" style="grid-column: 1/-1">
-              <label>Directives</label>
-              <p id="view_directives" style="white-space: pre-wrap">—</p>
-            </div>
-            <div class="view-item" style="grid-column: 1/-1">
-              <label>Observation Statement</label>
-              <p id="view_observation" style="white-space: pre-wrap">—</p>
-            </div>
+            <p
+              id="view_inspectors"
+              style="font-size: 0.875rem; color: var(--gray-700)"
+            >
+              —
+            </p>
           </div>
         </div>
+        <!-- end modal-body -->
+
         <div class="modal-footer">
           <button class="btn btn-secondary modal-close-btn">Close</button>
           <div style="display: flex; gap: 8px">

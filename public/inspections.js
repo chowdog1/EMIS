@@ -13,11 +13,6 @@ let currentModal = 1;
 let formData = {};
 let editingReportId = null;
 
-// ── Violation fee + priority map ──────────────────────────────────────────────
-// priority: "HIGH" | "MEDIUM" | "LOW"
-// HIGH   = ₱2,500–₱5,000  (serious environmental offenses)
-// MEDIUM = ₱1,000–₱3,000  (moderate)
-// LOW    = ₱500            (minor: segregation, labels, cover)
 const VIOLATIONS_META = {
   ordinance35_2004_sec2a: {
     fee: 1000,
@@ -532,16 +527,112 @@ async function viewReport(id) {
 // Track the currently-viewed report for reinspection/timeline buttons
 let activeViewReportId = null;
 
+// Violation key → label map
+const VIOL_LABELS = {
+  ordinance35_2004_sec2a:
+    "City Ordinance No. 35-2004 sec.2a — Failure to segregate wastes",
+  ordinance30_1999_sec5c:
+    "City Ordinance No. 30-1999 sec.5c — Failure to specify garbage bin label",
+  ordinance94_1994_sec1:
+    "City Ordinance No. 94-1994 sec.1 — Failure to cover trash receptacle",
+  ordinance91_2013_sec5F03d:
+    "City Ordinance No. 91-2013 sec.5F-03d — Failure to install anti-pollution devices",
+  ordinance21_11_sec14_2:
+    "City Ordinance No. 21-11 sec 14.2 — Failure to desludge septic tank",
+  ordinance91_2013_sec5F03e:
+    "City Ordinance No. 91-2013 sec.5F-03e — Failure to present clearances/permits",
+  ordinance10_2011:
+    "City Ordinance No. 10-2011 — Dumping solid waste into canals/drainage",
+  ordinance09_2011_sec3_1:
+    "City Ordinance No. 09-2011 sec.3-1 — Littering / illegal dumping",
+  ordinance91_2013_sec5F03a:
+    "City Ordinance No. 91-2013 sec.5F-03a — Failure to pay Environmental Protection Fee",
+  ordinance91_2013_sec5F03b:
+    "City Ordinance No. 91-2013 sec.5F-03b — Failure to appoint PCO",
+  ordinance91_2013_sec5F03c:
+    "City Ordinance No. 91-2013 sec.5F-03c — Refused entry to inspectors",
+  ordinance15_11_sec1b:
+    "City Ordinance No. 15-11 sec.1b — Improper disposal of used cooking oil",
+  ordinance14_2024_sec5w:
+    "City Ordinance No. 14-2024 sec.5w — Tobacco Advertisement",
+};
+
+const REC_LABELS = {
+  environmentalComplianceCertificate: "Environmental Compliance Certificate",
+  certificateOfNonCoverage: "Certificate of Non-Coverage",
+  wastewaterDischargePerm: "Wastewater Discharge Permit",
+  hazardousWasteGeneratorId: "Hazardous Waste Generator ID",
+  permitToOperateAirPollution: "Permit to Operate (Air Pollution)",
+  pcoAccreditationCertificate: "PCO Accreditation Certificate",
+  tsdCertificate: "Transport/Storage/Disposal Certificate",
+  environmentalProtectionFee: "Environmental Protection Fee",
+  appointPCO: "Appoint PCO",
+  provideSegregationBins: "Provide segregation bins",
+  properWasteSegregation: "Proper waste segregation",
+  installGreaseTrap: "Install grease trap",
+  installExhaustSystem: "Install exhaust system",
+  installSepticTank: "Install septic tank",
+  attendSeminar: "Attend environmental seminar",
+};
+
+const AFTER_REC_LABELS = {
+  forReinspection: "For reinspection",
+  forSeminar: "For seminar",
+  complianceMeasures: "For compliance to pollution mitigating measures",
+  forCDO: "For endorsement to BPLO for CDO",
+  issuanceCEC: "Issuance of Certificate of Environmental Compliance",
+  forCaseConference: "For Case Conference",
+  forCaseTermination: "For Case Termination/Dismissal",
+};
+
+function tagList(items, cls) {
+  if (!items || !items.length)
+    return "<span style='color:var(--gray-400);font-size:0.82rem;'>None</span>";
+  return `<div class="view-tag-list">${items.map((i) => `<span class="view-tag ${cls}">${i}</span>`).join("")}</div>`;
+}
+
+function yesNo(val) {
+  if (val === "YES" || val === true) return "Yes";
+  if (val === "NO" || val === false) return "No";
+  return "N/A";
+}
+
 function populateViewModal(r) {
   activeViewReportId = r._id;
+
+  // Reset to first tab
+  document
+    .querySelectorAll(".view-tab-btn")
+    .forEach((b, i) => b.classList.toggle("active", i === 0));
+  document
+    .querySelectorAll(".view-tab-content")
+    .forEach((t, i) => t.classList.toggle("active", i === 0));
+
   const el = (id, val) => {
     const e = document.getElementById(id);
     if (e) e.textContent = val ?? "—";
   };
+
+  // ── Header badges ──
   el("view_inspectionId", r.inspectionId);
+  document.getElementById("view_status").innerHTML = statusBadge(
+    r.inspectionStatus,
+  );
+  const priBadge = document.getElementById("view_priorityBadge");
+  if (priBadge) priBadge.innerHTML = priorityBadgeHtml(r.violationPriority);
+  const riBadge = document.getElementById("view_reinspectionBadge");
+  if (riBadge) {
+    riBadge.textContent = r.isReinspection
+      ? `Reinspection #${r.reinspectionNumber}`
+      : "";
+    riBadge.style.display = r.isReinspection ? "inline-block" : "none";
+  }
+
+  // ── TAB 1: Notice ──
   el("view_accountNo", r.accountNo);
   el("view_businessName", r.businessName);
   el("view_address", r.address);
+  el("view_barangay", r.barangay);
   el("view_appStatus", r.applicationStatus);
   el(
     "view_dateOfInspection",
@@ -549,7 +640,6 @@ function populateViewModal(r) {
       ? new Date(r.dateOfInspection).toLocaleString("en-PH")
       : "—",
   );
-  el("view_barangay", r.barangay);
   el(
     "view_result",
     r.inspectionResult === "NOTICE_WARNING"
@@ -563,33 +653,188 @@ function populateViewModal(r) {
       ? `₱${r.violations.totalFine.toLocaleString()}`
       : "—",
   );
-  el("view_complianceDeadline", r.complianceDeadline);
-  el("view_directives", r.directives);
-  el("view_observation", r.findings?.observationStatement);
+  el("view_complianceDeadline", r.complianceDeadline || "—");
+  el("view_encodedBy", r.encodedByName || r.encodedByEmail || "—");
+  el("view_lastUpdatedBy", r.lastUpdatedByEmail || "—");
+
+  // Violations tag list
+  const violEl = document.getElementById("view_violationsList");
+  if (violEl) {
+    if (r.violations?.isNA) {
+      violEl.innerHTML = tagList(["N/A"], "view-tag-na");
+    } else {
+      const checked = Object.keys(VIOL_LABELS).filter((k) => r.violations?.[k]);
+      violEl.innerHTML = tagList(
+        checked.map((k) => VIOL_LABELS[k]),
+        "view-tag-viol",
+      );
+    }
+  }
+
+  // Recommendations tag list
+  const recEl = document.getElementById("view_recommendationsList");
+  if (recEl) {
+    const checked = Object.keys(REC_LABELS).filter(
+      (k) => r.recommendations?.[k],
+    );
+    recEl.innerHTML = tagList(
+      checked.map((k) => REC_LABELS[k]),
+      "view-tag-rec",
+    );
+  }
+
+  // ── TAB 2: Checklist — Permits ──
+  const p = r.permits || {};
+  el("vp_mayors", yesNo(p.mayorsPermit));
+  el("vp_epf", yesNo(p.environmentalProtectionFee));
+  el(
+    "vp_ecc",
+    p.ecc?.status === "YES"
+      ? `Yes — ECC No: ${p.ecc.eccNumber || "—"}, Issued: ${p.ecc.dateIssued ? new Date(p.ecc.dateIssued).toLocaleDateString("en-PH") : "—"}`
+      : yesNo(p.ecc?.status),
+  );
+  el(
+    "vp_cnc",
+    p.cnc?.status === "YES"
+      ? `Yes — CNC No: ${p.cnc.cncNumber || "—"}, Issued: ${p.cnc.dateIssued ? new Date(p.cnc.dateIssued).toLocaleDateString("en-PH") : "—"}`
+      : yesNo(p.cnc?.status),
+  );
+  el(
+    "vp_wdp",
+    p.wdp?.status === "YES"
+      ? `Yes — WDP No: ${p.wdp.wdpNumber || "—"}, Valid: ${p.wdp.validity || "—"}`
+      : yesNo(p.wdp?.status),
+  );
+  el(
+    "vp_pto",
+    p.pto?.status === "YES"
+      ? `Yes — PTO No: ${p.pto.ptoNumber || "—"}, Valid: ${p.pto.validity || "—"}`
+      : yesNo(p.pto?.status),
+  );
+  el(
+    "vp_hwid",
+    p.hwid?.status === "YES"
+      ? `Yes — HWID No: ${p.hwid.hwidNumber || "—"}, Issued: ${p.hwid.dateIssued ? new Date(p.hwid.dateIssued).toLocaleDateString("en-PH") : "—"}`
+      : yesNo(p.hwid?.status),
+  );
+
+  // PCO
+  const pco = r.pco || {};
+  el("vp_pcoName", pco.name);
+  el("vp_pcoAccred", pco.accreditationNo);
+  el("vp_pcoContact", pco.contactNo);
+  el("vp_pcoEmail", pco.email);
+
+  // Solid Waste
+  const sw = r.wasteManagement?.solidWaste || {};
+  el("vw_bins", yesNo(sw.wasteBinsProvided));
+  el("vw_labels", yesNo(sw.binsProperlyLabelled));
+  el("vw_covered", yesNo(sw.binsCovered));
+  el("vw_segregation", yesNo(sw.properSegregation));
+  el("vw_mrf", yesNo(sw.mrf));
+  el("vw_collected", yesNo(sw.wastesCollected));
+  el("vw_frequency", sw.frequencyOfHauling);
+  el("vw_hauler", sw.hauler);
+
+  // Liquid Waste
+  const lw = r.wasteManagement?.liquidWaste || {};
+  const st = lw.septicTank || {};
+  el("vw_septic", yesNo(st.status));
+  el(
+    "vw_septicDetail",
+    st.status === "YES" ? `${st.location || "—"} / ${st.capacity || "—"}` : "—",
+  );
+  el(
+    "vw_septicDesludge",
+    st.status === "YES"
+      ? `${st.frequencyOfDesludging || "—"} / ${st.dateOfDesludging ? new Date(st.dateOfDesludging).toLocaleDateString("en-PH") : "—"}`
+      : "—",
+  );
+  el("vw_septicProvider", st.status === "YES" ? st.serviceProvider : "—");
+  const gt = lw.greaseTrap || {};
+  el("vw_grease", yesNo(gt.status));
+  el(
+    "vw_greaseDetail",
+    gt.status === "YES"
+      ? `${gt.location || "—"} / ${gt.capacity || "—"} / Freq: ${gt.frequencyOfHauling || "—"} / ${gt.hauler || "—"}`
+      : "—",
+  );
+  const wt = lw.wwtp || {};
+  el("vw_wwtp", yesNo(wt.status));
+  el("vw_wwtpResult", wt.status === "YES" ? wt.laboratoryAnalysisResult : "—");
+  const oil = lw.usedOil || {};
+  el("vw_oil", yesNo(oil.status));
+  el(
+    "vw_oilDetail",
+    oil.status === "YES"
+      ? `${oil.typeOfOil || "—"} / Freq: ${oil.frequencyOfHauling || "—"} / ${oil.hauler || "—"}`
+      : "—",
+  );
+
+  // Air
+  const air = r.wasteManagement?.airPollution?.pollutionControlDevices || {};
+  el("vw_airDevices", yesNo(air.status));
+  el(
+    "vw_airDetail",
+    air.status === "YES"
+      ? `${air.deviceType || "—"} / ${air.maintenanceProvider || "—"}`
+      : "—",
+  );
+
+  // ── TAB 3: After Inspection ──
+  const purpEl = document.getElementById("view_purpose");
+  if (purpEl) {
+    const purposes = [];
+    if (r.purposeOfInspection?.newEstablishment)
+      purposes.push("New establishment");
+    if (r.purposeOfInspection?.complianceCheck)
+      purposes.push("For compliance to pollution mitigating measures");
+    purpEl.innerHTML = tagList(purposes, "view-tag-rec2");
+  }
+
+  const lu = r.physicalEnvironment?.landUse || {};
+  const luItems = ["commercial", "residential", "industrial", "institutional"]
+    .filter((k) => lu[k])
+    .map((k) => k.charAt(0).toUpperCase() + k.slice(1));
+  el("view_landUse", luItems.join(", ") || "—");
+
+  const ot = r.physicalEnvironment?.ownershipTerms || {};
+  const otMap = {
+    proprietorship: "Proprietorship",
+    privateCorporation: "Private Corporation",
+    multiNational: "Multi-National",
+  };
+  const otItems = Object.entries(otMap)
+    .filter(([k]) => ot[k])
+    .map(([, v]) => v);
+  el("view_ownership", otItems.join(", ") || "—");
+  el("view_lessee", yesNo(r.physicalEnvironment?.occupancyTerms?.lessee));
+  el(
+    "view_standalone",
+    yesNo(r.physicalEnvironment?.occupancyTerms?.standAlone),
+  );
+
   el(
     "view_operationStatus",
     r.findings?.operationStatus
       ? r.findings.operationStatus.replace(/_/g, " ")
       : "—",
   );
-  const vp = document.getElementById("view_violationPriority");
-  if (vp) vp.innerHTML = priorityBadgeHtml(r.violationPriority);
-  el("view_inspectors", getInspectorNames(r.inspectors));
-  el("view_encodedBy", r.encodedByName || r.encodedByEmail || "—");
-  el("view_lastUpdatedBy", r.lastUpdatedByEmail || "—");
-  const statusEl = document.getElementById("view_status");
-  if (statusEl) statusEl.innerHTML = statusBadge(r.inspectionStatus);
+  el("view_observation", r.findings?.observationStatement);
+  el("view_directives", r.directives);
 
-  // Reinspection badge
-  const riBadge = document.getElementById("view_reinspectionBadge");
-  if (riBadge) {
-    if (r.isReinspection) {
-      riBadge.textContent = `Reinspection #${r.reinspectionNumber}`;
-      riBadge.style.display = "inline-block";
-    } else {
-      riBadge.style.display = "none";
-    }
+  const arEl = document.getElementById("view_afterRecs");
+  if (arEl) {
+    const checked = Object.keys(AFTER_REC_LABELS).filter(
+      (k) => r.afterRecommendations?.[k],
+    );
+    arEl.innerHTML = tagList(
+      checked.map((k) => AFTER_REC_LABELS[k]),
+      "view-tag-rec2",
+    );
   }
+
+  el("view_inspectors", getInspectorNames(r.inspectors));
 }
 
 // ── Create Reinspection ──────────────────────────────────────────────────────
@@ -944,6 +1189,21 @@ function setupModalNavigation() {
   document
     .getElementById("viewTimelineBtn")
     ?.addEventListener("click", viewTimeline);
+
+  // View modal tab switching
+  document.querySelectorAll(".view-tab-btn").forEach((btn) => {
+    btn.addEventListener("click", function () {
+      document
+        .querySelectorAll(".view-tab-btn")
+        .forEach((b) => b.classList.remove("active"));
+      document
+        .querySelectorAll(".view-tab-content")
+        .forEach((t) => t.classList.remove("active"));
+      this.classList.add("active");
+      const target = document.getElementById(this.dataset.vtab);
+      if (target) target.classList.add("active");
+    });
+  });
 
   // Inspection result radio — controls violation section state
   document

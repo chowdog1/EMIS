@@ -1,34 +1,24 @@
 // reports.js
-// Wait for DOM to be fully loaded
 window.addEventListener("load", function () {
   console.log("Reports page loaded, initializing");
-  // Update current page for user tracking
   updateCurrentPage("Reports");
-  // Check if user is logged in
   checkAuthentication();
-  // Setup dropdown functionality
   setupDropdown();
-  // Setup logout functionality
   setupLogout();
-  // Setup report generation
   setupReportGeneration();
-  // Populate year dropdown with available years
   populateYearDropdown();
 
-  // Initialize account lock notifier
   if (typeof initAccountLockNotifier === "function") {
-    console.log("Initializing account lock notifier");
     initAccountLockNotifier();
   } else {
     console.error("Account lock notifier function not found");
   }
 
-  // Start updating the datetime
   updateDateTime();
   setInterval(updateDateTime, 1000);
 });
 
-// Function to update current page for user tracking
+// ── Current page tracker ──────────────────────────────────────────────────────
 function updateCurrentPage(page) {
   const token = localStorage.getItem("auth_token");
   if (!token) return;
@@ -39,35 +29,25 @@ function updateCurrentPage(page) {
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({ page }),
-  })
-    .then((response) => {
-      if (!response.ok) {
-        console.error("Failed to update current page");
-      }
-    })
-    .catch((error) => {
-      console.error("Error updating current page:", error);
-    });
+  }).catch((error) => console.error("Error updating current page:", error));
 }
 
-// Function to populate year dropdown with available years
+// ── Year dropdown ─────────────────────────────────────────────────────────────
 async function populateYearDropdown() {
   const reportYearSelect = document.getElementById("reportYear");
   try {
-    // Fetch available years from the server
     const response = await fetch("/api/reports/available-years");
     if (!response.ok) throw new Error("Failed to fetch available years");
     const years = await response.json();
-    // Clear existing options
+
     reportYearSelect.innerHTML = "";
-    // Add each year as an option
     years.forEach((year) => {
       const option = document.createElement("option");
       option.value = year;
       option.textContent = year;
       reportYearSelect.appendChild(option);
     });
-    // Set the current year as default
+
     const currentYear = new Date().getFullYear().toString();
     if (years.includes(currentYear)) {
       reportYearSelect.value = currentYear;
@@ -78,7 +58,6 @@ async function populateYearDropdown() {
     }
   } catch (error) {
     console.error("Error populating year dropdown:", error);
-    // Fallback to hardcoded years if API fails
     const fallbackYears = ["2025", "2026"];
     fallbackYears.forEach((year) => {
       const option = document.createElement("option");
@@ -93,55 +72,89 @@ async function populateYearDropdown() {
   }
 }
 
-// Function to setup report generation
+// ── Shared helper: trigger a CSV download ────────────────────────────────────
+function downloadCSV(url, btn, originalLabel) {
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+  btn.disabled = true;
+  window.location.href = url;
+  setTimeout(() => {
+    btn.innerHTML = originalLabel;
+    btn.disabled = false;
+  }, 2000);
+}
+
+// ── Wire all report buttons ───────────────────────────────────────────────────
 function setupReportGeneration() {
   const reportYearSelect = document.getElementById("reportYear");
   const selectedYearSpan = document.getElementById("selectedYear");
-  const generateReportBtn = document.getElementById("generateReportBtn");
-  const noPaymentsReportBtn = document.getElementById("noPaymentsReportBtn");
-  // Update the displayed year when selection changes
+
+  // Keep displayed year in sync
   reportYearSelect.addEventListener("change", function () {
     selectedYearSpan.textContent = this.value;
   });
-  // Setup main report generation
-  generateReportBtn.addEventListener("click", function () {
-    const year = reportYearSelect.value;
-    const isConfirmed = confirm(
-      `Are you sure you want to create a report for the year ${year}?`
-    );
-    if (isConfirmed) {
-      // Show loading state
-      generateReportBtn.innerHTML =
+
+  // ── Environmental Clearance (all businesses) ──
+  document
+    .getElementById("generateReportBtn")
+    .addEventListener("click", function () {
+      const year = reportYearSelect.value;
+      if (!confirm(`Generate Environmental Clearance report for ${year}?`))
+        return;
+      this.innerHTML =
         '<i class="fas fa-spinner fa-spin"></i> Generating Report...';
-      generateReportBtn.disabled = true;
-      // Make request to generate CSV
+      this.style.pointerEvents = "none";
       window.location.href = `/api/reports/csv/${year}`;
-      // Reset button after a delay
       setTimeout(() => {
-        generateReportBtn.innerHTML = `APPLICATION FOR ENVIRONMENTAL CLEARANCE - <span id="selectedYear">${year}</span>`;
-        generateReportBtn.disabled = false;
+        this.innerHTML = `APPLICATION FOR ENVIRONMENTAL CLEARANCE — <span id="selectedYear">${year}</span>`;
+        this.style.pointerEvents = "";
       }, 2000);
-    }
-  });
-  // Setup no payments report generation
-  noPaymentsReportBtn.addEventListener("click", function () {
+    });
+
+  // ── No Payments ──
+  const noPayBtn = document.getElementById("noPaymentsReportBtn");
+  noPayBtn.addEventListener("click", function () {
     const year = reportYearSelect.value;
-    const isConfirmed = confirm(
-      `Are you sure you want to create a no-payments report for the year ${year}?`
+    if (!confirm(`Generate No Payments report for ${year}?`)) return;
+    downloadCSV(
+      `/api/reports/csv/${year}/no-payments`,
+      this,
+      '<i class="fas fa-file-excel"></i> No Payments Report',
     );
-    if (isConfirmed) {
-      // Show loading state
-      noPaymentsReportBtn.innerHTML =
-        '<i class="fas fa-spinner fa-spin"></i> Generating Report...';
-      noPaymentsReportBtn.disabled = true;
-      // Make request to generate CSV
-      window.location.href = `/api/reports/csv/${year}/no-payments`;
-      // Reset button after a delay
-      setTimeout(() => {
-        noPaymentsReportBtn.innerHTML =
-          '<i class="fas fa-file-excel"></i> Generate No Payments Report';
-        noPaymentsReportBtn.disabled = false;
-      }, 2000);
-    }
+  });
+
+  // ── Inspection Reports ──
+  const inspBtn = document.getElementById("inspectionsReportBtn");
+  inspBtn.addEventListener("click", function () {
+    const year = reportYearSelect.value;
+    if (!confirm(`Export all inspection reports for ${year} as CSV?`)) return;
+    downloadCSV(
+      `/api/reports/csv/${year}/inspections`,
+      this,
+      '<i class="fas fa-file-csv"></i> Export Inspection Reports',
+    );
+  });
+
+  // ── Violation Records ──
+  const violBtn = document.getElementById("violationsReportBtn");
+  violBtn.addEventListener("click", function () {
+    const year = reportYearSelect.value;
+    if (!confirm(`Export all violation records for ${year} as CSV?`)) return;
+    downloadCSV(
+      `/api/reports/csv/${year}/violations`,
+      this,
+      '<i class="fas fa-file-csv"></i> Export Violation Records',
+    );
+  });
+
+  // ── Compliance Records ──
+  const compBtn = document.getElementById("complianceReportBtn");
+  compBtn.addEventListener("click", function () {
+    const year = reportYearSelect.value;
+    if (!confirm(`Export all compliance records for ${year} as CSV?`)) return;
+    downloadCSV(
+      `/api/reports/csv/${year}/compliance`,
+      this,
+      '<i class="fas fa-file-csv"></i> Export Compliance Records',
+    );
   });
 }

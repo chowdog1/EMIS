@@ -77,6 +77,9 @@
         margin-right: 10px;
         margin-bottom: 10px;
         transition: background-color 0.3s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
       }
       .btn-report:hover {
         background-color: #2980b9;
@@ -86,6 +89,42 @@
       }
       .btn-report.special:hover {
         background-color: #c0392b;
+      }
+      .btn-report.green {
+        background-color: #27ae60;
+      }
+      .btn-report.green:hover {
+        background-color: #1e8449;
+      }
+      .btn-report.orange {
+        background-color: #e67e22;
+      }
+      .btn-report.orange:hover {
+        background-color: #ca6f1e;
+      }
+      .btn-report.purple {
+        background-color: #8e44ad;
+      }
+      .btn-report.purple:hover {
+        background-color: #7d3c98;
+      }
+      /* Section divider between business and inspection reports */
+      .section-divider {
+        border: none;
+        border-top: 2px solid #e9ecef;
+        margin: 30px 0 20px;
+      }
+      .section-subtitle {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 6px;
+      }
+      .export-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 8px;
       }
     </style>
   </head>
@@ -125,15 +164,16 @@
             </a>
           </li>
           <li>
-            <a href="/inspections"
-              ><i class="fas fa-clipboard-check"></i><span>Inspections</span></a
-            >
+            <a href="/inspections">
+              <i class="fas fa-clipboard-check"></i>
+              <span>Inspections</span>
+            </a>
           </li>
           <li>
-            <a href="/violations"
-              ><i class="fas fa-exclamation-triangle"></i
-              ><span>Violations and Compliances</span></a
-            >
+            <a href="/violations">
+              <i class="fas fa-exclamation-triangle"></i>
+              <span>Violations and Compliances</span>
+            </a>
           </li>
           <li>
             <a href="/reports" class="active">
@@ -188,42 +228,105 @@
         <!-- Report Section -->
         <div class="table-section">
           <div class="report-section">
-            <h2 class="table-title">Generate Environmental Clearance Report</h2>
-
+            <!-- ── Year selector (shared across all exports) ── -->
+            <h2 class="table-title">Generate Reports</h2>
             <div class="report-container">
               <div class="year-selector">
-                <label for="reportYear">Select Year: </label>
-                <select id="reportYear">
-                  <option value="2023">2023</option>
-                  <option value="2024">2024</option>
-                  <option value="2025" selected>2025</option>
-                  <option value="2026">2026</option>
-                  <option value="2027">2027</option>
-                </select>
+                <label for="reportYear"><strong>Select Year:</strong> </label>
+                <select id="reportYear"></select>
               </div>
+
+              <!-- ── Environmental Clearance ── -->
+              <p class="section-subtitle">
+                <i
+                  class="fas fa-leaf"
+                  style="color: var(--primary-green); margin-right: 6px"
+                ></i>
+                Environmental Clearance (Business Directory)
+              </p>
 
               <div class="report-title" id="generateReportBtn">
-                APPLICATION FOR ENVIRONMENTAL CLEARANCE -
+                APPLICATION FOR ENVIRONMENTAL CLEARANCE —
                 <span id="selectedYear">2025</span>
               </div>
-
               <p class="report-description">
-                Click on the title above to generate a complete report for the
-                selected year. This will include all businesses in the database
-                regardless of their application or payment dates.
+                Complete report of all businesses for the selected year
+                regardless of payment status.
               </p>
-            </div>
 
-            <div class="special-reports">
-              <h3>Special Reports</h3>
-              <button id="noPaymentsReportBtn" class="btn-report special">
-                <i class="fas fa-file-excel"></i> Generate No Payments Report
-              </button>
-              <p class="report-description">
-                Generate a report of businesses without payments for the
-                selected year. This is useful for identifying businesses that
-                need to renew their environmental clearance.
+              <div class="special-reports">
+                <div class="export-row">
+                  <button id="noPaymentsReportBtn" class="btn-report special">
+                    <i class="fas fa-file-excel"></i> No Payments Report
+                  </button>
+                </div>
+                <p class="report-description">
+                  Businesses without payments for the selected year — useful for
+                  identifying those that need to renew.
+                </p>
+              </div>
+
+              <!-- ── Divider ── -->
+              <hr class="section-divider" />
+
+              <!-- ── Inspection Reports ── -->
+              <p class="section-subtitle">
+                <i
+                  class="fas fa-clipboard-check"
+                  style="color: var(--primary-green); margin-right: 6px"
+                ></i>
+                Inspection Records
               </p>
+              <p class="report-description" style="margin-bottom: 12px">
+                Export all inspection reports for the selected year as CSV.
+                Includes inspection ID, result, violations, recommendations,
+                inspectors, and encoder.
+              </p>
+              <div class="export-row">
+                <button id="inspectionsReportBtn" class="btn-report green">
+                  <i class="fas fa-file-csv"></i> Export Inspection Reports
+                </button>
+              </div>
+
+              <!-- ── Violations ── -->
+              <hr class="section-divider" />
+              <p class="section-subtitle">
+                <i
+                  class="fas fa-gavel"
+                  style="color: #e74c3c; margin-right: 6px"
+                ></i>
+                Violation Records (OVR)
+              </p>
+              <p class="report-description" style="margin-bottom: 12px">
+                Export all city ordinance violation records for the selected
+                year. Includes OVR No., violated ordinances, total fine, and
+                payment status.
+              </p>
+              <div class="export-row">
+                <button id="violationsReportBtn" class="btn-report orange">
+                  <i class="fas fa-file-csv"></i> Export Violation Records
+                </button>
+              </div>
+
+              <!-- ── Compliance ── -->
+              <hr class="section-divider" />
+              <p class="section-subtitle">
+                <i
+                  class="fas fa-tasks"
+                  style="color: #8e44ad; margin-right: 6px"
+                ></i>
+                Compliance Records (DENR/Environmental)
+              </p>
+              <p class="report-description" style="margin-bottom: 12px">
+                Export all DENR/environmental compliance records for the
+                selected year. Includes requirements, deadline, and compliance
+                status per item.
+              </p>
+              <div class="export-row">
+                <button id="complianceReportBtn" class="btn-report purple">
+                  <i class="fas fa-file-csv"></i> Export Compliance Records
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -241,7 +344,6 @@
     <script src="/js/commonUtils.js"></script>
     <script src="/js/apiUtils.js"></script>
     <script src="/js/uiUtils.js"></script>
-    <!--<script src="/js/inactivityUtils.js"></script>-->
 
     <!-- Chatbox -->
     <script src="./js/chatbox.js"></script>
