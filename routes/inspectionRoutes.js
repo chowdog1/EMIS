@@ -436,6 +436,7 @@ router.post("/:id/reinspect", verifyToken, async (req, res) => {
       inspectionStatus,
       violationPriority,
       year,
+      inspectionType: "REINSPECTION",
       isReinspection: true,
       parentInspectionId: rootId,
       reinspectionNumber: existingCount + 1,

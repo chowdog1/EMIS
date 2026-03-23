@@ -21,10 +21,31 @@ let cPage = 1,
 let activeViolationId = null;
 let activeComplianceId = null;
 
+// Function to update current page for user tracking
+function updateCurrentPage(page) {
+  const token = localStorage.getItem("auth_token");
+  if (!token) return;
+  fetch("/api/auth/current-page", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ page }),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        console.error("Failed to update current page");
+      }
+    })
+    .catch((error) => {
+      console.error("Error updating current page:", error);
+    });
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener("load", function () {
-  if (typeof updateCurrentPage === "function")
-    updateCurrentPage("Violations & Compliance");
+  if (typeof updateCurrentPage === "function") updateCurrentPage("Violations");
   checkAuthentication();
   setupDropdown();
   setupLogout();

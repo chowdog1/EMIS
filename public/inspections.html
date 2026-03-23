@@ -159,6 +159,52 @@
         background: #cce5ff;
         color: #004085;
       }
+      /* ── Inspection type tags ── */
+      .tag-complaint {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        font-size: 1rem;
+        line-height: 18px;
+        text-align: center;
+        font-weight: 700;
+        background: #fff3cd;
+        color: #856404;
+        margin-left: 5px;
+        vertical-align: middle;
+        cursor: pointer;
+      }
+      .tag-special {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        font-size: 1rem;
+        line-height: 18px;
+        text-align: center;
+        font-weight: 700;
+        background: #e8d5f5;
+        color: #6f42c1;
+        margin-left: 5px;
+        vertical-align: middle;
+        cursor: pointer;
+      }
+      .tag-regular {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        font-size: 1rem;
+        line-height: 18px;
+        text-align: center;
+        font-weight: 700;
+        background: #d1ecf1;
+        color: #0c5460;
+        margin-left: 5px;
+        vertical-align: middle;
+        cursor: pointer;
+      }
       /* Reinspection badge *
     .badge-reinspection  { background:#cce5ff; color:#004085; font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:10px; vertical-align:middle; margin-left:6px; }
 
@@ -589,6 +635,63 @@
         font-size: 0.875rem;
       }
 
+      /* ── Filter bar ── */
+      .filter-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 0 6px;
+        border-bottom: 1px solid var(--gray-200);
+        margin-bottom: 12px;
+      }
+      .filter-bar label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--gray-600);
+        white-space: nowrap;
+      }
+      .filter-select {
+        padding: 5px 10px;
+        border: 1px solid var(--gray-300);
+        border-radius: 6px;
+        font-size: 0.8rem;
+        background: #fff;
+        color: var(--gray-800);
+        cursor: pointer;
+        height: 30px;
+      }
+      .filter-select:focus {
+        outline: none;
+        border-color: var(--primary-green);
+      }
+      .filter-divider {
+        width: 1px;
+        height: 22px;
+        background: var(--gray-200);
+        margin: 0 4px;
+      }
+      .filter-clear-btn {
+        padding: 4px 12px;
+        border: 1px solid var(--gray-300);
+        border-radius: 6px;
+        font-size: 0.78rem;
+        background: #fff;
+        color: var(--gray-600);
+        cursor: pointer;
+        height: 30px;
+        white-space: nowrap;
+      }
+      .filter-clear-btn:hover {
+        background: var(--gray-100);
+        color: var(--gray-900);
+      }
+      .filter-active-count {
+        font-size: 0.75rem;
+        color: var(--primary-green);
+        font-weight: 600;
+      }
+
       .table-section {
         background: #fff;
         border-radius: var(--border-radius-md);
@@ -773,6 +876,81 @@
               </button>
             </div>
           </div>
+          <!-- Filter bar -->
+          <div class="filter-bar">
+            <label
+              ><i
+                class="fas fa-filter"
+                style="margin-right: 4px; color: var(--primary-green)"
+              ></i
+              >Filters:</label
+            >
+
+            <label>Sort</label>
+            <select class="filter-select" id="filterSort">
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+            </select>
+
+            <div class="filter-divider"></div>
+
+            <label>Result</label>
+            <select class="filter-select" id="filterResult">
+              <option value="">All</option>
+              <option value="PASSED">Passed</option>
+              <option value="VIOLATED">Violated</option>
+              <option value="NOTICE_WARNING">Notice/Warning</option>
+            </select>
+
+            <div class="filter-divider"></div>
+
+            <label>Priority</label>
+            <select class="filter-select" id="filterPriority">
+              <option value="">All</option>
+              <option value="PRIORITY">Priority</option>
+              <option value="LOW_PRIORITY">Low Priority</option>
+              <option value="none">No Priority</option>
+            </select>
+
+            <div class="filter-divider"></div>
+
+            <label>Application</label>
+            <select class="filter-select" id="filterAppStatus">
+              <option value="">All</option>
+              <option value="NEW">New</option>
+              <option value="RENEWAL">Renewal</option>
+            </select>
+
+            <div class="filter-divider"></div>
+
+            <label>Barangay</label>
+            <select class="filter-select" id="filterBarangay">
+              <option value="">All</option>
+            </select>
+
+            <div class="filter-divider"></div>
+
+            <label>Type</label>
+            <select class="filter-select" id="filterType">
+              <option value="">All</option>
+              <option value="REGULAR">Regular</option>
+              <option value="REINSPECTION">Reinspection</option>
+              <option value="COMPLAINT">Complaint</option>
+              <option value="SPECIAL_OPERATION">Special Op</option>
+            </select>
+
+            <div class="filter-divider"></div>
+
+            <button class="filter-clear-btn" id="filterClearBtn">
+              <i class="fas fa-times"></i> Clear
+            </button>
+            <span
+              class="filter-active-count"
+              id="filterActiveCount"
+              style="display: none"
+            ></span>
+          </div>
+
           <div class="table-container">
             <div id="inspectionsTable">
               <div class="table-loading">
@@ -841,6 +1019,40 @@
         </div>
         <div class="modal-body">
           <form id="part1Form" autocomplete="off">
+            <!-- Inspection Type -->
+            <div class="section-title">Inspection Type</div>
+            <div class="form-2col">
+              <div class="form-group">
+                <label
+                  >Type of Inspection
+                  <span style="color: var(--danger)">*</span></label
+                >
+                <select id="p1_inspectionType" class="form-control">
+                  <option value="REGULAR">Regular Inspection</option>
+                  <option value="COMPLAINT">Complaint-Based Inspection</option>
+                  <option value="SPECIAL_OPERATION">
+                    Special Operation Inspection
+                  </option>
+                </select>
+              </div>
+              <div
+                class="form-group"
+                id="complainantGroup"
+                style="display: none"
+              >
+                <label
+                  >Complainant Name
+                  <span style="color: var(--danger)">*</span></label
+                >
+                <input
+                  type="text"
+                  id="p1_complainantName"
+                  class="form-control text-uppercase"
+                  placeholder="Full name of complainant"
+                />
+              </div>
+            </div>
+
             <!-- Business Information -->
             <div class="section-title">Business Information</div>
             <div class="form-2col">
@@ -2605,6 +2817,7 @@
                 style="display: none"
                 class="badge-reinspection"
               ></span>
+              <span id="view_typeBadge"></span>
               <span id="view_priorityBadge"></span>
             </div>
           </div>
@@ -2956,6 +3169,13 @@
             >
               <i class="fas fa-history"></i> Timeline
             </button>
+            <button
+              class="btn btn-secondary"
+              id="printInspectionBtn"
+              title="Print inspection report as PDF"
+            >
+              <i class="fas fa-print"></i> Print PDF
+            </button>
             <button class="btn btn-primary" id="createReinspectionBtn">
               <i class="fas fa-redo"></i> Create Reinspection
             </button>
@@ -3015,7 +3235,7 @@
     <script src="/js/commonUtils.js"></script>
     <script src="/js/apiUtils.js"></script>
     <script src="/js/uiUtils.js"></script>
-    <script src="inspections.js"></script>
+    <script src="inspections.js?v=1773799826851"></script>
     <script src="./js/chatbox.js"></script>
   </body>
 </html>

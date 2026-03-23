@@ -13,6 +13,11 @@ let currentModal = 1;
 let formData = {};
 let editingReportId = null;
 
+// ── Violation fee + priority map ──────────────────────────────────────────────
+// priority: "HIGH" | "MEDIUM" | "LOW"
+// HIGH   = ₱2,500–₱5,000  (serious environmental offenses)
+// MEDIUM = ₱1,000–₱3,000  (moderate)
+// LOW    = ₱500            (minor: segregation, labels, cover)
 const VIOLATIONS_META = {
   ordinance35_2004_sec2a: {
     fee: 1000,
@@ -119,6 +124,7 @@ window.addEventListener("load", function () {
     .getElementById("newInspectionBtn")
     .addEventListener("click", openNewInspection);
   setupModalNavigation();
+  setupFilters();
   setupAutoCapitalize();
   setupAccountNoLookup();
 });
@@ -295,9 +301,8 @@ async function loadReports() {
       throw new Error("Failed to load");
     }
     allReports = await res.json();
-    totalRecords = allReports.length;
-    currentPage = 1;
-    renderTable();
+    populateBarangayFilter(allReports);
+    applyFiltersAndRender();
   } catch (e) {
     showTableError(e.message);
   }
@@ -377,54 +382,107 @@ function computeViolationPriority(violations, recommendations) {
   return hasNonMinorViol || hasNonMinorRec ? "PRIORITY" : "LOW_PRIORITY";
 }
 
+function getInspectionTypeTags(r) {
+  let tags = "";
+  if (r.inspectionType === "COMPLAINT") {
+    tags += "<span class='tag-complaint' title='Complaint'>●</span>";
+  }
+  if (r.inspectionType === "SPECIAL_OPERATION") {
+    tags += "<span class='tag-special' title='Special Operation'>●</span>";
+  }
+  if (r.inspectionType === "REGULAR") {
+    tags += "<span class='tag-regular' title='Regular Inspection'>●</span>";
+  }
+  if (r.isReinspection) {
+    tags +=
+      "<span class='badge-reinspection'>Re-#" +
+      r.reinspectionNumber +
+      "</span>";
+  }
+  return tags;
+}
+
 function renderTable() {
   const start = (currentPage - 1) * pageSize;
   const slice = allReports.slice(start, start + pageSize);
   const tbody = document.getElementById("inspectionsTable");
-
   if (!slice.length) {
-    tbody.innerHTML = `<div class="table-empty"><i class="fas fa-clipboard"></i><p>No inspection reports found for ${currentYear}.</p></div>`;
+    tbody.innerHTML =
+      '<div class="table-empty"><i class="fas fa-clipboard"></i><p>No inspection reports found for ' +
+      currentYear +
+      ".</p></div>";
     updatePaginationInfo();
     return;
   }
-
-  tbody.innerHTML = `
-    <table class="insp-table">
-      <thead><tr>
-        <th>Inspection ID</th><th>Account No.</th><th>Business Name</th><th>Barangay</th>
-        <th>Date of Inspection</th><th>Result</th><th>Status</th>
-        <th>Priority</th><th>Inspectors</th><th>Actions</th>
-      </tr></thead>
-      <tbody>
-        ${slice
-          .map(
-            (r) => `
-          <tr>
-            <td>
-              <span class="insp-id-badge">${r.inspectionId || "—"}</span>
-              ${r.isReinspection ? `<span class="badge-reinspection" title="Reinspection #${r.reinspectionNumber}">Re-#${r.reinspectionNumber}</span>` : ""}
-            </td>
-            <td><span class="acct-link" onclick="viewReport('${r._id}')">${r.accountNo || "—"}</span></td>
-            <td>${r.businessName || "—"}</td>
-            <td>${r.barangay || "—"}</td>
-            <td>${r.dateOfInspection ? new Date(r.dateOfInspection).toLocaleDateString("en-PH") : "—"}</td>
-            <td>${resultBadgeHtml(r.inspectionResult)}</td>
-            <td>${statusBadge(r.inspectionStatus)}</td>
-            <td>${priorityBadgeHtml(r.violationPriority)}</td>
-            <td class="inspector-cell" title="Encoded by: ${r.encodedByName || r.encodedByEmail || "—"}">${getInspectorNames(r.inspectors)}</td>
-            <td class="action-cell">
-              <button class="act-btn act-view" title="View" onclick="viewReport('${r._id}')"><i class="fas fa-eye"></i></button>
-              <button class="act-btn act-edit" title="Edit" onclick="editReport('${r._id}')"><i class="fas fa-edit"></i></button>
-              <button class="act-btn act-del"  title="Delete" onclick="deleteReport('${r._id}')"><i class="fas fa-trash"></i></button>
-            </td>
-          </tr>`,
-          )
-          .join("")}
-      </tbody>
-    </table>`;
+  const rows = slice
+    .map(function (r) {
+      const tags = getInspectionTypeTags(r);
+      const id = r.inspectionId || "-";
+      const acct = r.accountNo || "-";
+      const biz = r.businessName || "-";
+      const brgy = r.barangay || "-";
+      const date = r.dateOfInspection
+        ? new Date(r.dateOfInspection).toLocaleDateString("en-PH")
+        : "-";
+      const oid = r._id;
+      return (
+        "<tr>" +
+        '<td><span class="insp-id-badge">' +
+        id +
+        "</span>" +
+        tags +
+        "</td>" +
+        '<td><span class="acct-link" onclick="viewReport(\'' +
+        oid +
+        "')\">" +
+        acct +
+        "</span></td>" +
+        "<td>" +
+        biz +
+        "</td>" +
+        "<td>" +
+        brgy +
+        "</td>" +
+        "<td>" +
+        date +
+        "</td>" +
+        "<td>" +
+        resultBadgeHtml(r.inspectionResult) +
+        "</td>" +
+        "<td>" +
+        statusBadge(r.inspectionStatus) +
+        "</td>" +
+        "<td>" +
+        priorityBadgeHtml(r.violationPriority) +
+        "</td>" +
+        '<td class="inspector-cell">' +
+        getInspectorNames(r.inspectors) +
+        "</td>" +
+        '<td class="action-cell">' +
+        '<button class="act-btn act-view" onclick="viewReport(\'' +
+        oid +
+        '\')" title="View"><i class="fas fa-eye"></i></button>' +
+        '<button class="act-btn act-edit" onclick="editReport(\'' +
+        oid +
+        '\')" title="Edit"><i class="fas fa-edit"></i></button>' +
+        '<button class="act-btn act-del"  onclick="deleteReport(\'' +
+        oid +
+        '\')" title="Delete"><i class="fas fa-trash"></i></button>' +
+        "</td>" +
+        "</tr>"
+      );
+    })
+    .join("");
+  tbody.innerHTML =
+    '<table class="insp-table"><thead><tr>' +
+    "<th>Inspection ID</th><th>Account No.</th><th>Business Name</th><th>Barangay</th>" +
+    "<th>Date of Inspection</th><th>Result</th><th>Status</th>" +
+    "<th>Priority</th><th>Inspectors</th><th>Actions</th>" +
+    "</tr></thead><tbody>" +
+    rows +
+    "</tbody></table>";
   updatePaginationInfo();
 }
-
 function getInspectorNames(inspectors) {
   if (!inspectors) return "—";
   const map = {
@@ -470,15 +528,15 @@ function performSearch() {
     loadReports();
     return;
   }
+  // Search narrows allReports then filters/sorts are applied on top
   allReports = allReports.filter(
     (r) =>
       (r.inspectionId || "").toLowerCase().includes(q) ||
       (r.accountNo || "").toLowerCase().includes(q) ||
       (r.businessName || "").toLowerCase().includes(q),
   );
-  totalRecords = allReports.length;
   currentPage = 1;
-  renderTable();
+  applyFiltersAndRender();
 }
 function setupRefreshButton() {
   document.getElementById("refreshBtn")?.addEventListener("click", () => {
@@ -492,13 +550,13 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("prevPageBtn")?.addEventListener("click", () => {
     if (currentPage > 1) {
       currentPage--;
-      renderTable();
+      applyFiltersAndRender();
     }
   });
   document.getElementById("nextPageBtn")?.addEventListener("click", () => {
     if (currentPage * pageSize < totalRecords) {
       currentPage++;
-      renderTable();
+      applyFiltersAndRender();
     }
   });
   document
@@ -506,7 +564,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ?.addEventListener("change", function () {
       pageSize = parseInt(this.value);
       currentPage = 1;
-      renderTable();
+      applyFiltersAndRender();
     });
 });
 
@@ -600,6 +658,14 @@ function yesNo(val) {
 function populateViewModal(r) {
   activeViewReportId = r._id;
 
+  // Re-wire Print PDF button each time so it always has the current report ID
+  const printBtn = document.getElementById("printInspectionBtn");
+  if (printBtn) {
+    const newPrintBtn = printBtn.cloneNode(true);
+    printBtn.parentNode.replaceChild(newPrintBtn, printBtn);
+    newPrintBtn.addEventListener("click", () => printInspectionReport(r._id));
+  }
+
   // Reset to first tab
   document
     .querySelectorAll(".view-tab-btn")
@@ -618,6 +684,12 @@ function populateViewModal(r) {
   document.getElementById("view_status").innerHTML = statusBadge(
     r.inspectionStatus,
   );
+  const typeMap = {
+    COMPLAINT: `<span class="tag-complaint"><i class="fas fa-exclamation-circle"></i> Complaint${r.complainantName ? ": " + r.complainantName : ""}</span>`,
+    SPECIAL_OPERATION: `<span class="tag-special"><i class="fas fa-shield-alt"></i> Special Operation</span>`,
+  };
+  const typeBadgeEl = document.getElementById("view_typeBadge");
+  if (typeBadgeEl) typeBadgeEl.innerHTML = typeMap[r.inspectionType] || "";
   const priBadge = document.getElementById("view_priorityBadge");
   if (priBadge) priBadge.innerHTML = priorityBadgeHtml(r.violationPriority);
   const riBadge = document.getElementById("view_reinspectionBadge");
@@ -929,6 +1001,12 @@ function fillAllPartsFromData(r) {
     });
   }
 
+  // Reset type to REGULAR for reinspection form
+  const typeElRI = document.getElementById("p1_inspectionType");
+  if (typeElRI) typeElRI.value = "REGULAR";
+  const cgRI = document.getElementById("complainantGroup");
+  if (cgRI) cgRI.style.display = "none";
+
   // Show editing label with parent ID
   const idDisplay = document.getElementById("modal1InspectionId");
   if (idDisplay) {
@@ -1106,6 +1184,22 @@ function resetAllForms() {
     const f = document.getElementById(id);
     if (f) f.reset();
   });
+  // Reset p3_newEstab state (re-enabled, unstyled)
+  const newEstabReset = document.getElementById("p3_newEstab");
+  if (newEstabReset) {
+    newEstabReset.checked = false;
+    newEstabReset.disabled = false;
+    newEstabReset.title = "";
+    const lbl = newEstabReset.closest("label");
+    if (lbl) lbl.style.color = "";
+  }
+  // Reset inspection type
+  const typeReset = document.getElementById("p1_inspectionType");
+  if (typeReset) typeReset.value = "REGULAR";
+  const cgReset = document.getElementById("complainantGroup");
+  if (cgReset) cgReset.style.display = "none";
+  const cnReset = document.getElementById("p1_complainantName");
+  if (cnReset) cnReset.value = "";
   // Re-enable biz fields after reset
   const nameEl = document.getElementById("p1_businessName");
   const addrEl = document.getElementById("p1_address");
@@ -1169,6 +1263,8 @@ function setupModalNavigation() {
     if (formData._prefillPart3) {
       applyPart3Prefill(formData._prefillPart3);
     }
+    // Auto-set New Establishment based on application status
+    applyNewEstabCheckbox();
   });
   document.getElementById("back3Btn").addEventListener("click", () => {
     collectPart3();
@@ -1189,6 +1285,11 @@ function setupModalNavigation() {
   document
     .getElementById("viewTimelineBtn")
     ?.addEventListener("click", viewTimeline);
+  document
+    .getElementById("printInspectionBtn")
+    ?.addEventListener("click", () =>
+      printInspectionReport(activeViewReportId),
+    );
 
   // View modal tab switching
   document.querySelectorAll(".view-tab-btn").forEach((btn) => {
@@ -1309,6 +1410,19 @@ function collectPart1() {
   formData.inspectionResult = resultEl.value;
   formData.complianceDeadline =
     document.getElementById("p1_complianceDeadline").value || null;
+
+  // Inspection type and complaint details
+  formData.inspectionType =
+    document.getElementById("p1_inspectionType").value || "REGULAR";
+  if (formData.inspectionType === "COMPLAINT") {
+    formData.complainantName =
+      document
+        .getElementById("p1_complainantName")
+        ?.value.trim()
+        .toUpperCase() || null;
+  } else {
+    formData.complainantName = null;
+  }
 
   // Violations — if the N/A checkbox is checked, all violation flags are cleared
   const naChecked = document.getElementById("viol_na")?.checked || false;
@@ -1606,6 +1720,15 @@ function fillPart1(r) {
     recalcFine();
   }
   sv("p1_complianceDeadline", r.complianceDeadline);
+  // Restore inspection type
+  const typeEl = document.getElementById("p1_inspectionType");
+  if (typeEl && r.inspectionType && r.inspectionType !== "REINSPECTION") {
+    typeEl.value = r.inspectionType;
+    const cg = document.getElementById("complainantGroup");
+    if (cg)
+      cg.style.display = r.inspectionType === "COMPLAINT" ? "block" : "none";
+  }
+  if (r.complainantName) sv("p1_complainantName", r.complainantName);
   if (r.recommendations) {
     document.querySelectorAll(".rec-cb").forEach((cb) => {
       cb.checked = r.recommendations[cb.dataset.key] || false;
@@ -1677,6 +1800,950 @@ function setConditionalFields() {
     const el = document.getElementById(fieldId);
     if (el)
       el.style.display = checked && checked.value === "YES" ? "block" : "none";
+  });
+}
+
+// ── Print Inspection Report PDF ──────────────────────────────────────────────
+async function printInspectionReport(reportId) {
+  if (!reportId) return;
+
+  const btn = document.getElementById("printInspectionBtn");
+  const origLabel = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+  btn.disabled = true;
+
+  try {
+    const token = getAuthToken();
+    const res = await fetch(`/api/inspections/${reportId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error("Failed to load report");
+    const r = await res.json();
+
+    await loadInspectionLibraries();
+    const { jsPDF } = window.jspdf;
+
+    // ── Legal size 216×356mm ─────────────────────────────────────────────────
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: [216, 356],
+    });
+    const pageW = 216,
+      pageH = 356;
+    const mL = 15,
+      mR = 15;
+    const cW = pageW - mL - mR; // 186mm content width
+    const cx = pageW / 2; // 108mm center
+    let y = 0;
+
+    // ── Built-in fonts only ───────────────────────────────────────────────────
+    // times / times bold / times italic / helvetica / helvetica bold
+
+    // ── Logo loader ───────────────────────────────────────────────────────────
+    async function toB64(url) {
+      const resp = await fetch(url);
+      const blob = await resp.blob();
+      return new Promise((r) => {
+        const rd = new FileReader();
+        rd.onloadend = () => r(rd.result);
+        rd.readAsDataURL(blob);
+      });
+    }
+    const [sealB64, cenroB64] = await Promise.all([
+      toB64(
+        "https://upload.wikimedia.org/wikipedia/commons/3/34/Seal_of_San_Juan%2C_Metro_Manila.png",
+      ),
+      toB64("/makabagong%20san%20juan%20Logo.png"),
+    ]);
+
+    // ── HELPERS ───────────────────────────────────────────────────────────────
+
+    // Black tick checkbox
+    function checkbox(checked, cx, cy, sz = 3.2) {
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.35);
+      doc.rect(cx, cy - sz + 0.5, sz, sz);
+      if (checked) {
+        doc.setLineWidth(0.6);
+        doc.setDrawColor(0, 0, 0);
+        doc.line(cx + 0.4, cy - sz + 1.8, cx + sz * 0.38, cy - 0.3);
+        doc.line(cx + sz * 0.38, cy - 0.3, cx + sz - 0.3, cy - sz + 0.7);
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.35);
+      }
+    }
+
+    // Vertical checkbox list — label beside box
+    function checkList(items, indentX) {
+      const sz = 3.2,
+        lh = 5.2;
+      items.forEach((item) => {
+        needPage(7);
+        checkbox(item.checked, indentX, y, sz);
+        doc.setFont("times", "normal");
+        doc.setFontSize(8.5);
+        doc.setTextColor(0, 0, 0);
+        const maxW = pageW - mR - indentX - sz - 2;
+        const lines = doc.splitTextToSize(item.label, maxW);
+        doc.text(lines, indentX + sz + 2, y);
+        y += lines.length * lh;
+      });
+    }
+
+    // Horizontal checkboxes on same line: □ Yes  □ No  □ N/A
+    function checkRow(items, startX, rowY, colW) {
+      const sz = 3.2;
+      let cx = startX;
+      items.forEach((item) => {
+        checkbox(item.checked, cx, rowY, sz);
+        doc.setFont("times", "normal");
+        doc.setFontSize(8.5);
+        doc.setTextColor(0, 0, 0);
+        doc.text(item.label, cx + sz + 1.5, rowY);
+        cx += colW;
+      });
+    }
+
+    // Section header bar — dark green, white text
+    function secHdr(title) {
+      needPage(12);
+      y += 2;
+      doc.setFillColor(0, 90, 8);
+      doc.rect(mL, y, cW, 6.5, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(255, 255, 255);
+      doc.text(title.toUpperCase(), mL + 3, y + 4.6);
+      doc.setTextColor(0, 0, 0);
+      y += 8.5;
+    }
+
+    // Sub-header — green bold text
+    function subHdr(title) {
+      needPage(8);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(0, 90, 8);
+      doc.text(title, mL, y);
+      doc.setTextColor(0, 0, 0);
+      y += 5.5;
+    }
+
+    // Two-column label: value  |  label: value
+    // labelW = fixed px from left margin to value start
+    const LW = 38; // label column width (mm)
+    function row2(lbl1, val1, lbl2, val2) {
+      needPage(7);
+      const half = cW / 2;
+      // col 1
+      doc.setFont("times", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(80, 80, 80);
+      doc.text(lbl1 + ":", mL, y);
+      doc.setFont("times", "bold");
+      doc.setTextColor(0, 0, 0);
+      const v1 = doc.splitTextToSize(String(val1 || "—"), half - LW - 2);
+      doc.text(v1, mL + LW, y);
+      // col 2
+      if (lbl2 !== undefined) {
+        const x2 = mL + half;
+        doc.setFont("times", "normal");
+        doc.setTextColor(80, 80, 80);
+        doc.text(String(lbl2) + ":", x2, y);
+        doc.setFont("times", "bold");
+        doc.setTextColor(0, 0, 0);
+        const v2 = doc.splitTextToSize(String(val2 || "—"), half - LW - 2);
+        doc.text(v2, x2 + LW, y);
+      }
+      y += Math.max(v1.length, 1) * 5.2;
+    }
+
+    // Single full-width label: value
+    function row1(lbl, val) {
+      needPage(7);
+      doc.setFont("times", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(80, 80, 80);
+      doc.text(lbl + ":", mL, y);
+      doc.setFont("times", "bold");
+      doc.setTextColor(0, 0, 0);
+      const lines = doc.splitTextToSize(String(val || "—"), cW - LW - 2);
+      doc.text(lines, mL + LW, y);
+      y += lines.length * 5.2;
+    }
+
+    // Boxed multiline text field
+    function multiLine(lbl, val) {
+      if (!val) return;
+      needPage(18);
+      doc.setFont("times", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(80, 80, 80);
+      if (lbl) {
+        doc.text(lbl + ":", mL, y);
+        y += 4.5;
+      }
+      doc.setTextColor(0, 0, 0);
+      const lines = doc.splitTextToSize(String(val), cW - 4);
+      const bH = lines.length * 4.8 + 4;
+      doc.setFillColor(252, 252, 252);
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
+      doc.rect(mL, y - 1, cW, bH, "FD");
+      doc.setFont("times", "normal");
+      doc.setFontSize(8.5);
+      doc.text(lines, mL + 2, y + 3.5);
+      y += bH + 3;
+    }
+
+    // Separator line
+    function hrLine() {
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.3);
+      doc.line(mL, y - 1, pageW - mR, y - 1);
+    }
+
+    // Page break guard
+    function needPage(need = 18) {
+      if (y + need > pageH - 20) {
+        doc.addPage();
+        y = 8;
+        doc.setFont("times", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(140, 140, 140);
+        doc.text(`Inspection Report — ${r.inspectionId} (continued)`, cx, y, {
+          align: "center",
+        });
+        doc.setTextColor(0, 0, 0);
+        doc.setDrawColor(0, 90, 8);
+        doc.setLineWidth(0.5);
+        doc.line(mL, y + 2, pageW - mR, y + 2);
+        y = 12;
+      }
+    }
+
+    // ── PAGE 1: INSPECTION ID top-left, then header ───────────────────────────
+    y = 8;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(0, 90, 8);
+    const idLabel = r.isReinspection
+      ? `${r.inspectionId}  (Reinspection #${r.reinspectionNumber} of ${r.parentInspectionId})`
+      : r.inspectionId;
+    doc.text(idLabel, mL, y);
+    y += 5;
+
+    // Logos — left: seal, right: CENRO
+    const logoSz = 22;
+    const logoY = y;
+    doc.addImage(sealB64, "PNG", mL, logoY, logoSz, logoSz);
+    doc.addImage(cenroB64, "PNG", pageW - mR - logoSz, logoY, logoSz, logoSz);
+
+    // Header text centered between logos
+    const txtX = cx;
+    const txtY = logoY + 4;
+    doc.setFont("times", "normal");
+    doc.setFontSize(11);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Republic of the Philippines", txtX, txtY, { align: "center" });
+    doc.setFont("times", "italic");
+    doc.setFontSize(12);
+    doc.text("City of San Juan, Metro Manila", txtX, txtY + 7, {
+      align: "center",
+    });
+    doc.setFont("times", "bold");
+    doc.setFontSize(10);
+    doc.text("City Environment and Natural Resources Office", txtX, txtY + 14, {
+      align: "center",
+    });
+
+    y = logoY + logoSz + 3;
+    doc.setDrawColor(0, 90, 8);
+    doc.setLineWidth(0.8);
+    doc.line(mL, y, pageW - mR, y);
+    y += 4;
+
+    // Document title
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(0, 90, 8);
+    doc.text("INSPECTION REPORT", cx, y, { align: "center" });
+    y += 9;
+    doc.setTextColor(0, 0, 0);
+
+    // ── PART I — Notice of Inspection ─────────────────────────────────────────
+    secHdr("Part I — Notice of Inspection");
+
+    subHdr("Business Information");
+    row2("Account No.", r.accountNo, "Application Status", r.applicationStatus);
+    row2("Business Name", r.businessName, "Barangay", r.barangay);
+    row1("Address", r.address);
+    row2(
+      "Date of Inspection",
+      r.dateOfInspection
+        ? new Date(r.dateOfInspection).toLocaleString("en-PH")
+        : "—",
+      "Encoded By",
+      r.encodedByName || r.encodedByEmail || "—",
+    );
+    y += 2;
+
+    needPage(22);
+    subHdr("Inspection Result");
+    checkList(
+      [
+        {
+          label: "Passed the CENRO Standards",
+          checked: r.inspectionResult === "PASSED",
+        },
+        {
+          label: "Violated City Ordinances",
+          checked: r.inspectionResult === "VIOLATED",
+        },
+        {
+          label: "Notice / Warning",
+          checked: r.inspectionResult === "NOTICE_WARNING",
+        },
+      ],
+      mL + 2,
+    );
+    y += 3;
+
+    needPage(22);
+    subHdr("City Ordinance Violations");
+    const vMap = [
+      {
+        key: "ordinance35_2004_sec2a",
+        l: "City Ordinance No. 35-2004 sec.2a — Failure to segregate wastes",
+      },
+      {
+        key: "ordinance30_1999_sec5c",
+        l: "City Ordinance No. 30-1999 sec.5c — Failure to specify appropriate garbage bin label",
+      },
+      {
+        key: "ordinance94_1994_sec1",
+        l: "City Ordinance No. 94-1994 sec.1 — Failure to cover trash receptacle",
+      },
+      {
+        key: "ordinance91_2013_sec5F03d",
+        l: "City Ordinance No. 91-2013 sec.5F-03d — Failure to install adequate anti-pollution devices",
+      },
+      {
+        key: "ordinance21_11_sec14_2",
+        l: "City Ordinance No. 21-11 sec 14.2 — Failure to desludge septic tank",
+      },
+      {
+        key: "ordinance91_2013_sec5F03e",
+        l: "City Ordinance No. 91-2013 sec.5F-03e — Failure to present/provide a true copy of all clearances, permits and certifications",
+      },
+      {
+        key: "ordinance10_2011",
+        l: "City Ordinance No. 10-2011 — Dumping of solid waste in any form into canals, drainage & water systems",
+      },
+      {
+        key: "ordinance09_2011_sec3_1",
+        l: "City Ordinance No. 09-2011 sec.3-1 — Littering and illegally dumping of solid wastes in any public/private places",
+      },
+      {
+        key: "ordinance91_2013_sec5F03a",
+        l: "City Ordinance No. 91-2013 sec.5F-03a — Failure to pay Environmental Protection and Preservation Fee",
+      },
+      {
+        key: "ordinance91_2013_sec5F03b",
+        l: "City Ordinance No. 91-2013 sec.5F-03b — Failure to appoint/designate Pollution Control Officer (PCO)",
+      },
+      {
+        key: "ordinance91_2013_sec5F03c",
+        l: "City Ordinance No. 91-2013 sec.5F-03c — Refuse to allow inspectors to enter and inspect the premises",
+      },
+      {
+        key: "ordinance15_11_sec1b",
+        l: "City Ordinance No. 15-11 sec.1b — Improper disposal of used cooking oil",
+      },
+      {
+        key: "ordinance14_2024_sec5w",
+        l: "City Ordinance No. 14-2024 sec.5w — Tobacco Advertisement",
+      },
+      { key: "isNA", l: "N/A" },
+    ];
+    checkList(
+      vMap.map((v) => ({
+        label: v.l,
+        checked:
+          v.key === "isNA" ? !!r.violations?.isNA : !!r.violations?.[v.key],
+      })),
+      mL + 2,
+    );
+    y += 2;
+    row2(
+      "OVR No.",
+      r.violations?.ovrNo || "—",
+      "Total Fine (PHP)",
+      r.violations?.totalFine ? r.violations.totalFine.toLocaleString() : "—",
+    );
+    row2(
+      "Violation Priority",
+      r.violationPriority || "—",
+      "Compliance Deadline",
+      r.complianceDeadline || "—",
+    );
+    y += 2;
+
+    needPage(22);
+    subHdr("Recommendations");
+    const recMap = [
+      {
+        key: "environmentalComplianceCertificate",
+        l: "Environmental Compliance Certificate",
+      },
+      { key: "certificateOfNonCoverage", l: "Certificate of Non-Coverage" },
+      { key: "wastewaterDischargePerm", l: "Wastewater Discharge Permit" },
+      { key: "hazardousWasteGeneratorId", l: "Hazardous Waste Generator ID" },
+      {
+        key: "permitToOperateAirPollution",
+        l: "Permit to Operate for Air Pollution Source Installation/Equipment",
+      },
+      {
+        key: "pcoAccreditationCertificate",
+        l: "Pollution Control Officer Accreditation Certificate",
+      },
+      {
+        key: "tsdCertificate",
+        l: "Transport, Storage and Disposal Certificate",
+      },
+      {
+        key: "environmentalProtectionFee",
+        l: "Environmental Protection and Preservation Fee / Environmental Compliance Fee",
+      },
+      {
+        key: "appointPCO",
+        l: "Appoint an accredited Pollution Control Officer",
+      },
+      {
+        key: "provideSegregationBins",
+        l: "Provide waste segregation bins with properly labeled markings",
+      },
+      {
+        key: "properWasteSegregation",
+        l: "Proper waste segregation in accordance with the markings",
+      },
+      { key: "installGreaseTrap", l: "Installation of grease trap" },
+      { key: "installExhaustSystem", l: "Installation of exhaust system" },
+      {
+        key: "installSepticTank",
+        l: "Installation of septic tank / desludging certificate",
+      },
+      {
+        key: "attendSeminar",
+        l: "Attend business establishment environmental seminar",
+      },
+    ];
+    checkList(
+      recMap.map((rc) => ({
+        label: rc.l,
+        checked: !!r.recommendations?.[rc.key],
+      })),
+      mL + 2,
+    );
+
+    // ── PART II — Inspection Checklist ────────────────────────────────────────
+    needPage(30);
+    secHdr("Part II — Inspection Checklist");
+
+    subHdr("Permits & Certifications");
+    const p = r.permits || {};
+
+    // Permit rows: item name on left, Yes/No/NA checkboxes on right
+    function permitRow(label, statusVal, extra) {
+      needPage(9);
+      doc.setFont("times", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(0, 0, 0);
+      const lLines = doc.splitTextToSize(label, cW - 52);
+      doc.text(lLines, mL + 2, y);
+      const cbX = pageW - mR - 48;
+      checkRow(
+        [
+          { label: "Yes", checked: statusVal === "YES" },
+          { label: "No", checked: statusVal === "NO" },
+          { label: "N/A", checked: !statusVal || statusVal === "NA" },
+        ],
+        cbX,
+        y,
+        16,
+      );
+      y += lLines.length * 5.2;
+      if (extra && statusVal === "YES") {
+        doc.setFont("times", "italic");
+        doc.setFontSize(8);
+        doc.setTextColor(60, 60, 60);
+        doc.text(extra, mL + 6, y);
+        y += 4.5;
+      }
+    }
+
+    permitRow("Mayor's Permit to Operate", p.mayorsPermit);
+    permitRow("Environmental Protection Fee", p.environmentalProtectionFee);
+    permitRow(
+      "Environmental Compliance Certificate",
+      p.ecc?.status,
+      p.ecc?.status === "YES"
+        ? `ECC No.: ${p.ecc?.eccNumber || "—"}   Issued: ${p.ecc?.dateIssued ? new Date(p.ecc.dateIssued).toLocaleDateString("en-PH") : "—"}`
+        : null,
+    );
+    permitRow(
+      "Certificate of Non-Coverage",
+      p.cnc?.status,
+      p.cnc?.status === "YES"
+        ? `CNC No.: ${p.cnc?.cncNumber || "—"}   Issued: ${p.cnc?.dateIssued ? new Date(p.cnc.dateIssued).toLocaleDateString("en-PH") : "—"}`
+        : null,
+    );
+    permitRow(
+      "Wastewater Discharge Permit",
+      p.wdp?.status,
+      p.wdp?.status === "YES"
+        ? `WDP No.: ${p.wdp?.wdpNumber || "—"}   Validity: ${p.wdp?.validity || "—"}`
+        : null,
+    );
+    permitRow(
+      "Permit to Operate (Air Pollution Source)",
+      p.pto?.status,
+      p.pto?.status === "YES"
+        ? `PTO No.: ${p.pto?.ptoNumber || "—"}   Validity: ${p.pto?.validity || "—"}`
+        : null,
+    );
+    permitRow(
+      "Hazardous Waste Generator ID",
+      p.hwid?.status,
+      p.hwid?.status === "YES"
+        ? `HWID No.: ${p.hwid?.hwidNumber || "—"}   Issued: ${p.hwid?.dateIssued ? new Date(p.hwid.dateIssued).toLocaleDateString("en-PH") : "—"}`
+        : null,
+    );
+    y += 2;
+
+    needPage(22);
+    subHdr("Pollution Control Officer");
+    const pco = r.pco || {};
+    row2("Name", pco.name, "Accreditation No.", pco.accreditationNo);
+    row2("Contact No.", pco.contactNo, "Email", pco.email);
+    y += 2;
+
+    needPage(30);
+    subHdr("Waste Management — 1. Solid Waste");
+    const sw = r.wasteManagement?.solidWaste || {};
+
+    function swRow(lbl, val) {
+      needPage(7);
+      doc.setFont("times", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(0, 0, 0);
+      doc.text(lbl, mL + 4, y);
+      checkRow(
+        [
+          { label: "Yes", checked: val === "YES" },
+          { label: "No", checked: val === "NO" },
+        ],
+        pageW - mR - 32,
+        y,
+        16,
+      );
+      y += 5.2;
+    }
+
+    swRow("a. Waste bins were provided", sw.wasteBinsProvided);
+    swRow("b. Bins were properly labelled", sw.binsProperlyLabelled);
+    swRow("c. Bins were appropriately covered", sw.binsCovered);
+    swRow("d. Proper waste segregation was practiced", sw.properSegregation);
+    swRow("e. Provision of Materials Recovery Facility (MRF)", sw.mrf);
+    swRow("f. Wastes were collected", sw.wastesCollected);
+    y += 1;
+    row2("Frequency of Hauling", sw.frequencyOfHauling, "Hauler", sw.hauler);
+    y += 2;
+
+    needPage(35);
+    subHdr("Waste Management — 2. Liquid Waste");
+    const lw = r.wasteManagement?.liquidWaste || {};
+
+    function lwRow(lbl, val) {
+      needPage(7);
+      doc.setFont("times", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(0, 0, 0);
+      const llines = doc.splitTextToSize(lbl, cW - 52);
+      doc.text(llines, mL + 4, y);
+      checkRow(
+        [
+          { label: "Yes", checked: val === "YES" },
+          { label: "No", checked: val === "NO" },
+          { label: "N/A", checked: !val || val === "NA" },
+        ],
+        pageW - mR - 48,
+        y,
+        16,
+      );
+      y += llines.length * 5.2;
+    }
+
+    const st = lw.septicTank || {};
+    lwRow("a. Installed septic tank", st.status);
+    if (st.status === "YES") {
+      row2("Location", st.location, "Capacity", st.capacity);
+      row2(
+        "Desludging Frequency",
+        st.frequencyOfDesludging,
+        "Date of Desludging",
+        st.dateOfDesludging
+          ? new Date(st.dateOfDesludging).toLocaleDateString("en-PH")
+          : "—",
+      );
+      row1("Service Provider", st.serviceProvider);
+    }
+
+    const gt = lw.greaseTrap || {};
+    lwRow("b. Installed grease trap", gt.status);
+    if (gt.status === "YES") {
+      row2("Location", gt.location, "Capacity", gt.capacity);
+      row2("Hauling Frequency", gt.frequencyOfHauling, "Hauler", gt.hauler);
+    }
+
+    const wt = lw.wwtp || {};
+    lwRow("c. Wastewater / Sewage Treatment Plant", wt.status);
+    if (wt.status === "YES")
+      row1("Lab Analysis Result", wt.laboratoryAnalysisResult);
+
+    const oil = lw.usedOil || {};
+    lwRow("d. Used oil were properly disposed", oil.status);
+    if (oil.status === "YES") {
+      row2(
+        "Type of Oil",
+        oil.typeOfOil,
+        "Hauling Frequency",
+        oil.frequencyOfHauling,
+      );
+      row1("Hauler", oil.hauler);
+    }
+    y += 2;
+
+    needPage(18);
+    subHdr("Waste Management — 3. Air Pollution Management");
+    const air = r.wasteManagement?.airPollution?.pollutionControlDevices || {};
+    lwRow("a. Pollution control devices", air.status);
+    if (air.status === "YES") {
+      row2(
+        "Device Type",
+        air.deviceType,
+        "Maintenance Provider",
+        air.maintenanceProvider,
+      );
+    }
+
+    // ── PART III — After Inspection Report ────────────────────────────────────
+    needPage(30);
+    secHdr("Part III — After Inspection Report");
+
+    subHdr("I. Purpose of Inspection");
+    const pur = r.purposeOfInspection || {};
+    const appStatus = (r.applicationStatus || "").toUpperCase();
+    // Auto-derive from application status:
+    // NEW     → "New establishment" is checked, compliance is unchecked
+    // RENEWAL → "New establishment" is unchecked, compliance is checked
+    const isNew = appStatus === "NEW";
+    const isRenewal = appStatus === "RENEWAL";
+    checkList(
+      [
+        {
+          label: "New establishment",
+          checked: isNew || !!pur.newEstablishment,
+        },
+        {
+          label:
+            "For business establishment's compliance to the required pollution mitigating measures",
+          checked: isRenewal || !!pur.complianceCheck,
+        },
+      ],
+      mL + 2,
+    );
+    y += 3;
+
+    needPage(35);
+    subHdr("II. General Description of the Physical Environment");
+    const lu = r.physicalEnvironment?.landUse || {};
+    const ot = r.physicalEnvironment?.ownershipTerms || {};
+    const occ = r.physicalEnvironment?.occupancyTerms || {};
+
+    doc.setFont("times", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(50, 50, 50);
+    doc.text("Land Use:", mL + 2, y);
+    y += 5;
+    checkList(
+      [
+        { label: "Commercial", checked: !!lu.commercial },
+        { label: "Residential", checked: !!lu.residential },
+        { label: "Industrial", checked: !!lu.industrial },
+        { label: "Institutional", checked: !!lu.institutional },
+      ],
+      mL + 6,
+    );
+    y += 2;
+
+    doc.setFont("times", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(50, 50, 50);
+    doc.text("Ownership Terms:", mL + 2, y);
+    y += 5;
+    checkList(
+      [
+        { label: "Proprietorship", checked: !!ot.proprietorship },
+        { label: "Private Corporation", checked: !!ot.privateCorporation },
+        { label: "Multi-National", checked: !!ot.multiNational },
+      ],
+      mL + 6,
+    );
+    y += 2;
+
+    doc.setFont("times", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(50, 50, 50);
+    doc.text("Occupancy Terms:", mL + 2, y);
+    y += 5;
+    needPage(7);
+    doc.setFont("times", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Lessee:", mL + 6, y);
+    checkRow(
+      [
+        { label: "Yes", checked: occ.lessee === "YES" },
+        { label: "No", checked: occ.lessee === "NO" },
+      ],
+      mL + 24,
+      y,
+      16,
+    );
+    y += 5.2;
+    needPage(7);
+    doc.setFont("times", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Stand Alone:", mL + 6, y);
+    checkRow(
+      [
+        { label: "Yes", checked: occ.standAlone === "YES" },
+        { label: "No", checked: occ.standAlone === "NO" },
+      ],
+      mL + 30,
+      y,
+      16,
+    );
+    y += 6;
+
+    needPage(30);
+    subHdr("III. Findings and Observations");
+    const fi = r.findings || {};
+    doc.setFont("times", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(50, 50, 50);
+    doc.text(
+      "a. Establishment operation's status during inspection:",
+      mL + 2,
+      y,
+    );
+    y += 5;
+    checkList(
+      [
+        { label: "Operational", checked: fi.operationStatus === "OPERATIONAL" },
+        {
+          label: "No Operation",
+          checked: fi.operationStatus === "NO_OPERATION",
+        },
+        { label: "Closed", checked: fi.operationStatus === "CLOSED" },
+        { label: "Unlocated", checked: fi.operationStatus === "UNLOCATED" },
+        {
+          label: "No Person In-charge",
+          checked: fi.operationStatus === "NO_PERSON_IN_CHARGE",
+        },
+      ],
+      mL + 6,
+    );
+    y += 2;
+    multiLine("b. Inspector's observation statement", fi.observationStatement);
+
+    needPage(25);
+    subHdr("IV. Directives");
+    multiLine("", r.directives);
+
+    needPage(25);
+    subHdr("V. Recommendations");
+    const ar = r.afterRecommendations || {};
+    checkList(
+      [
+        { label: "For reinspection", checked: !!ar.forReinspection },
+        { label: "For seminar", checked: !!ar.forSeminar },
+        {
+          label:
+            "For business establishment's compliance to the required pollution mitigating measures",
+          checked: !!ar.complianceMeasures,
+        },
+        {
+          label:
+            "For endorsement to BPLO for issuance of Cease-and-Desist Order",
+          checked: !!ar.forCDO,
+        },
+        {
+          label: "Issuance of Certificate of Environmental Compliance",
+          checked: !!ar.issuanceCEC,
+        },
+        { label: "For Case Conference", checked: !!ar.forCaseConference },
+        {
+          label: "For Case Termination/Dismissal",
+          checked: !!ar.forCaseTermination,
+        },
+      ],
+      mL + 2,
+    );
+
+    // ── SIGNATURES ────────────────────────────────────────────────────────────
+    needPage(80);
+    y += 6;
+
+    // Attested by:
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Attested by:", mL, y);
+    y += 8;
+
+    const inspFullNames = {
+      alvinMagbanua: "Alvin Magbanua",
+      edwinPaderes: "Edwin Paderes",
+      jaycelEden: "Jaycel Eden",
+      jeffreyBasco: "Jeffrey Basco",
+      jennySandrino: "Jenny Sandrino",
+      jhonIvanMadronal: "Jhon Ivan Madronal",
+      jovenSantiago: "Joven Santiago",
+      marcJoelRato: "Marc Joel Rato",
+      ninaTan: "Niña Tan",
+      robinRomero: "Robin Romero",
+    };
+    const selInsp = r.inspectors
+      ? Object.entries(inspFullNames)
+          .filter(([k]) => r.inspectors[k])
+          .map(([, v]) => v)
+      : [];
+
+    const sigW = 54,
+      sigH = 18,
+      sigGap = 6,
+      perRow = 3;
+    for (let i = 0; i < selInsp.length; i++) {
+      if (i % perRow === 0 && i > 0) {
+        y += sigH + 14;
+        needPage(sigH + 16);
+      }
+      const col = i % perRow;
+      const sx = mL + col * (sigW + sigGap);
+      const sy = y;
+      // Signature line
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.4);
+      doc.line(sx, sy + sigH, sx + sigW, sy + sigH);
+      // Name — bold, centered above line
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(0, 0, 0);
+      const nLines = doc.splitTextToSize(selInsp[i].toUpperCase(), sigW);
+      doc.text(nLines, sx + sigW / 2, sy + sigH + 4, { align: "center" });
+      // Title — italic below name
+      doc.setFont("times", "italic");
+      doc.setFontSize(8);
+      doc.setTextColor(60, 60, 60);
+      doc.text(
+        "Environmental Inspector",
+        sx + sigW / 2,
+        sy + sigH + 4 + nLines.length * 4,
+        { align: "center" },
+      );
+    }
+
+    const inspRows = Math.ceil(Math.max(selInsp.length, 1) / perRow);
+    y += inspRows * (sigH + 14) + 10;
+
+    // Approved by:
+    needPage(45);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Approved by:", mL, y);
+    y += 8;
+
+    const apprW = 90;
+    const apprX = cx - apprW / 2;
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.4);
+    doc.line(apprX, y + 18, apprX + apprW, y + 18);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text("GABRIEL GERARD S. KATIGBAK", cx, y + 23, { align: "center" });
+    doc.setFont("times", "italic");
+    doc.setFontSize(9);
+    doc.setTextColor(50, 50, 50);
+    doc.text("City Environment and Natural Resources Officer", cx, y + 29, {
+      align: "center",
+    });
+    y += 36;
+
+    // ── FOOTER on every page ──────────────────────────────────────────────────
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setDrawColor(0, 90, 8);
+      doc.setLineWidth(0.5);
+      doc.line(mL, pageH - 13, pageW - mR, pageH - 13);
+      doc.setFont("times", "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(130, 130, 130);
+      doc.text(
+        "City Environment and Natural Resources Office — City Government of San Juan",
+        cx,
+        pageH - 8.5,
+        { align: "center" },
+      );
+      doc.text(
+        `Encoded by: ${r.encodedByName || r.encodedByEmail || "—"}   |   Generated: ${new Date().toLocaleString("en-PH")}   |   Page ${i} of ${totalPages}`,
+        cx,
+        pageH - 4.5,
+        { align: "center" },
+      );
+    }
+
+    // ── Open in new tab ───────────────────────────────────────────────────────
+    const blob = doc.output("blob");
+    window.open(URL.createObjectURL(blob), "_blank");
+    showSuccessMessage("Inspection report PDF opened in a new tab.");
+  } catch (err) {
+    console.error("PDF generation error:", err);
+    showErrorMessage(`Failed to generate PDF: ${err.message}`);
+  } finally {
+    btn.innerHTML = origLabel;
+    btn.disabled = false;
+  }
+}
+
+// Load jsPDF if not already loaded
+function loadInspectionLibraries() {
+  return new Promise((resolve) => {
+    if (window.jspdf) {
+      resolve();
+      return;
+    }
+    const script = document.createElement("script");
+    script.src =
+      "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+    script.onload = resolve;
+    document.head.appendChild(script);
   });
 }
 
@@ -1852,6 +2919,251 @@ function applyPart3Prefill(p3) {
       cb.checked = p3.inspectors[cb.dataset.key] || false;
     });
   }
+  // Re-apply auto-check after prefill (edit mode)
+  applyNewEstabCheckbox();
+}
+
+function applyNewEstabCheckbox() {
+  const appStatus = (formData.applicationStatus || "").toUpperCase();
+  const newEstabCb = document.getElementById("p3_newEstab");
+  if (!newEstabCb) return;
+
+  if (appStatus === "NEW") {
+    // Auto-check and lock — it's definitively a new business
+    newEstabCb.checked = true;
+    newEstabCb.disabled = true;
+    newEstabCb.title = "Auto-checked: Application Status is NEW";
+    // Style the label to show it's auto-set
+    const lbl = newEstabCb.closest("label");
+    if (lbl) lbl.style.color = "var(--primary-green)";
+  } else if (appStatus === "RENEWAL") {
+    // Uncheck and disable — renewals are not new establishments
+    newEstabCb.checked = false;
+    newEstabCb.disabled = true;
+    newEstabCb.title = "Disabled: Application Status is RENEWAL";
+    const lbl = newEstabCb.closest("label");
+    if (lbl) lbl.style.color = "var(--gray-500)";
+  } else {
+    // Unknown status — leave it editable
+    newEstabCb.disabled = false;
+    newEstabCb.title = "";
+    const lbl = newEstabCb.closest("label");
+    if (lbl) lbl.style.color = "";
+  }
+}
+
+// ── Filter logic ─────────────────────────────────────────────────────────────
+
+function populateBarangayFilter(reports) {
+  const sel = document.getElementById("filterBarangay");
+  if (!sel) return;
+  const current = sel.value;
+  // Collect unique barangays
+  const barangays = [
+    ...new Set(
+      reports
+        .map((r) => r.barangay)
+        .filter(Boolean)
+        .map((b) => b.toUpperCase()),
+    ),
+  ].sort();
+  // Rebuild options
+  sel.innerHTML = '<option value="">All</option>';
+  barangays.forEach((b) => {
+    const opt = document.createElement("option");
+    opt.value = b;
+    opt.textContent = b;
+    sel.appendChild(opt);
+  });
+  // Restore previous selection if still valid
+  if (barangays.includes(current)) sel.value = current;
+}
+
+function getActiveFilters() {
+  return {
+    sort: document.getElementById("filterSort")?.value || "newest",
+    result: document.getElementById("filterResult")?.value || "",
+    priority: document.getElementById("filterPriority")?.value || "",
+    appStatus: document.getElementById("filterAppStatus")?.value || "",
+    barangay: document.getElementById("filterBarangay")?.value || "",
+    type: document.getElementById("filterType")?.value || "",
+  };
+}
+
+function applyFiltersAndRender() {
+  const f = getActiveFilters();
+  let data = [...allReports];
+
+  // Filter: result
+  if (f.result) data = data.filter((r) => r.inspectionResult === f.result);
+
+  // Filter: priority
+  if (f.priority === "none") {
+    data = data.filter((r) => !r.violationPriority);
+  } else if (f.priority) {
+    data = data.filter((r) => r.violationPriority === f.priority);
+  }
+
+  // Filter: application status
+  if (f.appStatus)
+    data = data.filter(
+      (r) => (r.applicationStatus || "").toUpperCase() === f.appStatus,
+    );
+
+  // Filter: barangay
+  if (f.barangay)
+    data = data.filter((r) => (r.barangay || "").toUpperCase() === f.barangay);
+
+  // Filter: type
+  if (f.type)
+    data = data.filter((r) => {
+      if (f.type === "REINSPECTION")
+        return r.isReinspection || r.inspectionType === "REINSPECTION";
+      return (r.inspectionType || "REGULAR") === f.type;
+    });
+
+  // Sort
+  data.sort((a, b) => {
+    const da = new Date(a.dateOfInspection || a.createdAt || 0);
+    const db = new Date(b.dateOfInspection || b.createdAt || 0);
+    return f.sort === "oldest" ? da - db : db - da;
+  });
+
+  // Update active filter count badge
+  const activeCount = [
+    f.result,
+    f.priority,
+    f.appStatus,
+    f.barangay,
+    f.type,
+  ].filter(Boolean).length;
+  const badge = document.getElementById("filterActiveCount");
+  if (badge) {
+    if (activeCount > 0) {
+      badge.textContent = `${activeCount} filter${activeCount > 1 ? "s" : ""} active`;
+      badge.style.display = "inline";
+    } else {
+      badge.style.display = "none";
+    }
+  }
+
+  totalRecords = data.length;
+  currentPage = 1;
+  // Render using filtered data directly
+  renderFilteredTable(data);
+}
+
+function renderFilteredTable(data) {
+  const start = (currentPage - 1) * pageSize;
+  const slice = data.slice(start, start + pageSize);
+  const tbody = document.getElementById("inspectionsTable");
+  if (!slice.length) {
+    tbody.innerHTML =
+      '<div class="table-empty"><i class="fas fa-clipboard"></i><p>No records match the current filters.</p></div>';
+    updatePaginationInfoWith(data);
+    return;
+  }
+  const rows = slice
+    .map(function (r) {
+      const tags = getInspectionTypeTags(r);
+      const id = r.inspectionId || "-";
+      const acct = r.accountNo || "-";
+      const biz = r.businessName || "-";
+      const brgy = r.barangay || "-";
+      const date = r.dateOfInspection
+        ? new Date(r.dateOfInspection).toLocaleDateString("en-PH")
+        : "-";
+      const oid = r._id;
+      return (
+        "<tr>" +
+        '<td><span class="insp-id-badge">' +
+        id +
+        "</span>" +
+        tags +
+        "</td>" +
+        '<td><span class="acct-link" onclick="viewReport(\'' +
+        oid +
+        "')\">" +
+        acct +
+        "</span></td>" +
+        "<td>" +
+        biz +
+        "</td>" +
+        "<td>" +
+        brgy +
+        "</td>" +
+        "<td>" +
+        date +
+        "</td>" +
+        "<td>" +
+        resultBadgeHtml(r.inspectionResult) +
+        "</td>" +
+        "<td>" +
+        statusBadge(r.inspectionStatus) +
+        "</td>" +
+        "<td>" +
+        priorityBadgeHtml(r.violationPriority) +
+        "</td>" +
+        '<td class="inspector-cell">' +
+        getInspectorNames(r.inspectors) +
+        "</td>" +
+        '<td class="action-cell">' +
+        '<button class="act-btn act-view" onclick="viewReport(\'' +
+        oid +
+        '\')" title="View"><i class="fas fa-eye"></i></button>' +
+        '<button class="act-btn act-edit" onclick="editReport(\'' +
+        oid +
+        '\')" title="Edit"><i class="fas fa-edit"></i></button>' +
+        '<button class="act-btn act-del"  onclick="deleteReport(\'' +
+        oid +
+        '\')" title="Delete"><i class="fas fa-trash"></i></button>' +
+        "</td>" +
+        "</tr>"
+      );
+    })
+    .join("");
+  tbody.innerHTML =
+    '<table class="insp-table"><thead><tr>' +
+    "<th>Inspection ID</th><th>Account No.</th><th>Business Name</th><th>Barangay</th>" +
+    "<th>Date of Inspection</th><th>Result</th><th>Status</th>" +
+    "<th>Priority</th><th>Inspectors</th><th>Actions</th>" +
+    "</tr></thead><tbody>" +
+    rows +
+    "</tbody></table>";
+  updatePaginationInfoWith(data);
+}
+function updatePaginationInfoWith(data) {
+  const start = data.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const end = Math.min(currentPage * pageSize, data.length);
+  document.getElementById("paginationInfo").textContent =
+    `Showing ${start}–${end} of ${data.length} records`;
+  document.getElementById("prevPageBtn").disabled = currentPage <= 1;
+  document.getElementById("nextPageBtn").disabled = end >= data.length;
+}
+
+function setupFilters() {
+  const filterIds = [
+    "filterSort",
+    "filterResult",
+    "filterPriority",
+    "filterAppStatus",
+    "filterBarangay",
+    "filterType",
+  ];
+  filterIds.forEach((id) => {
+    document
+      .getElementById(id)
+      ?.addEventListener("change", applyFiltersAndRender);
+  });
+  document.getElementById("filterClearBtn")?.addEventListener("click", () => {
+    document.getElementById("filterSort").value = "newest";
+    document.getElementById("filterResult").value = "";
+    document.getElementById("filterPriority").value = "";
+    document.getElementById("filterAppStatus").value = "";
+    document.getElementById("filterBarangay").value = "";
+    document.getElementById("filterType").value = "";
+    applyFiltersAndRender();
+  });
 }
 
 function setupEscapeKey() {

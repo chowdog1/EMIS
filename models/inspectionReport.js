@@ -237,6 +237,19 @@ const inspectionReportSchema = new mongoose.Schema(
     // For reinspections — track who last updated too
     lastUpdatedByEmail: String,
 
+    // ── Inspection type ───────────────────────────────────────────────────────
+    // REGULAR         = standard scheduled inspection
+    // REINSPECTION    = follow-up after violation/compliance
+    // COMPLAINT       = triggered by a filed complaint
+    // SPECIAL_OPERATION = sweep / special operation
+    inspectionType: {
+      type: String,
+      enum: ["REGULAR", "REINSPECTION", "COMPLAINT", "SPECIAL_OPERATION"],
+      default: "REGULAR",
+    },
+    // Complaint details (only used when inspectionType === "COMPLAINT")
+    complainantName: { type: String, default: null },
+
     // ── Reinspection linkage ──────────────────────────────────────────────────
     isReinspection: { type: Boolean, default: false },
     // inspectionId of the original (root) inspection in this chain

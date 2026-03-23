@@ -256,145 +256,328 @@ module.exports = function (establishmentsDB) {
       }).sort({ createdAt: 1 });
 
       const headers = [
-        "inspectionId",
-        "isReinspection",
-        "parentInspectionId",
-        "reinspectionNumber",
-        "accountNo",
-        "businessName",
-        "address",
-        "barangay",
-        "applicationStatus",
-        "dateOfInspection",
-        "inspectionResult",
-        "inspectionStatus",
-        "violationPriority",
-        "ovrNo",
-        "totalFine",
-        "complianceDeadline",
-        "violations",
-        "recommendations",
-        "operationStatus",
-        "observationStatement",
-        "directives",
-        "afterRecommendations",
-        "inspectors",
-        "encodedByName",
-        "encodedByEmail",
-        "lastUpdatedByEmail",
-        "createdAt",
-        "updatedAt",
+        // ── Identity
+        "Inspection ID",
+        "Is Reinspection",
+        "Parent Inspection ID",
+        "Reinspection No.",
+        // ── Part 1: Business info
+        "Account No.",
+        "Business Name",
+        "Address",
+        "Barangay",
+        "Application Status",
+        // ── Part 1: Inspection result
+        "Date of Inspection",
+        "Inspection Result",
+        "Inspection Status",
+        "Violation Priority",
+        "OVR No.",
+        "Total Fine (₱)",
+        "Compliance Deadline",
+        "Violations",
+        "Recommendations",
+        // ── Part 2: Permits
+        "Mayor's Permit",
+        "Environmental Protection Fee",
+        "Environmental Compliance Certificate",
+        "ECC No.",
+        "ECC Date Issued",
+        "Certificate of Non-Coverage",
+        "CNC No.",
+        "CNC Date Issued",
+        "Wastewater Discharge Permit",
+        "WDP No.",
+        "WDP Validity",
+        "Permit to Operate (Air Pollution)",
+        "PTO No.",
+        "PTO Validity",
+        "Hazardous Waste Generator ID",
+        "HWID No.",
+        "HWID Date Issued",
+        // ── Part 2: PCO
+        "PCO Name",
+        "PCO Accreditation No.",
+        "PCO Contact No.",
+        "PCO Email",
+        // ── Part 2: Solid Waste
+        "Waste Bins Provided",
+        "Bins Properly Labelled",
+        "Bins Covered",
+        "Proper Waste Segregation",
+        "MRF Provided",
+        "Wastes Collected",
+        "Hauling Frequency",
+        "Hauler",
+        // ── Part 2: Liquid Waste — Septic Tank
+        "Septic Tank Installed",
+        "Septic Tank Location",
+        "Septic Tank Capacity",
+        "Desludging Frequency",
+        "Date of Desludging",
+        "Septic Tank Service Provider",
+        // ── Part 2: Liquid Waste — Grease Trap
+        "Grease Trap Installed",
+        "Grease Trap Location",
+        "Grease Trap Capacity",
+        "Grease Trap Hauling Frequency",
+        "Grease Trap Hauler",
+        // ── Part 2: Liquid Waste — WWTP
+        "Wastewater Treatment Plant",
+        "WWTP Laboratory Analysis Result",
+        // ── Part 2: Liquid Waste — Used Oil
+        "Used Oil Properly Disposed",
+        "Type of Oil",
+        "Oil Hauling Frequency",
+        "Oil Hauler",
+        // ── Part 2: Air Pollution
+        "Pollution Control Devices Installed",
+        "Device Type",
+        "Maintenance Provider",
+        // ── Part 3: Purpose
+        "Purpose: New Establishment",
+        "Purpose: Compliance Check",
+        // ── Part 3: Physical Environment
+        "Land Use: Commercial",
+        "Land Use: Residential",
+        "Land Use: Industrial",
+        "Land Use: Institutional",
+        "Ownership: Proprietorship",
+        "Ownership: Private Corporation",
+        "Ownership: Multi-National",
+        "Occupancy: Lessee",
+        "Occupancy: Stand Alone",
+        // ── Part 3: Findings
+        "Operation Status During Inspection",
+        "Inspector's Observation Statement",
+        "Directives",
+        // ── Part 3: After Recommendations
+        "After-Inspection Recommendations",
+        // ── Meta
+        "Inspectors",
+        "Encoded By",
+        "Encoder Email",
+        "Last Modified By",
+        "Date Created",
+        "Date Updated",
       ];
 
+      const yn = (v) =>
+        v === "YES"
+          ? "Yes"
+          : v === "NO"
+            ? "No"
+            : v === "NA"
+              ? "N/A"
+              : v || "N/A";
+      const bl = (v) => (v ? "Yes" : "No");
+
+      const violLabels = {
+        ordinance35_2004_sec2a:
+          "CO 35-2004 sec.2a — Failure to segregate wastes",
+        ordinance30_1999_sec5c:
+          "CO 30-1999 sec.5c — Failure to specify garbage bin label",
+        ordinance94_1994_sec1:
+          "CO 94-1994 sec.1 — Failure to cover trash receptacle",
+        ordinance91_2013_sec5F03d:
+          "CO 91-2013 sec.5F-03d — Failure to install anti-pollution devices",
+        ordinance21_11_sec14_2:
+          "CO 21-11 sec 14.2 — Failure to desludge septic tank",
+        ordinance91_2013_sec5F03e:
+          "CO 91-2013 sec.5F-03e — Failure to present clearances/permits",
+        ordinance10_2011:
+          "CO 10-2011 — Dumping solid waste into canals/drainage",
+        ordinance09_2011_sec3_1:
+          "CO 09-2011 sec.3-1 — Littering / illegal dumping",
+        ordinance91_2013_sec5F03a:
+          "CO 91-2013 sec.5F-03a — Failure to pay Environmental Protection Fee",
+        ordinance91_2013_sec5F03b:
+          "CO 91-2013 sec.5F-03b — Failure to appoint PCO",
+        ordinance91_2013_sec5F03c:
+          "CO 91-2013 sec.5F-03c — Refused entry to inspectors",
+        ordinance15_11_sec1b:
+          "CO 15-11 sec.1b — Improper disposal of used cooking oil",
+        ordinance14_2024_sec5w: "CO 14-2024 sec.5w — Tobacco Advertisement",
+      };
+      const recLabels = {
+        environmentalComplianceCertificate:
+          "Environmental Compliance Certificate",
+        certificateOfNonCoverage: "Certificate of Non-Coverage",
+        wastewaterDischargePerm: "Wastewater Discharge Permit",
+        hazardousWasteGeneratorId: "Hazardous Waste Generator ID",
+        permitToOperateAirPollution: "Permit to Operate (Air Pollution)",
+        pcoAccreditationCertificate: "PCO Accreditation Certificate",
+        tsdCertificate: "Transport/Storage/Disposal Certificate",
+        environmentalProtectionFee: "Environmental Protection Fee",
+        appointPCO: "Appoint PCO",
+        provideSegregationBins: "Provide segregation bins",
+        properWasteSegregation: "Proper waste segregation",
+        installGreaseTrap: "Install grease trap",
+        installExhaustSystem: "Install exhaust system",
+        installSepticTank: "Install septic tank",
+        attendSeminar: "Attend environmental seminar",
+      };
+      const afterRecLabels = {
+        forReinspection: "For reinspection",
+        forSeminar: "For seminar",
+        complianceMeasures: "For compliance measures",
+        forCDO: "For CDO",
+        issuanceCEC: "Issuance of CEC",
+        forCaseConference: "For Case Conference",
+        forCaseTermination: "For Case Termination",
+      };
+
       const rows = records.map((r) => {
-        // Collect checked violations
-        const violKeys = [
-          "ordinance35_2004_sec2a",
-          "ordinance30_1999_sec5c",
-          "ordinance94_1994_sec1",
-          "ordinance91_2013_sec5F03d",
-          "ordinance21_11_sec14_2",
-          "ordinance91_2013_sec5F03e",
-          "ordinance10_2011",
-          "ordinance09_2011_sec3_1",
-          "ordinance91_2013_sec5F03a",
-          "ordinance91_2013_sec5F03b",
-          "ordinance91_2013_sec5F03c",
-          "ordinance15_11_sec1b",
-          "ordinance14_2024_sec5w",
-        ];
-        const violLabels = {
-          ordinance35_2004_sec2a: "Failure to segregate wastes",
-          ordinance30_1999_sec5c: "Failure to specify garbage bin label",
-          ordinance94_1994_sec1: "Failure to cover trash receptacle",
-          ordinance91_2013_sec5F03d:
-            "Failure to install anti-pollution devices",
-          ordinance21_11_sec14_2: "Failure to desludge septic tank",
-          ordinance91_2013_sec5F03e: "Failure to present clearances/permits",
-          ordinance10_2011: "Dumping solid waste into canals/drainage",
-          ordinance09_2011_sec3_1: "Littering / illegal dumping",
-          ordinance91_2013_sec5F03a:
-            "Failure to pay Environmental Protection Fee",
-          ordinance91_2013_sec5F03b: "Failure to appoint PCO",
-          ordinance91_2013_sec5F03c: "Refused entry to inspectors",
-          ordinance15_11_sec1b: "Improper disposal of used cooking oil",
-          ordinance14_2024_sec5w: "Tobacco Advertisement",
-        };
+        const p = r.permits || {};
+        const pco = r.pco || {};
+        const sw = r.wasteManagement?.solidWaste || {};
+        const lw = r.wasteManagement?.liquidWaste || {};
+        const st = lw.septicTank || {};
+        const gt = lw.greaseTrap || {};
+        const wt = lw.wwtp || {};
+        const oil = lw.usedOil || {};
+        const air =
+          r.wasteManagement?.airPollution?.pollutionControlDevices || {};
+        const pe = r.physicalEnvironment || {};
+        const lu = pe.landUse || {};
+        const ot = pe.ownershipTerms || {};
+        const occ = pe.occupancyTerms || {};
+        const fi = r.findings || {};
+        const pur = r.purposeOfInspection || {};
+        const ar = r.afterRecommendations || {};
 
         const checkedViols = r.violations?.isNA
           ? ["N/A"]
-          : violKeys
+          : Object.keys(violLabels)
               .filter((k) => r.violations?.[k])
-              .map((k) => violLabels[k] || k);
-
-        const recLabels = {
-          environmentalComplianceCertificate:
-            "Environmental Compliance Certificate",
-          certificateOfNonCoverage: "Certificate of Non-Coverage",
-          wastewaterDischargePerm: "Wastewater Discharge Permit",
-          hazardousWasteGeneratorId: "Hazardous Waste Generator ID",
-          permitToOperateAirPollution: "Permit to Operate (Air Pollution)",
-          pcoAccreditationCertificate: "PCO Accreditation Certificate",
-          tsdCertificate: "Transport/Storage/Disposal Certificate",
-          environmentalProtectionFee: "Environmental Protection Fee",
-          appointPCO: "Appoint PCO",
-          provideSegregationBins: "Provide segregation bins",
-          properWasteSegregation: "Proper waste segregation",
-          installGreaseTrap: "Install grease trap",
-          installExhaustSystem: "Install exhaust system",
-          installSepticTank: "Install septic tank",
-          attendSeminar: "Attend environmental seminar",
-        };
-        const checkedRecs = r.recommendations
-          ? Object.entries(recLabels)
-              .filter(([k]) => r.recommendations[k])
-              .map(([, v]) => v)
-          : [];
-
-        const afterRecLabels = {
-          forReinspection: "For reinspection",
-          forSeminar: "For seminar",
-          complianceMeasures: "For compliance measures",
-          forCDO: "For CDO",
-          issuanceCEC: "Issuance of CEC",
-          forCaseConference: "For Case Conference",
-          forCaseTermination: "For Case Termination",
-        };
-        const checkedAfterRecs = r.afterRecommendations
-          ? Object.entries(afterRecLabels)
-              .filter(([k]) => r.afterRecommendations[k])
-              .map(([, v]) => v)
-          : [];
+              .map((k) => violLabels[k]);
+        const checkedRecs = Object.entries(recLabels)
+          .filter(([k]) => r.recommendations?.[k])
+          .map(([, v]) => v);
+        const checkedAfterRecs = Object.entries(afterRecLabels)
+          .filter(([k]) => ar[k])
+          .map(([, v]) => v);
 
         return {
-          inspectionId: r.inspectionId || "",
-          isReinspection: boolLabel(r.isReinspection),
-          parentInspectionId: r.parentInspectionId || "",
-          reinspectionNumber: r.reinspectionNumber ?? "",
-          accountNo: r.accountNo || "",
-          businessName: r.businessName || "",
-          address: r.address || "",
-          barangay: r.barangay || "",
-          applicationStatus: r.applicationStatus || "",
-          dateOfInspection: safeDate(r.dateOfInspection),
-          inspectionResult: r.inspectionResult || "",
-          inspectionStatus: r.inspectionStatus || "",
-          violationPriority: r.violationPriority || "",
-          ovrNo: r.violations?.ovrNo || "",
-          totalFine: r.violations?.totalFine ?? "",
-          complianceDeadline: r.complianceDeadline || "",
-          violations: checkedViols.join(" | "),
-          recommendations: checkedRecs.join(" | "),
-          operationStatus: r.findings?.operationStatus || "",
-          observationStatement: r.findings?.observationStatement || "",
-          directives: r.directives || "",
-          afterRecommendations: checkedAfterRecs.join(" | "),
-          inspectors: inspectorNames(r.inspectors),
-          encodedByName: r.encodedByName || "",
-          encodedByEmail: r.encodedByEmail || "",
-          lastUpdatedByEmail: r.lastUpdatedByEmail || "",
-          createdAt: safeDate(r.createdAt),
-          updatedAt: safeDate(r.updatedAt),
+          // Identity
+          "Inspection ID": r.inspectionId || "",
+          "Is Reinspection": boolLabel(r.isReinspection),
+          "Parent Inspection ID": r.parentInspectionId || "",
+          "Reinspection No.": r.reinspectionNumber ?? "",
+          // Part 1: Business info
+          "Account No.": r.accountNo || "",
+          "Business Name": r.businessName || "",
+          Address: r.address || "",
+          Barangay: r.barangay || "",
+          "Application Status": r.applicationStatus || "",
+          // Part 1: Result
+          "Date of Inspection": safeDate(r.dateOfInspection),
+          "Inspection Result":
+            r.inspectionResult === "NOTICE_WARNING"
+              ? "Notice/Warning"
+              : r.inspectionResult || "",
+          "Inspection Status": r.inspectionStatus || "",
+          "Violation Priority": r.violationPriority || "",
+          "OVR No.": r.violations?.ovrNo || "",
+          "Total Fine (₱)": r.violations?.totalFine ?? "",
+          "Compliance Deadline": r.complianceDeadline || "",
+          Violations: checkedViols.join(" | "),
+          Recommendations: checkedRecs.join(" | "),
+          // Part 2: Permits
+          "Mayor's Permit": yn(p.mayorsPermit),
+          "Environmental Protection Fee": yn(p.environmentalProtectionFee),
+          "Environmental Compliance Certificate": yn(p.ecc?.status),
+          "ECC No.": p.ecc?.status === "YES" ? p.ecc?.eccNumber || "" : "",
+          "ECC Date Issued":
+            p.ecc?.status === "YES" ? safeDate(p.ecc?.dateIssued) : "",
+          "Certificate of Non-Coverage": yn(p.cnc?.status),
+          "CNC No.": p.cnc?.status === "YES" ? p.cnc?.cncNumber || "" : "",
+          "CNC Date Issued":
+            p.cnc?.status === "YES" ? safeDate(p.cnc?.dateIssued) : "",
+          "Wastewater Discharge Permit": yn(p.wdp?.status),
+          "WDP No.": p.wdp?.status === "YES" ? p.wdp?.wdpNumber || "" : "",
+          "WDP Validity": p.wdp?.status === "YES" ? p.wdp?.validity || "" : "",
+          "Permit to Operate (Air Pollution)": yn(p.pto?.status),
+          "PTO No.": p.pto?.status === "YES" ? p.pto?.ptoNumber || "" : "",
+          "PTO Validity": p.pto?.status === "YES" ? p.pto?.validity || "" : "",
+          "Hazardous Waste Generator ID": yn(p.hwid?.status),
+          "HWID No.": p.hwid?.status === "YES" ? p.hwid?.hwidNumber || "" : "",
+          "HWID Date Issued":
+            p.hwid?.status === "YES" ? safeDate(p.hwid?.dateIssued) : "",
+          // Part 2: PCO
+          "PCO Name": pco.name || "",
+          "PCO Accreditation No.": pco.accreditationNo || "",
+          "PCO Contact No.": pco.contactNo || "",
+          "PCO Email": pco.email || "",
+          // Part 2: Solid Waste
+          "Waste Bins Provided": yn(sw.wasteBinsProvided),
+          "Bins Properly Labelled": yn(sw.binsProperlyLabelled),
+          "Bins Covered": yn(sw.binsCovered),
+          "Proper Waste Segregation": yn(sw.properSegregation),
+          "MRF Provided": yn(sw.mrf),
+          "Wastes Collected": yn(sw.wastesCollected),
+          "Hauling Frequency": sw.frequencyOfHauling || "",
+          Hauler: sw.hauler || "",
+          // Part 2: Septic Tank
+          "Septic Tank Installed": yn(st.status),
+          "Septic Tank Location": st.status === "YES" ? st.location || "" : "",
+          "Septic Tank Capacity": st.status === "YES" ? st.capacity || "" : "",
+          "Desludging Frequency":
+            st.status === "YES" ? st.frequencyOfDesludging || "" : "",
+          "Date of Desludging":
+            st.status === "YES" ? safeDate(st.dateOfDesludging) : "",
+          "Septic Tank Service Provider":
+            st.status === "YES" ? st.serviceProvider || "" : "",
+          // Part 2: Grease Trap
+          "Grease Trap Installed": yn(gt.status),
+          "Grease Trap Location": gt.status === "YES" ? gt.location || "" : "",
+          "Grease Trap Capacity": gt.status === "YES" ? gt.capacity || "" : "",
+          "Grease Trap Hauling Frequency":
+            gt.status === "YES" ? gt.frequencyOfHauling || "" : "",
+          "Grease Trap Hauler": gt.status === "YES" ? gt.hauler || "" : "",
+          // Part 2: WWTP
+          "Wastewater Treatment Plant": yn(wt.status),
+          "WWTP Laboratory Analysis Result":
+            wt.status === "YES" ? wt.laboratoryAnalysisResult || "" : "",
+          // Part 2: Used Oil
+          "Used Oil Properly Disposed": yn(oil.status),
+          "Type of Oil": oil.status === "YES" ? oil.typeOfOil || "" : "",
+          "Oil Hauling Frequency":
+            oil.status === "YES" ? oil.frequencyOfHauling || "" : "",
+          "Oil Hauler": oil.status === "YES" ? oil.hauler || "" : "",
+          // Part 2: Air Pollution
+          "Pollution Control Devices Installed": yn(air.status),
+          "Device Type": air.status === "YES" ? air.deviceType || "" : "",
+          "Maintenance Provider":
+            air.status === "YES" ? air.maintenanceProvider || "" : "",
+          // Part 3: Purpose
+          "Purpose: New Establishment": bl(pur.newEstablishment),
+          "Purpose: Compliance Check": bl(pur.complianceCheck),
+          // Part 3: Physical Environment
+          "Land Use: Commercial": bl(lu.commercial),
+          "Land Use: Residential": bl(lu.residential),
+          "Land Use: Industrial": bl(lu.industrial),
+          "Land Use: Institutional": bl(lu.institutional),
+          "Ownership: Proprietorship": bl(ot.proprietorship),
+          "Ownership: Private Corporation": bl(ot.privateCorporation),
+          "Ownership: Multi-National": bl(ot.multiNational),
+          "Occupancy: Lessee": yn(occ.lessee),
+          "Occupancy: Stand Alone": yn(occ.standAlone),
+          // Part 3: Findings
+          "Operation Status During Inspection": (
+            fi.operationStatus || ""
+          ).replace(/_/g, " "),
+          "Inspector's Observation Statement": fi.observationStatement || "",
+          Directives: r.directives || "",
+          // Part 3: After Recommendations
+          "After-Inspection Recommendations": checkedAfterRecs.join(" | "),
+          // Meta
+          Inspectors: inspectorNames(r.inspectors),
+          "Encoded By": r.encodedByName || "",
+          "Encoder Email": r.encodedByEmail || "",
+          "Last Modified By": r.lastUpdatedByEmail || "",
+          "Date Created": safeDate(r.createdAt),
+          "Date Updated": safeDate(r.updatedAt),
         };
       });
 
@@ -420,37 +603,37 @@ module.exports = function (establishmentsDB) {
       );
 
       const headers = [
-        "inspectionId",
-        "accountNo",
-        "businessName",
-        "address",
-        "barangay",
-        "ovrNo",
-        "dateOfViolation",
-        "violatedOrdinances",
-        "totalFine",
-        "paymentStatus",
-        "paymentDate",
-        "orNo",
-        "remarks",
-        "createdAt",
+        "Inspection ID",
+        "Account No.",
+        "Business Name",
+        "Address",
+        "Barangay",
+        "OVR No.",
+        "Date of Violation",
+        "Violated Ordinances",
+        "Total Fine (₱)",
+        "Payment Status",
+        "Date of Payment",
+        "OR No.",
+        "Remarks",
+        "Date Created",
       ];
 
       const rows = records.map((r) => ({
-        inspectionId: r.inspectionId || "",
-        accountNo: r.accountNo || "",
-        businessName: r.businessName || "",
-        address: r.address || "",
-        barangay: r.barangay || "",
-        ovrNo: r.ovrNo || "",
-        dateOfViolation: safeDate(r.dateOfViolation),
-        violatedOrdinances: ordinanceList(r.violatedOrdinances),
-        totalFine: r.totalFine ?? "",
-        paymentStatus: r.paymentStatus || "",
-        paymentDate: safeDate(r.paymentDate),
-        orNo: r.orNo || "",
-        remarks: r.remarks || "",
-        createdAt: safeDate(r.createdAt),
+        "Inspection ID": r.inspectionId || "",
+        "Account No.": r.accountNo || "",
+        "Business Name": r.businessName || "",
+        Address: r.address || "",
+        Barangay: r.barangay || "",
+        "OVR No.": r.ovrNo || "",
+        "Date of Violation": safeDate(r.dateOfViolation),
+        "Violated Ordinances": ordinanceList(r.violatedOrdinances),
+        "Total Fine (₱)": r.totalFine ?? "",
+        "Payment Status": r.paymentStatus || "",
+        "Date of Payment": safeDate(r.paymentDate),
+        "OR No.": r.orNo || "",
+        Remarks: r.remarks || "",
+        "Date Created": safeDate(r.createdAt),
       }));
 
       res.setHeader("Content-Type", "text/csv");
@@ -475,31 +658,31 @@ module.exports = function (establishmentsDB) {
       }).sort({ createdAt: 1 });
 
       const headers = [
-        "inspectionId",
-        "accountNo",
-        "businessName",
-        "address",
-        "barangay",
-        "complianceDeadline",
-        "deadlineDate",
-        "overallStatus",
-        "requirements",
-        "remarks",
-        "createdAt",
+        "Inspection ID",
+        "Account No.",
+        "Business Name",
+        "Address",
+        "Barangay",
+        "Compliance Deadline",
+        "Deadline Date",
+        "Overall Status",
+        "Requirements",
+        "Remarks",
+        "Date Created",
       ];
 
       const rows = records.map((r) => ({
-        inspectionId: r.inspectionId || "",
-        accountNo: r.accountNo || "",
-        businessName: r.businessName || "",
-        address: r.address || "",
-        barangay: r.barangay || "",
-        complianceDeadline: r.complianceDeadline || "",
-        deadlineDate: safeDate(r.deadlineDate),
-        overallStatus: r.overallStatus || "",
-        requirements: requirementList(r.requirements),
-        remarks: r.remarks || "",
-        createdAt: safeDate(r.createdAt),
+        "Inspection ID": r.inspectionId || "",
+        "Account No.": r.accountNo || "",
+        "Business Name": r.businessName || "",
+        Address: r.address || "",
+        Barangay: r.barangay || "",
+        "Compliance Deadline": r.complianceDeadline || "",
+        "Deadline Date": safeDate(r.deadlineDate),
+        "Overall Status": r.overallStatus || "",
+        Requirements: requirementList(r.requirements),
+        Remarks: r.remarks || "",
+        "Date Created": safeDate(r.createdAt),
       }));
 
       res.setHeader("Content-Type", "text/csv");
