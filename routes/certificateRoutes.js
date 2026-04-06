@@ -46,8 +46,8 @@ async function cleanupOldCertificates() {
       },
       {
         $unset: {
-          pdfBase64: "", // Remove the encoded PDF
-          signatureBase64: "", // Remove the encoded signature
+          pdfBase64: "",
+          signatureBase64: "",
         },
       },
     );
@@ -62,11 +62,38 @@ async function cleanupOldCertificates() {
   }
 }
 
-// Get all certificates
+// ─────────────────────────────────────────────────────────────────────────────
+// GET all certificates — server-side pagination + search, NO base64 fields
+// ─────────────────────────────────────────────────────────────────────────────
 router.get("/", async (req, res) => {
   try {
-    const certificates = await Certificate.find().sort({ createdAt: -1 });
-    res.json(certificates);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, parseInt(req.query.limit) || 10);
+    const search = (req.query.search || "").trim();
+    const skip = (page - 1) * limit;
+
+    // Build filter — empty search returns all records
+    const query = search
+      ? {
+          $or: [
+            { email: { $regex: search, $options: "i" } },
+            { businessName: { $regex: search, $options: "i" } },
+            { accountNo: { $regex: search, $options: "i" } },
+          ],
+        }
+      : {};
+
+    // Run find + count in parallel; exclude heavy base64 blobs from list view
+    const [certificates, total] = await Promise.all([
+      Certificate.find(query)
+        .select("-pdfBase64 -signatureBase64") // ← KEY: never send blobs to the table
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Certificate.countDocuments(query),
+    ]);
+
+    res.json({ certificates, total, page, limit });
   } catch (error) {
     console.error("Error fetching certificates:", error);
     res.status(500).json({ message: "Server error" });
@@ -89,7 +116,6 @@ router.put("/:id", verifyToken, async (req, res) => {
       return res.status(404).json({ message: "Certificate not found" });
     }
 
-    // Update certificate fields
     certificate.accountNo = accountNo;
     certificate.businessName = businessName;
     certificate.address = address;
@@ -305,7 +331,7 @@ router.post("/upload", verifyToken, upload.single("csvFile"), (req, res) => {
         res.status(200).json({
           message: `File uploaded and ${savedCertificates.length} records saved successfully`,
           count: savedCertificates.length,
-          newCertificates: savedCertificates, // Return new certificates
+          newCertificates: savedCertificates,
         });
       } catch (error) {
         console.error("Error saving certificate data:", error);
@@ -322,7 +348,7 @@ router.post("/upload", verifyToken, upload.single("csvFile"), (req, res) => {
     });
 });
 
-// Approve certificate with signature (admin only) - new endpoint
+// Approve certificate with signature (admin only)
 router.post("/approve-with-signature", verifyToken, async (req, res) => {
   try {
     const { certificateId, signatureBase64 } = req.body;
@@ -332,7 +358,6 @@ router.post("/approve-with-signature", verifyToken, async (req, res) => {
     if (!signatureBase64) {
       return res.status(400).json({ message: "No signature image provided" });
     }
-
     if (req.user.role !== "admin") {
       return res
         .status(403)
@@ -343,7 +368,6 @@ router.post("/approve-with-signature", verifyToken, async (req, res) => {
     if (!certificate) {
       return res.status(404).json({ message: "Certificate not found" });
     }
-
     if (certificate.status !== "for approval") {
       return res
         .status(400)
@@ -355,8 +379,7 @@ router.post("/approve-with-signature", verifyToken, async (req, res) => {
       return res.status(404).json({ message: "Admin user not found" });
     }
 
-    // Update certificate with approval info and signature
-    certificate.status = "signed"; // Skip "for signatory" status
+    certificate.status = "signed";
     certificate.approvedBy = req.user.userId;
     certificate.approvedAt = new Date();
     certificate.signedBy = req.user.userId;
@@ -379,14 +402,13 @@ router.post("/approve-with-signature", verifyToken, async (req, res) => {
   }
 });
 
-// Approve certificate (admin only) - updated to set status directly to "signed"
+// Approve certificate (admin only)
 router.post("/approve", verifyToken, async (req, res) => {
   try {
     const { certificateId } = req.body;
     if (!certificateId) {
       return res.status(400).json({ message: "Certificate ID is required" });
     }
-
     if (req.user.role !== "admin") {
       return res
         .status(403)
@@ -397,7 +419,6 @@ router.post("/approve", verifyToken, async (req, res) => {
     if (!certificate) {
       return res.status(404).json({ message: "Certificate not found" });
     }
-
     if (certificate.status !== "for approval") {
       return res
         .status(400)
@@ -409,7 +430,6 @@ router.post("/approve", verifyToken, async (req, res) => {
       return res.status(404).json({ message: "Admin user not found" });
     }
 
-    // Update status directly to "signed" instead of "for signatory"
     certificate.status = "signed";
     certificate.approvedBy = req.user.userId;
     certificate.approvedAt = new Date();
@@ -429,7 +449,7 @@ router.post("/approve", verifyToken, async (req, res) => {
   }
 });
 
-// Upload signature for certificate (admin only) - updated to handle direct signing
+// Upload signature for certificate (admin only)
 router.post("/upload-signature", verifyToken, async (req, res) => {
   try {
     const { certificateId, signatureBase64 } = req.body;
@@ -439,7 +459,6 @@ router.post("/upload-signature", verifyToken, async (req, res) => {
     if (!signatureBase64) {
       return res.status(400).json({ message: "No signature image provided" });
     }
-
     if (req.user.role !== "admin") {
       return res
         .status(403)
@@ -450,8 +469,6 @@ router.post("/upload-signature", verifyToken, async (req, res) => {
     if (!certificate) {
       return res.status(404).json({ message: "Certificate not found" });
     }
-
-    // Allow signing if the certificate is either "for signatory" or "approved"
     if (
       certificate.status !== "for signatory" &&
       certificate.status !== "approved"
@@ -461,7 +478,6 @@ router.post("/upload-signature", verifyToken, async (req, res) => {
         .json({ message: "Certificate is not ready for signature" });
     }
 
-    // Update certificate with base64 signature
     certificate.signatureBase64 = signatureBase64;
     certificate.signedBy = req.user.userId;
     certificate.signedAt = new Date();
@@ -480,7 +496,7 @@ router.post("/upload-signature", verifyToken, async (req, res) => {
   }
 });
 
-// Preview endpoint - now uses base64
+// Preview endpoint — fetches FULL document by ID (base64 fields available here)
 router.post("/preview", verifyToken, async (req, res) => {
   try {
     const { certificateId } = req.body;
@@ -488,12 +504,12 @@ router.post("/preview", verifyToken, async (req, res) => {
       return res.status(400).json({ message: "Certificate ID is required" });
     }
 
+    // findById returns ALL fields including pdfBase64 / signatureBase64
     const certificate = await Certificate.findById(certificateId);
     if (!certificate) {
       return res.status(404).json({ message: "Certificate not found" });
     }
 
-    // Allow preview for signed, sent, or resent certificates
     if (
       certificate.status !== "signed" &&
       certificate.status !== "sent" &&
@@ -504,30 +520,26 @@ router.post("/preview", verifyToken, async (req, res) => {
       });
     }
 
-    // If PDF exists and is recent (within 30 days), return it
+    // Return cached PDF if it exists and is recent (within 30 days)
     if (
       certificate.pdfBase64 &&
       certificate.generatedAt &&
       certificate.generatedAt > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
     ) {
-      const fileName = `Certificate_${certificate.businessName.replace(
-        /\s+/g,
-        "_",
-      )}.pdf`;
+      const fileName = `Certificate_${certificate.businessName.replace(/\s+/g, "_")}.pdf`;
       return res.status(200).json({
         message: "Existing certificate preview retrieved successfully",
-        fileName: fileName,
+        fileName,
         pdfBase64: certificate.pdfBase64,
         certificate,
       });
     }
 
-    // Otherwise generate new PDF
+    // Generate new PDF
     console.log("Generating certificate PDF preview...");
     const pdfInfo = await fillCertificateTemplate(certificate);
-    console.log(`Certificate PDF preview generated`);
+    console.log("Certificate PDF preview generated");
 
-    // Save base64 PDF to database
     certificate.pdfBase64 = pdfInfo.pdfBase64;
     certificate.generatedAt = new Date();
     await certificate.save();
@@ -547,7 +559,7 @@ router.post("/preview", verifyToken, async (req, res) => {
   }
 });
 
-// Filling certificate template - now returns base64
+// Filling certificate template — returns base64
 async function fillCertificateTemplate(certificateData) {
   try {
     const templatePath = path.join(__dirname, "../certificate_template.pdf");
@@ -560,10 +572,8 @@ async function fillCertificateTemplate(certificateData) {
     const existingPdfBytes = fs.readFileSync(templatePath);
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
 
-    // Register fontkit with the PDFDocument
     pdfDoc.registerFontkit(fontkit);
 
-    // Load and embed the Rubik Bold font from the fonts folder
     const fontPath = path.join(__dirname, "../fonts/Rubik-Bold.ttf");
     if (!fs.existsSync(fontPath)) {
       throw new Error(
@@ -573,10 +583,8 @@ async function fillCertificateTemplate(certificateData) {
 
     const fontBytes = fs.readFileSync(fontPath);
     const rubikBoldFont = await pdfDoc.embedFont(fontBytes);
-
     const form = pdfDoc.getForm();
 
-    // Get all fields in the form and log them for debugging
     const fields = form.getFields();
     console.log("=== ALL FIELDS IN TEMPLATE ===");
     fields.forEach((field) => {
@@ -586,7 +594,6 @@ async function fillCertificateTemplate(certificateData) {
     });
     console.log("=== END FIELDS ===");
 
-    // Format the certificate date from the data
     let formattedDate = "Date not available";
     if (certificateData.certificateDate) {
       try {
@@ -606,14 +613,12 @@ async function fillCertificateTemplate(certificateData) {
       }
     }
 
-    // Define the field mappings using the exact field names from your PDF
     const fieldMappings = {
       accountNo: certificateData.accountNo,
       businessName: certificateData.businessName,
       date: formattedDate,
     };
 
-    // Try to fill each text field with custom font
     let fieldsFilled = 0;
     for (const [fieldName, value] of Object.entries(fieldMappings)) {
       try {
@@ -622,9 +627,7 @@ async function fillCertificateTemplate(certificateData) {
           field.setText(value);
           field.updateAppearances(rubikBoldFont);
           fieldsFilled++;
-          console.log(
-            `✓ Filled field '${fieldName}' with value: ${value} using Rubik Bold font`,
-          );
+          console.log(`✓ Filled field '${fieldName}' with value: ${value}`);
         } else {
           console.warn(`✗ Field '${fieldName}' not found in template`);
         }
@@ -633,14 +636,12 @@ async function fillCertificateTemplate(certificateData) {
       }
     }
 
-    // Handle address field with word boundary breaks and upward adjustment
+    // Handle address field with word boundary breaks
     try {
       const addressField = form.getTextField("address");
       if (addressField) {
         const address = certificateData.address;
         const maxLineLength = 70;
-
-        // Split address into lines with word boundary breaks
         const words = address.split(" ");
         const lines = [];
         let currentLine = "";
@@ -659,22 +660,14 @@ async function fillCertificateTemplate(certificateData) {
               currentLine = word;
             }
           } else {
-            if (currentLine) {
-              currentLine += " " + word;
-            } else {
-              currentLine = word;
-            }
+            currentLine = currentLine ? currentLine + " " + word : word;
           }
         }
-
-        if (currentLine) {
-          lines.push(currentLine);
-        }
+        if (currentLine) lines.push(currentLine);
 
         const formattedAddress = "\n" + lines.join("\n");
         addressField.setText(formattedAddress);
 
-        // Get the field's widget to adjust its position
         const widgets = addressField.acroField.getWidgets();
         if (widgets.length > 0) {
           const widget = widgets[0];
@@ -682,23 +675,20 @@ async function fillCertificateTemplate(certificateData) {
           const fontSize = 12;
           const lineHeight = fontSize * 1.2;
           const upwardAdjustment = (lines.length - 1) * lineHeight;
-          const adjustedRect = {
+          widget.setRectangle({
             x: rect.x,
             y: rect.y + upwardAdjustment,
             width: rect.width,
             height: rect.height,
-          };
-          widget.setRectangle(adjustedRect);
+          });
           console.log(
-            `Address field moved upward by ${upwardAdjustment} points to accommodate ${lines.length} lines`,
+            `Address field moved upward by ${upwardAdjustment} points`,
           );
         }
 
         addressField.updateAppearances(rubikBoldFont);
         fieldsFilled++;
-        console.log(
-          `✓ Filled address field with word boundary breaks and upward adjustment`,
-        );
+        console.log("✓ Filled address field");
       } else {
         console.warn("✗ Address field not found in template");
       }
@@ -706,7 +696,7 @@ async function fillCertificateTemplate(certificateData) {
       console.error("✗ Error handling address field:", error);
     }
 
-    // Handle signature field - using base64 if available
+    // Embed signature from base64 if available
     if (certificateData.signatureBase64) {
       try {
         console.log("Embedding base64 signature...");
@@ -715,92 +705,55 @@ async function fillCertificateTemplate(certificateData) {
           "base64",
         );
         const signatureImage = await pdfDoc.embedPng(signatureImageBytes);
-
-        // Get the first page of the PDF
         const page = pdfDoc.getPages()[0];
-        const { width, height } = page.getSize();
+        const { width } = page.getSize();
 
-        // Position signature (centered and 2 inches from bottom)
         const twoInchesFromBottom = 184;
         const signatureWidth = 180;
         const signatureHeight = 95;
         const centeredX = (width - signatureWidth) / 2;
-        const signaturePosition = {
+
+        page.drawImage(signatureImage, {
           x: centeredX,
           y: twoInchesFromBottom,
           width: signatureWidth,
           height: signatureHeight,
-        };
-
-        console.log("Using manual signature coordinates:", signaturePosition);
-
-        // Draw the signature image at the specified position
-        page.drawImage(signatureImage, {
-          x: signaturePosition.x,
-          y: signaturePosition.y,
-          width: signaturePosition.width,
-          height: signaturePosition.height,
         });
 
         console.log("✓ Embedded signature from base64");
 
-        // Try to remove any existing signature fields
-        try {
-          const signatureFieldNames = [
-            "signature",
-            "Signature",
-            "signature_field",
-            "Signature_Field",
-            "sig",
-            "Sig",
-            "sign",
-            "Sign",
-            "SignatureField",
-            "signatureField",
-          ];
-
-          for (const fieldName of signatureFieldNames) {
+        // Remove any existing signature form fields
+        const signatureFieldNames = [
+          "signature",
+          "Signature",
+          "signature_field",
+          "Signature_Field",
+          "sig",
+          "Sig",
+          "sign",
+          "Sign",
+          "SignatureField",
+          "signatureField",
+        ];
+        for (const fieldName of signatureFieldNames) {
+          for (const getter of [
+            "getTextField",
+            "getButton",
+            "getSignatureField",
+          ]) {
             try {
-              const field = form.getTextField(fieldName);
+              const field = form[getter](fieldName);
               if (field) {
                 field.remove();
-                console.log(
-                  `✓ Removed existing signature field: "${fieldName}"`,
-                );
+                console.log(`✓ Removed field: "${fieldName}"`);
               }
             } catch (e) {
-              // Not a text field, try next
-            }
-
-            try {
-              const field = form.getButton(fieldName);
-              if (field) {
-                field.remove();
-                console.log(
-                  `✓ Removed existing signature button field: "${fieldName}"`,
-                );
-              }
-            } catch (e) {
-              // Not a button field, try next
-            }
-
-            try {
-              const field = form.getSignatureField(fieldName);
-              if (field) {
-                field.remove();
-                console.log(
-                  `✓ Removed existing signature field: "${fieldName}"`,
-                );
-              }
-            } catch (e) {
-              // Not a signature field, try next
+              /* field type mismatch — skip */
             }
           }
-        } catch (e) {
-          console.log("Error removing existing signature fields:", e.message);
         }
       } catch (error) {
-        console.error(`✗ Error handling signature:`, error);
+        console.error("✗ Error handling signature:", error);
       }
     } else {
       console.log("No signature base64 provided for this certificate");
@@ -808,39 +761,29 @@ async function fillCertificateTemplate(certificateData) {
 
     if (fieldsFilled === 0) {
       console.warn(
-        "✗ No form fields were filled. Please check your PDF template field names.",
+        "✗ No form fields were filled. Check your PDF template field names.",
       );
       console.log(
         "Available fields:",
-        fields.map((field) => field.getName()),
+        fields.map((f) => f.getName()),
       );
     }
 
-    // Flatten the form to prevent further editing
     form.flatten();
 
     const pdfBytes = await pdfDoc.save();
-
-    // Convert to base64 instead of saving to file
     const pdfBase64 = Buffer.from(pdfBytes).toString("base64");
-    const fileName = `Certificate_of_Participation_${certificateData.businessName.replace(
-      /\s+/g,
-      "_",
-    )}.pdf`;
+    const fileName = `Certificate_of_Participation_${certificateData.businessName.replace(/\s+/g, "_")}.pdf`;
 
     console.log(`✓ Certificate generated as base64: ${fileName}`);
-
-    return {
-      fileName,
-      pdfBase64,
-    };
+    return { fileName, pdfBase64 };
   } catch (error) {
     console.error("✗ Error filling certificate template:", error);
     throw error;
   }
 }
 
-// Send certificate for a single participant - now uses base64
+// Send certificate — fetches FULL document by ID (base64 fields available here)
 router.post("/send", verifyToken, async (req, res) => {
   try {
     const { certificateId, subject, body, template } = req.body;
@@ -851,22 +794,18 @@ router.post("/send", verifyToken, async (req, res) => {
       return res.status(400).json({ message: "Subject and body are required" });
     }
 
+    // findById returns ALL fields — pdfBase64 / signatureBase64 included
     const certificate = await Certificate.findById(certificateId);
     if (!certificate) {
       return res.status(404).json({ message: "Certificate not found" });
     }
-
-    // Check if certificate is signed
     if (certificate.status !== "signed") {
       return res.status(400).json({
         message: `Certificate must be signed before sending. Current status: ${certificate.status}`,
       });
     }
 
-    // Create email transporter
     const transporter = createEmailTransporter();
-
-    // Verify transporter configuration
     try {
       await transporter.verify();
       console.log("SMTP server connection successful");
@@ -877,15 +816,13 @@ router.post("/send", verifyToken, async (req, res) => {
         .json({ message: "Email configuration error", error: error.message });
     }
 
-    // Check if email credentials are set
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      console.error("Email credentials not set in environment variables");
       return res
         .status(500)
         .json({ message: "Email credentials not configured" });
     }
 
-    // Generate the certificate PDF if not exists or expired
+    // Generate PDF if missing or expired (>30 days)
     if (
       !certificate.pdfBase64 ||
       !certificate.generatedAt ||
@@ -895,16 +832,14 @@ router.post("/send", verifyToken, async (req, res) => {
       const pdfInfo = await fillCertificateTemplate(certificate);
       certificate.pdfBase64 = pdfInfo.pdfBase64;
       certificate.generatedAt = new Date();
-      console.log(`Certificate PDF generated and stored as base64`);
+      console.log("Certificate PDF generated and stored as base64");
     }
 
-    // Update the certificate with send info
     certificate.sentBy = req.user.userId;
     certificate.sentAt = new Date();
     certificate.status = "sent";
     await certificate.save();
 
-    // Format the certificate date
     let formattedDate = "Date not available";
     if (certificate.certificateDate) {
       try {
@@ -924,10 +859,7 @@ router.post("/send", verifyToken, async (req, res) => {
       }
     }
 
-    // Get current year for footer
     const currentYear = new Date().getFullYear();
-
-    // Personalize the email body
     const personalizedBody = body
       .replace(/{{businessName}}/g, certificate.businessName)
       .replace(/{{accountNo}}/g, certificate.accountNo)
@@ -935,33 +867,25 @@ router.post("/send", verifyToken, async (req, res) => {
       .replace(/{{certificateDate}}/g, formattedDate)
       .replace(/{{currentYear}}/g, currentYear);
 
-    // Check if ordinance file exists
     const ordinancePath = path.join(
       __dirname,
       "../City Ordinance No. 57 Series of 2024.pdf",
     );
-    console.log("Checking ordinance at:", ordinancePath);
-
     if (!fs.existsSync(ordinancePath)) {
-      console.error("Ordinance file not found at:", ordinancePath);
       return res.status(500).json({
         message:
           "Ordinance file not found. Please check the path: " + ordinancePath,
       });
     }
 
-    // Create email options with base64 PDF attachment
     const mailOptions = {
       from: `"CENRO San Juan City" <${process.env.EMAIL_USER}>`,
       to: certificate.email,
-      subject: subject,
+      subject,
       html: personalizedBody,
       attachments: [
         {
-          filename: `Certificate_${certificate.businessName.replace(
-            /\s+/g,
-            "_",
-          )}.pdf`,
+          filename: `Certificate_${certificate.businessName.replace(/\s+/g, "_")}.pdf`,
           content: Buffer.from(certificate.pdfBase64, "base64"),
         },
         {
@@ -974,9 +898,7 @@ router.post("/send", verifyToken, async (req, res) => {
     console.log(
       `Sending certificate to ${certificate.email} (${certificate.businessName})`,
     );
-
     await transporter.sendMail(mailOptions);
-
     console.log(`Certificate sent successfully to ${certificate.email}`);
 
     res.status(200).json({
@@ -992,7 +914,7 @@ router.post("/send", verifyToken, async (req, res) => {
   }
 });
 
-// Resend certificate for a single participant - now uses base64
+// Resend certificate — fetches FULL document by ID (base64 fields available here)
 router.post("/resend", verifyToken, async (req, res) => {
   try {
     const { certificateId, subject, body, template } = req.body;
@@ -1002,12 +924,13 @@ router.post("/resend", verifyToken, async (req, res) => {
         .json({ message: "Certificate ID, subject, and body are required" });
     }
 
+    // findById returns ALL fields — pdfBase64 / signatureBase64 included
     const certificate = await Certificate.findById(certificateId);
     if (!certificate) {
       return res.status(404).json({ message: "Certificate not found" });
     }
 
-    // Generate PDF if not exists or expired
+    // Generate PDF if missing or expired
     if (
       !certificate.pdfBase64 ||
       !certificate.generatedAt ||
@@ -1022,29 +945,21 @@ router.post("/resend", verifyToken, async (req, res) => {
       await certificate.save();
     }
 
-    // Create email transporter
     const transporter = createEmailTransporter();
-
-    // Verify transporter configuration
     try {
       await transporter.verify();
-      console.log("SMTP server connection successful");
     } catch (error) {
-      console.error("SMTP connection error:", error);
       return res
         .status(500)
         .json({ message: "Email configuration error", error: error.message });
     }
 
-    // Check if email credentials are set
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      console.error("Email credentials not set in environment variables");
       return res
         .status(500)
         .json({ message: "Email credentials not configured" });
     }
 
-    // Format the certificate date
     let formattedDate = "Date not available";
     if (certificate.certificateDate) {
       try {
@@ -1064,10 +979,7 @@ router.post("/resend", verifyToken, async (req, res) => {
       }
     }
 
-    // Get current year for footer
     const currentYear = new Date().getFullYear();
-
-    // Personalize the email body
     const personalizedBody = body
       .replace(/{{businessName}}/g, certificate.businessName)
       .replace(/{{accountNo}}/g, certificate.accountNo)
@@ -1075,33 +987,25 @@ router.post("/resend", verifyToken, async (req, res) => {
       .replace(/{{certificateDate}}/g, formattedDate)
       .replace(/{{currentYear}}/g, currentYear);
 
-    // Check if ordinance file exists
     const ordinancePath = path.join(
       __dirname,
       "../City Ordinance No. 57 Series of 2024.pdf",
     );
-    console.log("Checking ordinance at:", ordinancePath);
-
     if (!fs.existsSync(ordinancePath)) {
-      console.error("Ordinance file not found at:", ordinancePath);
       return res.status(500).json({
         message:
           "Ordinance file not found. Please check the path: " + ordinancePath,
       });
     }
 
-    // Create email options with base64 PDF attachment
     const mailOptions = {
       from: `"CENRO San Juan City" <${process.env.EMAIL_USER}>`,
       to: certificate.email,
-      subject: subject,
+      subject,
       html: personalizedBody,
       attachments: [
         {
-          filename: `Certificate_${certificate.businessName.replace(
-            /\s+/g,
-            "_",
-          )}.pdf`,
+          filename: `Certificate_${certificate.businessName.replace(/\s+/g, "_")}.pdf`,
           content: Buffer.from(certificate.pdfBase64, "base64"),
         },
         {
@@ -1114,18 +1018,13 @@ router.post("/resend", verifyToken, async (req, res) => {
     console.log(
       `Resending certificate to ${certificate.email} (${certificate.businessName})`,
     );
-
     await transporter.sendMail(mailOptions);
-
     console.log(`Certificate resent successfully to ${certificate.email}`);
 
-    // Update the certificate status to "resent"
     certificate.resentBy = req.user.userId;
     certificate.resentAt = new Date();
     certificate.status = "resent";
     await certificate.save();
-
-    console.log(`Updated status for ${certificate.email} to 'resent'`);
 
     res.status(200).json({
       message: `Certificate resent successfully to ${certificate.businessName}`,
@@ -1155,14 +1054,12 @@ router.get("/debug-template", verifyToken, async (req, res) => {
     const form = pdfDoc.getForm();
     const fields = form.getFields();
 
-    const fieldInfo = fields.map((field) => ({
-      name: field.getName(),
-      type: field.constructor.name,
-    }));
-
     res.json({
       message: "Template loaded successfully",
-      fields: fieldInfo,
+      fields: fields.map((field) => ({
+        name: field.getName(),
+        type: field.constructor.name,
+      })),
     });
   } catch (error) {
     console.error("Error debugging template:", error);
@@ -1172,7 +1069,7 @@ router.get("/debug-template", verifyToken, async (req, res) => {
   }
 });
 
-// Enhanced debug endpoint to test filling a specific certificate
+// Test-fill endpoint
 router.post("/test-fill", verifyToken, async (req, res) => {
   try {
     const { businessName, accountNo, address } = req.body;
@@ -1182,13 +1079,11 @@ router.post("/test-fill", verifyToken, async (req, res) => {
         .json({ message: "businessName, accountNo, and address are required" });
     }
 
-    const certificateData = {
+    const pdfInfo = await fillCertificateTemplate({
       businessName,
       accountNo,
       address,
-    };
-
-    const pdfInfo = await fillCertificateTemplate(certificateData);
+    });
 
     res.json({
       message: "Test certificate generated successfully",
