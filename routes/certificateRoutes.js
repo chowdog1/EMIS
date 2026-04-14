@@ -39,15 +39,11 @@ async function cleanupOldCertificates() {
     const result = await Certificate.updateMany(
       {
         createdAt: { $lt: oneWeekAgo },
-        $or: [
-          { pdfBase64: { $exists: true, $ne: "" } },
-          { signatureBase64: { $exists: true, $ne: "" } },
-        ],
+        $or: [{ pdfBase64: { $exists: true, $ne: "" } }],
       },
       {
         $unset: {
           pdfBase64: "",
-          signatureBase64: "",
         },
       },
     );
