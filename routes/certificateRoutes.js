@@ -30,6 +30,67 @@ const createEmailTransporter = () => {
   });
 };
 
+// ─── TIMEZONE-SAFE DATE HELPERS ───────────────────────────────────────────────
+
+/**
+ * Parse a date string as LOCAL midnight (Asia/Manila) to avoid UTC rollback.
+ * Supports: M/D/YY, M/D/YYYY, MM/DD/YYYY, YYYY-MM-DD, and similar.
+ * Returns a Date object or null if unparseable.
+ */
+function parseLocalDate(rawDate) {
+  if (!rawDate) return null;
+  const str = rawDate.trim();
+
+  const parts = str.split(/[\/\-]/);
+  if (parts.length === 3) {
+    const isISO = parts[0].length === 4; // YYYY-MM-DD
+    let year, month, day;
+
+    if (isISO) {
+      year = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10) - 1; // 0-indexed
+      day = parseInt(parts[2], 10);
+    } else {
+      month = parseInt(parts[0], 10) - 1; // 0-indexed
+      day = parseInt(parts[1], 10);
+      year = parseInt(parts[2], 10);
+      if (year < 100) year += 2000; // 2-digit year → 4-digit
+    }
+
+    const d = new Date(year, month, day); // local midnight — no UTC shift
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // Fallback: native parse (may shift by timezone — warn in logs)
+  console.warn(`parseLocalDate: falling back to new Date() for "${str}"`);
+  const fallback = new Date(str);
+  return isNaN(fallback.getTime()) ? null : fallback;
+}
+
+/**
+ * Format a Date as "Month DD, YYYY" in Philippine time (UTC+8).
+ * Using an explicit timeZone ensures the displayed day matches the stored day
+ * regardless of the server's system timezone.
+ */
+function formatDatePH(date) {
+  if (!date) return "Date not available";
+  try {
+    const d = typeof date === "string" ? new Date(date) : date;
+    if (isNaN(d.getTime())) return "Date not available";
+    return d.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      timeZone: "Asia/Manila",
+    });
+  } catch (e) {
+    console.error("formatDatePH error:", e);
+    return "Date not available";
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Cleanup function to remove old certificates data
 async function cleanupOldCertificates() {
   try {
@@ -68,7 +129,6 @@ router.get("/", async (req, res) => {
     const search = (req.query.search || "").trim();
     const skip = (page - 1) * limit;
 
-    // Build filter — empty search returns all records
     const query = search
       ? {
           $or: [
@@ -79,10 +139,9 @@ router.get("/", async (req, res) => {
         }
       : {};
 
-    // Run find + count in parallel; exclude heavy base64 blobs from list view
     const [certificates, total] = await Promise.all([
       Certificate.find(query)
-        .select("-pdfBase64 -signatureBase64") // ← KEY: never send blobs to the table
+        .select("-pdfBase64 -signatureBase64")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
@@ -116,7 +175,9 @@ router.put("/:id", verifyToken, async (req, res) => {
     certificate.businessName = businessName;
     certificate.address = address;
     certificate.email = email;
-    certificate.certificateDate = new Date(certificateDate);
+    // Use parseLocalDate so manual edits don't shift either
+    certificate.certificateDate =
+      parseLocalDate(certificateDate) || new Date(certificateDate);
 
     await certificate.save();
 
@@ -256,27 +317,29 @@ router.post("/upload", verifyToken, upload.single("csvFile"), (req, res) => {
         return "";
       };
 
+      // ── TIMEZONE FIX: parse as local date, not UTC ──
       const getCertificateDate = () => {
+        let rawDate = null;
+
         if (headerMap.certificateDate && data[headerMap.certificateDate]) {
-          return new Date(data[headerMap.certificateDate].trim());
-        }
-        const dateVariations = [
-          "date",
-          "Date",
-          "DATE",
-          "date of participation",
-          "date of seminar",
-        ];
-        for (const key of dateVariations) {
-          if (data[key]) {
-            const dateValue = data[key].trim();
-            const parsedDate = new Date(dateValue);
-            if (!isNaN(parsedDate.getTime())) {
-              return parsedDate;
+          rawDate = data[headerMap.certificateDate].trim();
+        } else {
+          const dateVariations = [
+            "date",
+            "Date",
+            "DATE",
+            "date of participation",
+            "date of seminar",
+          ];
+          for (const key of dateVariations) {
+            if (data[key]) {
+              rawDate = data[key].trim();
+              break;
             }
           }
         }
-        return null;
+
+        return parseLocalDate(rawDate);
       };
 
       const certificateData = {
@@ -500,7 +563,6 @@ router.post("/preview", verifyToken, async (req, res) => {
       return res.status(400).json({ message: "Certificate ID is required" });
     }
 
-    // findById returns ALL fields including pdfBase64 / signatureBase64
     const certificate = await Certificate.findById(certificateId);
     if (!certificate) {
       return res.status(404).json({ message: "Certificate not found" });
@@ -531,7 +593,6 @@ router.post("/preview", verifyToken, async (req, res) => {
       });
     }
 
-    // Generate new PDF
     console.log("Generating certificate PDF preview...");
     const pdfInfo = await fillCertificateTemplate(certificate);
     console.log("Certificate PDF preview generated");
@@ -590,24 +651,8 @@ async function fillCertificateTemplate(certificateData) {
     });
     console.log("=== END FIELDS ===");
 
-    let formattedDate = "Date not available";
-    if (certificateData.certificateDate) {
-      try {
-        const certDate =
-          typeof certificateData.certificateDate === "string"
-            ? new Date(certificateData.certificateDate)
-            : certificateData.certificateDate;
-        if (!isNaN(certDate.getTime())) {
-          formattedDate = certDate.toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          });
-        }
-      } catch (error) {
-        console.error("Error formatting certificate date:", error);
-      }
-    }
+    // ── TIMEZONE FIX: use formatDatePH for consistent Philippine-time display ──
+    const formattedDate = formatDatePH(certificateData.certificateDate);
 
     const fieldMappings = {
       accountNo: certificateData.accountNo,
@@ -718,7 +763,6 @@ async function fillCertificateTemplate(certificateData) {
 
         console.log("✓ Embedded signature from base64");
 
-        // Remove any existing signature form fields
         const signatureFieldNames = [
           "signature",
           "Signature",
@@ -779,7 +823,7 @@ async function fillCertificateTemplate(certificateData) {
   }
 }
 
-// Send certificate — fetches FULL document by ID (base64 fields available here)
+// Send certificate
 router.post("/send", verifyToken, async (req, res) => {
   try {
     const { certificateId, subject, body, template } = req.body;
@@ -790,7 +834,6 @@ router.post("/send", verifyToken, async (req, res) => {
       return res.status(400).json({ message: "Subject and body are required" });
     }
 
-    // findById returns ALL fields — pdfBase64 / signatureBase64 included
     const certificate = await Certificate.findById(certificateId);
     if (!certificate) {
       return res.status(404).json({ message: "Certificate not found" });
@@ -818,7 +861,6 @@ router.post("/send", verifyToken, async (req, res) => {
         .json({ message: "Email credentials not configured" });
     }
 
-    // Generate PDF if missing or expired (>30 days)
     if (
       !certificate.pdfBase64 ||
       !certificate.generatedAt ||
@@ -836,26 +878,10 @@ router.post("/send", verifyToken, async (req, res) => {
     certificate.status = "sent";
     await certificate.save();
 
-    let formattedDate = "Date not available";
-    if (certificate.certificateDate) {
-      try {
-        const certDate =
-          typeof certificate.certificateDate === "string"
-            ? new Date(certificate.certificateDate)
-            : certificate.certificateDate;
-        if (!isNaN(certDate.getTime())) {
-          formattedDate = certDate.toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          });
-        }
-      } catch (error) {
-        console.error("Error formatting certificate date:", error);
-      }
-    }
-
+    // ── TIMEZONE FIX: use formatDatePH ──
+    const formattedDate = formatDatePH(certificate.certificateDate);
     const currentYear = new Date().getFullYear();
+
     const personalizedBody = body
       .replace(/{{businessName}}/g, certificate.businessName)
       .replace(/{{accountNo}}/g, certificate.accountNo)
@@ -910,7 +936,7 @@ router.post("/send", verifyToken, async (req, res) => {
   }
 });
 
-// Resend certificate — fetches FULL document by ID (base64 fields available here)
+// Resend certificate
 router.post("/resend", verifyToken, async (req, res) => {
   try {
     const { certificateId, subject, body, template } = req.body;
@@ -920,13 +946,11 @@ router.post("/resend", verifyToken, async (req, res) => {
         .json({ message: "Certificate ID, subject, and body are required" });
     }
 
-    // findById returns ALL fields — pdfBase64 / signatureBase64 included
     const certificate = await Certificate.findById(certificateId);
     if (!certificate) {
       return res.status(404).json({ message: "Certificate not found" });
     }
 
-    // Generate PDF if missing or expired
     if (
       !certificate.pdfBase64 ||
       !certificate.generatedAt ||
@@ -956,26 +980,10 @@ router.post("/resend", verifyToken, async (req, res) => {
         .json({ message: "Email credentials not configured" });
     }
 
-    let formattedDate = "Date not available";
-    if (certificate.certificateDate) {
-      try {
-        const certDate =
-          typeof certificate.certificateDate === "string"
-            ? new Date(certificate.certificateDate)
-            : certificate.certificateDate;
-        if (!isNaN(certDate.getTime())) {
-          formattedDate = certDate.toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          });
-        }
-      } catch (error) {
-        console.error("Error formatting certificate date:", error);
-      }
-    }
-
+    // ── TIMEZONE FIX: use formatDatePH ──
+    const formattedDate = formatDatePH(certificate.certificateDate);
     const currentYear = new Date().getFullYear();
+
     const personalizedBody = body
       .replace(/{{businessName}}/g, certificate.businessName)
       .replace(/{{accountNo}}/g, certificate.accountNo)

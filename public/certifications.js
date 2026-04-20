@@ -15,6 +15,28 @@ if (typeof initAccountLockNotifier === "function") {
   console.error("Account lock notifier function not found");
 }
 
+// ─── TIMEZONE-SAFE DATE FORMATTER ────────────────────────────────────────────
+/**
+ * Format a date value as "Month DD, YYYY" in Philippine time (UTC+8).
+ * This prevents the UTC-midnight rollback that shifts dates back by one day.
+ */
+function formatDatePH(dateValue) {
+  if (!dateValue) return "Date not available";
+  try {
+    const d = typeof dateValue === "string" ? new Date(dateValue) : dateValue;
+    if (isNaN(d.getTime())) return "Date not available";
+    return d.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      timeZone: "Asia/Manila",
+    });
+  } catch (e) {
+    console.error("formatDatePH error:", e);
+    return "Date not available";
+  }
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function getUserRole() {
   const userData = localStorage.getItem("user_data");
@@ -43,12 +65,17 @@ function onEditCertificate(certificate) {
   let formattedDate = "";
   if (certificate.certificateDate) {
     try {
+      // Use Asia/Manila timezone to get the correct local date for the input
       const certDate =
         typeof certificate.certificateDate === "string"
           ? new Date(certificate.certificateDate)
           : certificate.certificateDate;
       if (!isNaN(certDate.getTime())) {
-        formattedDate = certDate.toISOString().split("T")[0];
+        // Get YYYY-MM-DD in Philippine time
+        const phDateStr = certDate.toLocaleDateString("en-CA", {
+          timeZone: "Asia/Manila",
+        }); // en-CA gives YYYY-MM-DD
+        formattedDate = phDateStr;
       }
     } catch (error) {
       console.error("Error formatting certificate date:", error);
@@ -217,7 +244,6 @@ async function handlePreviewCertificate(certificate) {
 
     const signatureSection = document.getElementById("previewSignatureSection");
     const signatureImage = document.getElementById("previewSignatureImage");
-    // Use signatureBase64 from the preview result (full document) not the table row
     if (result.certificate && result.certificate.signatureBase64) {
       signatureSection.style.display = "block";
       signatureImage.src = `data:image/png;base64,${result.certificate.signatureBase64}`;
@@ -333,7 +359,9 @@ async function saveEditedCertificate() {
           businessName,
           address,
           email,
-          certificateDate: new Date(certificateDate),
+          // Send the date string as-is (YYYY-MM-DD from the date input).
+          // The server's parseLocalDate() will handle it correctly.
+          certificateDate,
         }),
       },
     );
@@ -352,7 +380,6 @@ async function saveEditedCertificate() {
     showSuccessMessage("Certificate updated successfully");
     document.getElementById("editCertificateModal").style.display = "none";
 
-    // Reload current page so the edit is reflected
     const search = document.getElementById("searchInput")?.value.trim() || "";
     loadCertificateData(currentPage, pageSize, search);
   } catch (error) {
@@ -393,7 +420,6 @@ async function loadCertificateData(page = 1, size = pageSize, search = "") {
       );
     }
 
-    // API returns { certificates, total, page, limit }
     const { certificates, total } = await response.json();
     console.log(
       `Certificate data loaded: ${certificates.length} of ${total} total`,
@@ -782,25 +808,8 @@ function renderSimpleTable(certificates) {
 
 // ─── Email body generator ─────────────────────────────────────────────────────
 function generateCertificateEmailBody(certificate) {
-  let formattedDate = "Date not available";
-  if (certificate.certificateDate) {
-    try {
-      const certDate =
-        typeof certificate.certificateDate === "string"
-          ? new Date(certificate.certificateDate)
-          : certificate.certificateDate;
-      if (!isNaN(certDate.getTime())) {
-        formattedDate = certDate.toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        });
-      }
-    } catch (error) {
-      console.error("Error formatting certificate date:", error);
-    }
-  }
-
+  // ── TIMEZONE FIX: use formatDatePH for consistent Philippine-time display ──
+  const formattedDate = formatDatePH(certificate.certificateDate);
   const currentYear = new Date().getFullYear();
 
   return `<!DOCTYPE html>
@@ -1448,7 +1457,6 @@ function setupEmailPreviewModal() {
     }
   });
 
-  // Observe modal open to reset state
   const observer = new MutationObserver(function (mutations) {
     mutations.forEach(function (mutation) {
       if (
