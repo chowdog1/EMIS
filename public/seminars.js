@@ -1,8 +1,8 @@
 // seminars.js - Updated to support years 2025-2030 and auto-select current year
 let currentYear = new Date().getFullYear().toString(); // Default to current year
-// Ensure currentYear is within valid range (2025-2030)
-if (currentYear < "2025" || currentYear > "2030") {
-  currentYear = "2025"; // Fallback to 2025 if outside range
+// Ensure currentYear is within valid range (2025-2040)
+if (currentYear < "2025" || currentYear > "2040") {
+  currentYear = "2040"; // Fallback to 2040 if outside range
 }
 
 let allSeminars = []; // Store all seminars for client-side operations
@@ -43,7 +43,7 @@ function updateTableWithPagination(page, size) {
   const paginatedData = getPaginatedData(
     filteredSeminars,
     currentPage,
-    pageSize
+    pageSize,
   );
   // Update table
   updateSeminarTable(paginatedData);
@@ -52,7 +52,7 @@ function updateTableWithPagination(page, size) {
     currentPage,
     pageSize,
     totalRecords,
-    updateTableWithPagination
+    updateTableWithPagination,
   );
 }
 
@@ -84,7 +84,7 @@ async function loadSeminarData() {
         return;
       }
       throw new Error(
-        `Failed to load seminar data: ${response.status} ${response.statusText}`
+        `Failed to load seminar data: ${response.status} ${response.statusText}`,
       );
     }
     const seminars = await response.json();
@@ -99,7 +99,7 @@ async function loadSeminarData() {
     const paginatedData = getPaginatedData(
       filteredSeminars,
       currentPage,
-      pageSize
+      pageSize,
     );
     updateSeminarTable(paginatedData);
     // Update pagination controls
@@ -107,7 +107,7 @@ async function loadSeminarData() {
       currentPage,
       pageSize,
       totalRecords,
-      updateTableWithPagination
+      updateTableWithPagination,
     );
   } catch (error) {
     console.error("Error loading seminar data:", error);
@@ -155,7 +155,7 @@ function performSearch() {
   const paginatedData = getPaginatedData(
     filteredSeminars,
     currentPage,
-    pageSize
+    pageSize,
   );
   updateSeminarTable(paginatedData);
   // Update pagination controls
@@ -163,7 +163,7 @@ function performSearch() {
     currentPage,
     pageSize,
     totalRecords,
-    updateTableWithPagination
+    updateTableWithPagination,
   );
 }
 
@@ -219,7 +219,7 @@ function updateSeminarTable(seminars) {
             fontWeight: "500",
           },
         },
-        text
+        text,
       );
     };
     // Action button component
@@ -242,7 +242,7 @@ function updateSeminarTable(seminars) {
               fontSize: "0.75rem",
             },
           },
-          "Resend Invitation"
+          "Resend Invitation",
         );
       }
       return null; // Return null for other statuses
@@ -278,7 +278,7 @@ function updateSeminarTable(seminars) {
                     borderBottom: "1px solid #e9ecef",
                   },
                 },
-                "Email"
+                "Email",
               ),
               React.createElement(
                 "th",
@@ -290,7 +290,7 @@ function updateSeminarTable(seminars) {
                     borderBottom: "1px solid #e9ecef",
                   },
                 },
-                "Business Name"
+                "Business Name",
               ),
               React.createElement(
                 "th",
@@ -302,7 +302,7 @@ function updateSeminarTable(seminars) {
                     borderBottom: "1px solid #e9ecef",
                   },
                 },
-                "Address"
+                "Address",
               ),
               React.createElement(
                 "th",
@@ -314,7 +314,7 @@ function updateSeminarTable(seminars) {
                     borderBottom: "1px solid #e9ecef",
                   },
                 },
-                "Status"
+                "Status",
               ),
               React.createElement(
                 "th",
@@ -326,9 +326,9 @@ function updateSeminarTable(seminars) {
                     borderBottom: "1px solid #e9ecef",
                   },
                 },
-                "Actions"
-              )
-            )
+                "Actions",
+              ),
+            ),
           ),
           React.createElement(
             "tbody",
@@ -343,22 +343,22 @@ function updateSeminarTable(seminars) {
                 React.createElement(
                   "td",
                   { style: { padding: "12px 15px" } },
-                  seminar.email
+                  seminar.email,
                 ),
                 React.createElement(
                   "td",
                   { style: { padding: "12px 15px" } },
-                  seminar.businessName
+                  seminar.businessName,
                 ),
                 React.createElement(
                   "td",
                   { style: { padding: "12px 15px" } },
-                  seminar.address
+                  seminar.address,
                 ),
                 React.createElement(
                   "td",
                   { style: { padding: "12px 15px" } },
-                  React.createElement(StatusBadge, { status: seminar.status })
+                  React.createElement(StatusBadge, { status: seminar.status }),
                 ),
                 React.createElement(
                   "td",
@@ -366,12 +366,12 @@ function updateSeminarTable(seminars) {
                   React.createElement(ActionButton, {
                     seminar: seminar,
                     onResend: handleResendInvitation,
-                  })
-                )
+                  }),
+                ),
               );
-            })
-          )
-        )
+            }),
+          ),
+        ),
       );
     };
     // Clear the existing content
@@ -485,7 +485,7 @@ function renderSimpleTable(seminars) {
       resendBtn.style.padding = "0.25rem 0.5rem";
       resendBtn.style.fontSize = "0.75rem";
       resendBtn.addEventListener("click", () =>
-        handleResendInvitation(seminar)
+        handleResendInvitation(seminar),
       );
       actionCell.appendChild(resendBtn);
     }
@@ -515,7 +515,7 @@ function handleResendInvitation(seminar) {
   // Remove any existing success messages
   const resendModal = document.getElementById("resendInvitationModal");
   const existingProgressContainers = resendModal.querySelectorAll(
-    ".progress-container, .alert-success, .alert-danger"
+    ".progress-container, .alert-success, .alert-danger",
   );
   existingProgressContainers.forEach((container) => {
     container.remove();
@@ -555,7 +555,7 @@ function generateResendEmailBody() {
     day: "numeric",
   });
   const formattedTime = new Date(
-    `2000-01-01T${seminarTime.value}`
+    `2000-01-01T${seminarTime.value}`,
   ).toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
@@ -711,7 +711,7 @@ function setupResendInvitationModal() {
   const resendForm = document.getElementById("resendInvitationForm");
   const resendBtn = document.getElementById("resendInvitationBtn");
   const closeBtns = resendModal.querySelectorAll(
-    ".modal-close, .modal-close-btn"
+    ".modal-close, .modal-close-btn",
   );
   // Form fields
   const seminarDate = document.getElementById("resendSeminarDate");
@@ -768,7 +768,7 @@ function setupResendInvitationModal() {
 
       // Format time for better readability
       const formattedTime = new Date(
-        `2000-01-01T${timeValue}`
+        `2000-01-01T${timeValue}`,
       ).toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
@@ -808,7 +808,7 @@ function setupResendInvitationModal() {
       `;
       // Remove any existing progress containers
       const existingProgressContainers = resendModal.querySelectorAll(
-        ".progress-container"
+        ".progress-container",
       );
       existingProgressContainers.forEach((container) => {
         container.remove();
@@ -838,12 +838,12 @@ function setupResendInvitationModal() {
       // Insert progress container after the button
       resendBtn.parentNode.insertBefore(
         progressContainer,
-        resendBtn.nextSibling
+        resendBtn.nextSibling,
       );
       // Get progress elements
       const progressBar = progressContainer.querySelector(".progress-bar");
       const progressPercentage = progressContainer.querySelector(
-        ".progress-percentage"
+        ".progress-percentage",
       );
       const progressSteps = progressContainer.querySelectorAll(".step");
       // Animate progress bar
@@ -902,7 +902,7 @@ function setupResendInvitationModal() {
         // If the resend-invitation endpoint doesn't exist (404), fall back to the send-invitations endpoint
         if (response.status === 404) {
           console.log(
-            "Resend invitation endpoint not found, falling back to send invitations endpoint"
+            "Resend invitation endpoint not found, falling back to send invitations endpoint",
           );
           apiUrl = `/api/seminar${currentYear}/send-invitations`;
           response = await fetch(apiUrl, {
@@ -936,7 +936,7 @@ function setupResendInvitationModal() {
             return;
           }
           throw new Error(
-            `Failed to resend invitation: ${response.status} ${response.statusText}`
+            `Failed to resend invitation: ${response.status} ${response.statusText}`,
           );
         }
         // Finish progress animation
@@ -968,7 +968,7 @@ function setupResendInvitationModal() {
             `;
             // Show success message
             showSuccessMessage(
-              data.message || "Invitation resent successfully!"
+              data.message || "Invitation resent successfully!",
             );
             // Refresh table data to update status automatically
             setTimeout(() => {
@@ -1077,7 +1077,7 @@ function setupUploadButton() {
   const uploadForm = document.getElementById("uploadForm");
   const uploadBtn = document.getElementById("uploadBtn");
   const closeBtns = uploadModal.querySelectorAll(
-    ".modal-close, .modal-close-btn"
+    ".modal-close, .modal-close-btn",
   );
   if (uploadDataBtn) {
     uploadDataBtn.addEventListener("click", function () {
@@ -1123,7 +1123,7 @@ function setupUploadButton() {
             return;
           }
           throw new Error(
-            `Upload failed: ${response.status} ${response.statusText}`
+            `Upload failed: ${response.status} ${response.statusText}`,
           );
         }
         const result = await response.json();
@@ -1146,7 +1146,7 @@ function resetSendInvitationsModal() {
   const sendInvitationsBtn = document.getElementById("sendInvitationsBtn");
   // Remove any existing progress containers or alert messages
   const existingMessages = sendInvitationsModal.querySelectorAll(
-    ".progress-container, .alert-success, .alert-danger"
+    ".progress-container, .alert-success, .alert-danger",
   );
   existingMessages.forEach((container) => {
     container.remove();
@@ -1184,13 +1184,13 @@ function resetSendInvitationsModal() {
 // Function to setup send invitations button
 function setupSendInvitationsButton() {
   const sendInvitationsDataBtn = document.getElementById(
-    "sendInvitationsDataBtn"
+    "sendInvitationsDataBtn",
   );
   const sendInvitationsModal = document.getElementById("sendInvitationsModal");
   const invitationForm = document.getElementById("invitationForm");
   const sendInvitationsBtn = document.getElementById("sendInvitationsBtn");
   const closeBtns = sendInvitationsModal.querySelectorAll(
-    ".modal-close, .modal-close-btn"
+    ".modal-close, .modal-close-btn",
   );
   // Form fields
   const seminarDate = document.getElementById("seminarDate");
@@ -1211,7 +1211,7 @@ function setupSendInvitationsButton() {
       day: "numeric",
     });
     const formattedTime = new Date(
-      `2000-01-01T${seminarTime.value}`
+      `2000-01-01T${seminarTime.value}`,
     ).toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
@@ -1416,7 +1416,7 @@ function setupSendInvitationsButton() {
 
       // Format time for better readability
       const formattedTime = new Date(
-        `2000-01-01T${timeValue}`
+        `2000-01-01T${timeValue}`,
       ).toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
@@ -1455,7 +1455,7 @@ function setupSendInvitationsButton() {
       `;
       // Remove any existing progress containers
       const existingProgressContainers = sendInvitationsModal.querySelectorAll(
-        ".progress-container"
+        ".progress-container",
       );
       existingProgressContainers.forEach((container) => {
         container.remove();
@@ -1485,12 +1485,12 @@ function setupSendInvitationsButton() {
       // Insert progress container after the button
       sendInvitationsBtn.parentNode.insertBefore(
         progressContainer,
-        sendInvitationsBtn.nextSibling
+        sendInvitationsBtn.nextSibling,
       );
       // Get progress elements
       const progressBar = progressContainer.querySelector(".progress-bar");
       const progressPercentage = progressContainer.querySelector(
-        ".progress-percentage"
+        ".progress-percentage",
       );
       const progressSteps = progressContainer.querySelectorAll(".step");
       // Animate progress bar
@@ -1553,7 +1553,7 @@ function setupSendInvitationsButton() {
             return;
           }
           throw new Error(
-            `Failed to send invitations: ${response.status} ${response.statusText}`
+            `Failed to send invitations: ${response.status} ${response.statusText}`,
           );
         }
         // Finish progress animation
@@ -1654,7 +1654,7 @@ function setupLogout() {
           console.error(
             "Logout API call failed:",
             response.status,
-            response.statusText
+            response.statusText,
           );
         }
       }
@@ -1697,7 +1697,7 @@ window.addEventListener("load", function () {
     currentPage,
     pageSize,
     totalRecords,
-    updateTableWithPagination
+    updateTableWithPagination,
   );
   // Setup resend invitation modal
   setupResendInvitationModal();

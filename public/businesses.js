@@ -5,12 +5,12 @@ const logoUrls = [
   "/makabagong%20san%20juan%20Logo.png",
 ];
 
-// Automatically detect current year and set as default (within supported range 2025-2030)
+// Automatically detect current year and set as default (within supported range 2025-2040)
 let currentYear = new Date().getFullYear().toString();
 if (currentYear < "2025") {
   currentYear = "2025";
-} else if (currentYear > "2030") {
-  currentYear = "2030";
+} else if (currentYear > "2040") {
+  currentYear = "2040";
 }
 console.log("Current year set to:", currentYear);
 

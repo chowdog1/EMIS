@@ -1,12 +1,12 @@
 // dashboard.js - Updated to support all years from 2025 to 2030
 class DashboardManager {
   constructor() {
-    // Automatically detect current year and set as default (within supported range 2025-2030)
+    // Automatically detect current year and set as default (within supported range 2025-2040)
     const currentYear = new Date().getFullYear().toString();
     if (currentYear < "2025") {
       this.currentYear = "2025";
-    } else if (currentYear > "2030") {
-      this.currentYear = "2030";
+    } else if (currentYear > "2040") {
+      this.currentYear = "2040";
     } else {
       this.currentYear = currentYear;
     }
@@ -96,7 +96,7 @@ class DashboardManager {
       // Initialize map centered on San Juan City
       window.businessMapInstance = L.map("businessMap").setView(
         [14.6047, 121.0299],
-        13
+        13,
       );
       // Add tile layer (OpenStreetMap)
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -150,7 +150,7 @@ class DashboardManager {
         });
         const marker = L.marker(
           [barangay.coordinates.lat, barangay.coordinates.lng],
-          { icon: customIcon }
+          { icon: customIcon },
         ).addTo(window.businessMapInstance);
         // Create popup with barangay info and list of businesses
         const businessList = barangay.businesses
@@ -159,7 +159,7 @@ class DashboardManager {
               `<li style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #eee;">
             <strong>${business.name}</strong><br>
             <small style="color: #666;">${business.address}</small>
-          </li>`
+          </li>`,
           )
           .join("");
         const popupContent = `
@@ -239,7 +239,7 @@ class DashboardManager {
 
     // Update active businesses
     const activeBusinessesElement = document.getElementById(
-      "activeBusinessesCount"
+      "activeBusinessesCount",
     );
     if (activeBusinessesElement) {
       activeBusinessesElement.textContent = data.activeBusinessesCount || 0;
@@ -272,7 +272,7 @@ class DashboardManager {
       renewalElement.textContent = data.renewalPendingCount || 0;
       console.log(
         "Set renewal pending count to:",
-        data.renewalPendingCount || 0
+        data.renewalPendingCount || 0,
       );
     } else {
       console.error("Renewal element not found");
@@ -287,7 +287,7 @@ class DashboardManager {
         {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
-        }
+        },
       )}`;
       console.log("Set total amount paid to:", data.totalAmountPaid);
     } else {
